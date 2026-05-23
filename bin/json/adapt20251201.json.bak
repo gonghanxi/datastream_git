@@ -1,0 +1,21 @@
+{
+    "workSpace": "",
+    "datas": [
+
+    ],
+    "links": [
+        {
+            "id": "c5c117909f3b4d0ebded0e92650a24e3",
+            "processName": "link1",
+            "type": 1
+        }
+    ],
+    "describe": "用于与引擎对接",
+    "vars": [
+
+    ],
+    "graph": [
+
+    ],
+    "prjName": "adapt20251201"
+}

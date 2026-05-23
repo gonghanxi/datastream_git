@@ -1,0 +1,206 @@
+﻿/**
+ *
+ * "A Collection of Useful C++ Classes for Digital Signal Processing"
+ * By Vinnie Falco and Bernd Porr
+ *
+ * Official project location:
+ * https://github.com/berndporr/iir1
+ *
+ * See Documentation.cpp for contact information, notes, and bibliography.
+ * 
+ * -----------------------------------------------------------------
+ *
+ * License: MIT License (http://www.opensource.org/licenses/mit-license.php)
+ * Copyright (c) 2009 by Vinnie Falco
+ * Copyright (c) 2011 by Bernd Porr
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ **/
+
+#include "Common.h"
+#include "Butterworth.h"
+
+namespace Iir {
+
+namespace Butterworth {
+
+AnalogLowPass::AnalogLowPass ()
+  : m_numPoles (-1)
+{
+    //在模拟低通滤波器原型中，通常将直流（频率为0）处的增益归一化为1。这意味着在频率为0时，滤波器的增益为1（0 dB），这是低通滤波器的典型特性：在直流处没有衰减。
+  setNormal (0, 1);
+}
+
+void AnalogLowPass::design (int numPoles)
+{
+  if (m_numPoles != numPoles)
+  {
+    m_numPoles = numPoles;
+
+    reset ();
+
+    const double n2 = 2 * numPoles;
+    const int pairs = numPoles / 2; //计算复数共轭极点对的数量。因为巴特沃斯滤波器的极点总是成共轭对出现的（除了当N为奇数时有一个单独的实极点）。
+    for (int i = 0; i < pairs; ++i)
+    {
+      complex_t c = std::polar (1., doublePi_2 + (2 * i + 1) * doublePi / n2);
+      addPoleZeroConjugatePairs (c, infinity());
+    }
+
+    if (numPoles & 1)//当为极点个数为奇数的处理
+      add (-1, infinity());
+  }
+}
+
+//------------------------------------------------------------------------------
+
+AnalogLowShelf::AnalogLowShelf ()
+  : m_numPoles (-1)
+{
+  setNormal (doublePi, 1);
+}
+
+void AnalogLowShelf::design (int numPoles, double gainDb)
+{
+  if (m_numPoles != numPoles ||
+      m_gainDb != gainDb)
+  {
+    m_numPoles = numPoles;
+    m_gainDb = gainDb;
+
+    reset ();
+
+    const double n2 = numPoles * 2;
+    const double g = pow (pow (10., gainDb/20), 1. / n2);
+    const double gp = -1. / g;
+    const double gz = -g;
+
+    const int pairs = numPoles / 2;
+    for (int i = 1; i <= pairs; ++i)
+    {
+      const double theta = doublePi * (0.5 - (2 * i - 1) / n2);
+      addPoleZeroConjugatePairs (std::polar (gp, theta), std::polar (gz, theta));
+    }
+    
+    if (numPoles & 1)
+      add (gp, gz);
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void LowPassBase::setup (int order,
+                         double cutoffFrequency)
+{
+  m_analogProto.design (order);
+
+  LowPassTransform (cutoffFrequency,
+                    m_digitalProto,
+                    m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void HighPassBase::setup (int order,
+                          double cutoffFrequency)
+{
+  m_analogProto.design (order);
+
+  HighPassTransform (cutoffFrequency,
+                     m_digitalProto,
+                     m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void BandPassBase::setup (int order,
+                          double centerFrequency,
+                          double widthFrequency)
+{
+  m_analogProto.design (order);
+
+  BandPassTransform (centerFrequency,
+                     widthFrequency,
+                     m_digitalProto,
+                     m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void BandStopBase::setup (int order,
+                          double centerFrequency,
+                          double widthFrequency)
+{
+  m_analogProto.design (order);
+
+  BandStopTransform (centerFrequency,
+                     widthFrequency,
+                     m_digitalProto,
+                     m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void LowShelfBase::setup (int order,
+                         double cutoffFrequency,
+                         double gainDb)
+{
+  m_analogProto.design (order, gainDb);
+
+  LowPassTransform (cutoffFrequency,
+                    m_digitalProto,
+                    m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void HighShelfBase::setup (int order,
+                           double cutoffFrequency,
+                           double gainDb)
+{
+  m_analogProto.design (order, gainDb);
+
+  HighPassTransform (cutoffFrequency,
+                     m_digitalProto,
+                     m_analogProto);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+void BandShelfBase::setup (int order,
+                           double centerFrequency,
+                           double widthFrequency,
+                           double gainDb)
+{
+  m_analogProto.design (order, gainDb);
+
+  BandPassTransform (centerFrequency,
+                     widthFrequency,
+                     m_digitalProto,
+                     m_analogProto);
+
+  // HACK!
+  m_digitalProto.setNormal ( (centerFrequency < 0.25) ? doublePi : 0, 1);
+
+  Cascade::setLayout (m_digitalProto);
+}
+
+}
+
+}

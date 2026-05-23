@@ -1,0 +1,418 @@
+[
+  
+  {
+    "nodeLinkType": 1,
+    "maxCmpSetId": "cp_4",
+    "linkkey": "7ab5fec6662c41459a2ad370c4acf02c",
+    "instNameTable": "",
+    "ConnectSet": [
+      {
+        "cmpIdStart": "cp_1",
+        "portIdEnd": "p_3",
+        "cmpIdEnd": "cp_3",
+        "id": "ct_2",
+        "portIdStart": "p_1"
+      },
+      {
+        "cmpIdStart": "cp_3",
+        "portIdEnd": "p_5",
+        "cmpIdEnd": "cp_4",
+        "id": "ct_3",
+        "portIdStart": "p_4"
+      },
+      {
+        "cmpIdStart": "cp_4",
+        "portIdEnd": "p_2",
+        "cmpIdEnd": "cp_2",
+        "id": "ct_4",
+        "portIdStart": "p_6"
+      }
+    ],
+    "objectType": "",
+    "cmpAutoId": 0,
+    "linkKeyTable": "",
+    "linkNetNameTable": "",
+    "linkDeleteList": [],
+    "cmpDeleteList": [],
+    "topoId": 0,
+    "name": "timescheduler",
+    "maxCtId": "ct_4",
+    "maxProtId": "p_6",
+    "simuParams": {
+      "Num_Samples": "1000",
+      "simuName": "timescheduler_Analysis",
+      "SamplingRate_Unit": "MHz",
+      "Time_Interval": "1",
+      "Time_Interval_Unit": "us",
+      "StartTime": "0",
+      "id": "7ab5fec6662c41459a2ad370c4acf02c",
+      "describe": "",
+      "StopTime_Unit": "us",
+      "StartTime_Unit": "us",
+      "SamplingRate": "1",
+      "StopTime": "999"
+    },
+    "projectId": "82516048eccb4831abf8563417e675b5",
+    "isInterface": false,
+    "cmpSet": [
+      {
+        "cmpCondition": "Active",
+        "instanceName": "C1",
+        "ADSLib": "",
+        "cmpCategory": [ "Sources" ],
+        "cmpId": "cp_1",
+        "icon": "http://192.168.0.196:9000/iseicon/2026/svg/Const_1769668168220.svg",
+        "isInstanceNameShow": true,
+        "scale": "1",
+        "description": "暂无数据",
+        "isSubSystem": false,
+        "Equations": "",
+        "objectType": "model",
+        "labelPositionState": 0,
+        "iconObject": "",
+        "size": "60,60",
+        "port": [
+          {
+            "rotate": "0",
+            "putType": "out",
+            "pos": "1,0.5",
+            "nameDisplay": false,
+            "dataType": "real",
+            "cmpId": "cp_1",
+            "name": "output",
+            "isOptional": false,
+            "id": "p_1",
+            "cmpType": "Const",
+            "label": ""
+          }
+        ],
+        "pos": "20,180",
+        "isCmpTypeShow": true,
+        "iconWeb": "http://192.168.0.196:9000/iseicon/2026/svg/Const_1769668168220.svg",
+        "cmpType": "Const",
+        "attribute": [
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "0",
+            "dataType": "Double",
+            "name": "Value",
+            "HideCondition": "",
+            "isDisp": true,
+            "value": "1",
+            "isHideCondition": true,
+            "desc": "",
+            "calculateValue": "1"
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "No",
+            "dataType": "Enumeration",
+            "selectOptions": [ "No", "Yes" ],
+            "name": "ShowAdvancedParams",
+            "HideCondition": "",
+            "isDisp": false,
+            "value": "No",
+            "isHideCondition": true,
+            "desc": ""
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "TimedFromSchematic",
+            "dataType": "Enumeration",
+            "selectOptions": [ "UnTimed", "TimedFromSampleRate", "TimedFromSchematic" ],
+            "name": "SampleRateOption",
+            "HideCondition": "ShowAdvancedParams != 1",
+            "isDisp": false,
+            "value": "TimedFromSchematic",
+            "isHideCondition": true,
+            "desc": ""
+          },
+          {
+            "unitType": "FREQUENCY",
+            "unit": "Hz",
+            "valDefault": "1e6",
+            "dataType": "Double",
+            "name": "SampleRate",
+            "HideCondition": "SampleRateOption != 1 || ShowAdvancedParams != 1",
+            "isDisp": false,
+            "value": "1e6",
+            "isHideCondition": true,
+            "desc": "",
+            "calculateValue": "1000000.0"
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "0",
+            "dataType": "Integer",
+            "name": "InitialDelay",
+            "HideCondition": "ShowAdvancedParams != 1",
+            "isDisp": false,
+            "value": "0",
+            "isHideCondition": true,
+            "desc": "",
+            "calculateValue": "0"
+          }
+        ],
+        "isPortedit": false,
+        "portIdMap": {}
+      },
+      {
+        "cmpCondition": "Active",
+        "instanceName": "S1",
+        "ADSLib": "",
+        "cmpCategory": [ "Sinks" ],
+        "cmpId": "cp_2",
+        "icon": "http://192.168.0.196:9000/iseicon/2026/svg/Sink_1769077398447.svg",
+        "isInstanceNameShow": true,
+        "scale": "1",
+        "isSubSystem": false,
+        "objectType": "model",
+        "labelPositionState": 0,
+        "iconObject": "",
+        "size": "60, 40",
+        "port": [
+          {
+            "rotate": "0",
+            "putType": "in",
+            "pos": "0,0.5",
+            "nameDisplay": false,
+            "dataType": "multiple real",
+            "cmpId": "cp_2",
+            "name": "input",
+            "isOptional": false,
+            "id": "p_2",
+            "cmpType": "Sink",
+            "label": ""
+          }
+        ],
+        "pos": "590,190",
+        "isCmpTypeShow": true,
+        "iconWeb": "http://192.168.0.196:9000/iseicon/2026/svg/Sink_1769077398447.svg",
+        "cmpType": "Sink",
+        "attribute": [
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "Auto",
+            "dataType": "Enumeration",
+            "selectOptions": [ "Auto", "Samples", "Time" ],
+            "name": "StartStopOption",
+            "HideCondition": "",
+            "isDisp": true,
+            "value": "Auto",
+            "isHideCondition": true,
+            "desc": "Sink collection mode: Auto, Samples, Time"
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "0",
+            "dataType": "Integer",
+            "name": "SampleStart",
+            "HideCondition": "StartStopOption == 2",
+            "isDisp": false,
+            "value": "0",
+            "isHideCondition": true,
+            "desc": "Sample number to start data collection"
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "999",
+            "dataType": "Integer",
+            "name": "SampleStop",
+            "HideCondition": "StartStopOption == 2",
+            "isDisp": false,
+            "value": "999",
+            "isHideCondition": true,
+            "desc": "Sample number to stop data collection"
+          },
+          {
+            "unitType": "TIME",
+            "unit": "us",
+            "valDefault": "0",
+            "dataType": "Double",
+            "name": "TimeStart",
+            "HideCondition": "StartStopOption == 1",
+            "isDisp": false,
+            "value": "0",
+            "isHideCondition": true,
+            "desc": "Time to start data collection"
+          },
+          {
+            "unitType": "TIME",
+            "unit": "us",
+            "valDefault": "999",
+            "dataType": "Double",
+            "name": "TimeStop",
+            "HideCondition": "StartStopOption == 1",
+            "isDisp": false,
+            "value": "999",
+            "isHideCondition": true,
+            "desc": "Time to stop data collection"
+          },
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "",
+            "dataType": "String",
+            "name": "FileName",
+            "HideCondition": "",
+            "isDisp": false,
+            "value": "",
+            "isHideCondition": true,
+            "desc": "Data file name"
+          },
+          {
+            "unitType": "FREQUENCY",
+            "unit": "MHz",
+            "valDefault": "1",
+            "dataType": "Double",
+            "name": "SampleRate",
+            "HideCondition": "",
+            "isDisp": false,
+            "value": "1",
+            "isHideCondition": true,
+            "desc": ""
+          }
+        ],
+        "isPortedit": false,
+        "portIdMap": {}
+      },
+      {
+        "cmpCondition": "Active",
+        "instanceName": "G1",
+        "ADSLib": "",
+        "cmpCategory": [ "Math Scalar", "Math Matrix" ],
+        "cmpId": "cp_3",
+        "icon": "http://192.168.0.196:9000/iseicon/2026/svg/Gain_1769077844633.svg",
+        "isInstanceNameShow": true,
+        "scale": "1",
+        "description": "暂无数据",
+        "isSubSystem": false,
+        "Equations": "",
+        "objectType": "model",
+        "labelPositionState": 0,
+        "iconObject": "",
+        "size": "60,60",
+        "port": [
+          {
+            "rotate": "0",
+            "putType": "in",
+            "pos": "0,0.5",
+            "nameDisplay": false,
+            "dataType": "real",
+            "cmpId": "cp_3",
+            "name": "input",
+            "isOptional": false,
+            "id": "p_3",
+            "cmpType": "Gain",
+            "label": ""
+          },
+          {
+            "rotate": "0",
+            "putType": "out",
+            "pos": "1,0.5",
+            "nameDisplay": false,
+            "dataType": "real",
+            "cmpId": "cp_3",
+            "name": "output",
+            "isOptional": false,
+            "id": "p_4",
+            "cmpType": "Gain",
+            "label": ""
+          }
+        ],
+        "pos": "210,180",
+        "isCmpTypeShow": true,
+        "iconWeb": "http://192.168.0.196:9000/iseicon/2026/svg/Gain_1769077844633.svg",
+        "cmpType": "Gain",
+        "attribute": [
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "1",
+            "dataType": "Double",
+            "name": "m_Gain",
+            "HideCondition": "",
+            "isDisp": true,
+            "value": "2",
+            "isHideCondition": true,
+            "desc": "Gain value",
+            "calculateValue": "2"
+          }
+        ],
+        "isPortedit": false,
+        "portIdMap": {}
+      },
+      {
+        "cmpCondition": "Active",
+        "instanceName": "R1",
+        "ADSLib": "",
+        "cmpCategory": [ "Signal Processing" ],
+        "cmpId": "cp_4",
+        "icon": "http://192.168.0.196:9000/iseicon/2026/svg/Reverse_1768459267630.svg",
+        "isInstanceNameShow": true,
+        "scale": "1",
+        "isSubSystem": false,
+        "objectType": "model",
+        "labelPositionState": 0,
+        "iconObject": "",
+        "size": "60,40",
+        "port": [
+          {
+            "rotate": "0",
+            "putType": "in",
+            "pos": "0,0.5",
+            "nameDisplay": false,
+            "dataType": "real",
+            "cmpId": "cp_4",
+            "name": "input",
+            "isOptional": false,
+            "id": "p_5",
+            "cmpType": "Reverse",
+            "label": ""
+          },
+          {
+            "rotate": "0",
+            "putType": "out",
+            "pos": "1,0.5",
+            "nameDisplay": false,
+            "dataType": "real",
+            "cmpId": "cp_4",
+            "name": "output",
+            "isOptional": false,
+            "id": "p_6",
+            "cmpType": "Reverse",
+            "label": ""
+          }
+        ],
+        "pos": "410,190",
+        "isCmpTypeShow": true,
+        "iconWeb": "http://192.168.0.196:9000/iseicon/2026/svg/Reverse_1768459267630.svg",
+        "cmpType": "Reverse",
+        "attribute": [
+          {
+            "unitType": "NONE",
+            "unit": "",
+            "valDefault": "64",
+            "dataType": "Integer",
+            "name": "N",
+            "HideCondition": "",
+            "isDisp": true,
+            "value": "64",
+            "isHideCondition": true,
+            "desc": "Number of data items read and written"
+          }
+        ],
+        "isPortedit": false,
+        "portIdMap": {}
+      }
+    ],
+    "linkAutoId": 0
+  }
+]

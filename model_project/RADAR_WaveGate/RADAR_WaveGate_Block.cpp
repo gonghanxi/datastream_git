@@ -1,0 +1,99 @@
+#include "RADAR_WaveGate_Block.h"
+
+RADAR_WaveGate_Block::RADAR_WaveGate_Block(const std::string &name)
+    :Block(name)
+{
+
+}
+
+bool RADAR_WaveGate_Block::Setup()
+{
+    Block::Setup();
+    return true;
+}
+
+void RADAR_WaveGate_Block::SetDefaultParameters()
+{
+    PRF = 10e3;
+    StartTime = 0;
+    GateTime = 20e-6;
+    SampleRate = 10e6;
+}
+
+void RADAR_WaveGate_Block::SetParameters()
+{
+    if (!m_radar) return;
+
+
+    m_radar->PRF = PRF;
+    m_radar->StartTime = StartTime;
+    m_radar->GateTime = GateTime;
+    m_radar->SampleRate = SampleRate;
+}
+
+bool RADAR_WaveGate_Block::Initialize()
+{
+    SetBlockType(Block::BlockType::PROCESSOR);
+
+    m_radar = std::make_unique<RADAR_WaveGate>();
+
+    SetDefaultParameters();
+
+    try { PRF = std::stod(getParameter("PRF").Value); } catch (...) { }
+    try { StartTime = std::stod(getParameter("StartTime").Value); } catch (...) { }
+    try { GateTime = std::stod(getParameter("GateTime").Value); } catch (...) { }
+    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+
+    SetParameters();
+
+    double PRI = 1.0 / PRF;
+
+    int inputRate = PRI * SampleRate;
+    int outputRate = GateTime * SampleRate;
+
+    if (inputRate > 0 && outputRate > 0)
+    {
+        m_radar->input.SetRate(inputRate);
+        m_radar->output.SetRate(outputRate);
+    }
+    else
+    {
+        LOG_ERROR("Port rate must be greater than 0.");
+        return false;
+    }
+    AddInputPort("input", m_radar->input, static_cast<size_t>(inputRate), Block::DataType::CIRCULAR_BUFFER_DCOMPLEX);
+    AddInputPort("GateStartCtrl", m_radar->GateStartCtrl, 1, Block::DataType::CIRCULAR_BUFFER_DOUBLE);
+    AddOutputPort("output", m_radar->output, static_cast<size_t>(outputRate), Block::DataType::CIRCULAR_BUFFER_DCOMPLEX);
+
+    return true;
+}
+
+bool RADAR_WaveGate_Block::Run()
+{
+
+    std::string inputPort = GetInputPortName(0);
+    std::string gatePort = GetInputPortName(1);
+
+    auto inputData = ReadInputData<std::complex<double>>(inputPort);
+    std::vector<std::complex<double>> outputData(m_radar->output.GetRate());
+
+    if (GetInputPort(gatePort)->IsConnected())
+    {
+        auto gateData = ReadInputData<double>(gatePort);
+        StartTime = gateData[0];
+    }
+
+    int StartN	= StartTime * SampleRate;
+    int GateN = GateTime * SampleRate;
+    int StopN = StartN + GateN;
+
+    // 每个PRI都设一个波门
+    for (int i = 0; i < StopN; i++)
+    {
+        outputData[i] = inputData[i + StartN];
+    }
+
+    WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}

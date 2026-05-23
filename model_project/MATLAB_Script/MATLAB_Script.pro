@@ -1,0 +1,88 @@
+QT = core
+CONFIG += c++17 cmdline
+CONFIG += dll
+TEMPLATE = lib
+
+# 定义DLL导出宏
+DEFINES += SYSTEMVUEMODELBUILDER_EXPORTS
+DESTDIR = $$PWD/../../bin/models
+INCLUDEPATH += $$PWD/../../ModelDesign/
+include($$PWD/../../ModelDesign/openBlas/openBlas.pri)
+win32 {
+    LIBS += -L$$PWD/../../ModelDesign/lib -lDataStream
+}
+
+linux {
+    LIBS += -L$$PWD/../../ModelDesign/lib -lDataStream
+    DEFINES += QT_NO_DEBUG_OUTPUT
+    LIBS += -lm
+    CONFIG += unversioned_libname
+    CONFIG -= plugin
+    CONFIG -= create_prl
+    CONFIG -= shared
+
+    # 明确指定目标文件名
+    TARGET = $$basename(PWD)
+    QMAKE_EXTENSION_SHLIB = so
+
+    # 清除版本相关设置
+    QMAKE_LFLAGS_SONAME =
+    VERSION =
+    QMAKE_CXXFLAGS = -std=c++17 -Wno-unused-variable -fPIC
+    QMAKE_CFLAGS = -std=c11
+    CONFIG += c++17
+    CONFIG += c++1z
+    DEFINES += LINUX_PLATFORM
+    CONFIG += unversioned_libname unversioned_soname
+    QMAKE_CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
+
+    # MATLAB Runtime 安装路径
+#    MATLAB_ROOT = /usr/local/MATLAB/MATLAB_Runtime/R2023a
+    MATLAB_ROOT = /usr/local/MATLAB/R2023a
+
+    # 包含头文件
+    INCLUDEPATH += $$MATLAB_ROOT/extern/include
+
+    # 链接库路径
+    LIBS += -L$$MATLAB_ROOT/runtime/glnxa64
+    LIBS += -L$$MATLAB_ROOT/bin/glnxa64
+
+    # 链接库
+    LIBS += -leng -lmx -lmex -lmat -lmwmclmcrrt
+
+    # 设置运行时库路径 - 顺序很重要！
+    # 将 MATLAB 的 sys/os 路径放在最前面，优先使用 MATLAB 的 libstdc++
+    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/sys/os/glnxa64
+    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/runtime/glnxa64
+    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/bin/glnxa64
+}
+win32{
+
+#    MAT_DIR = "D:/Program Files/MATLAB/R2023a"
+    MAT_DIR = "C:/Program Files/MATLAB/R2023a"
+    INCLUDEPATH += $$MAT_DIR/extern/include
+    LIBS += -L$$MAT_DIR/extern/lib/win64/microsoft -llibmx -llibeng
+
+    LIBS += -L$$MAT_DIR/bin/win64
+}
+
+# You can make your code fail to compile if it uses deprecated APIs.
+# In order to do so, uncomment the following line.
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+
+SOURCES += \
+        MATLAB_Script.cpp \
+        MATLAB_Script_Block.cpp
+
+# Default rules for deployment.
+qnx: target.path = /tmp/$${TARGET}/bin
+else: unix:!android: target.path = /opt/$${TARGET}/bin
+!isEmpty(target.path): INSTALLS += target
+
+HEADERS += \
+    MATLAB_Script.h \
+    MATLAB_Script_Block.h
+
+#include(D:/work/temPrj/GWDataFlowSimulator/ModelDesign/ModelDesign.pri)
+#include($$PWD/../ModelDesign/ModelDesign.pri)
+#include(D:\work_grxw\code\GWDataFlowSimulator\ModelDesign\ModelDesign.pri)

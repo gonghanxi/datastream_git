@@ -1,0 +1,50 @@
+{
+    "prjName": "adapt20251201",
+    "describe": "用于与引擎对接",
+	"links": [
+		{
+            "id": "c5c117909f3b4d0ebded0e92650a24e3",
+            "processName": "TC_withoutSubSystem",
+            "type": 1			
+		}
+    ],
+	"Indicators":[
+		{
+			"id":"a1w212",
+			"symbol":"DetectRange",
+			"name":"雷达探测距离",
+			"unit":"km",			
+			"unitType":"LENGTH",
+			"describe":"雷达探测距离指标，要求雷达系统具备的最小探测能力。",
+			"targetValue":"500",
+			"maxValue":"",			
+			"minValue":"300",		
+			"simuValue":"453.3",	
+			"actualValue":"477.3"	
+		}
+	],
+	"designModel":{
+		"id":"xxx222",				
+		"symbol":"IBD_RadarSystem", 
+		"name":"雷达系统IBD图",		
+		"version":"1.0",			
+		"describe":"用以表征雷达物理架构模型",
+		"fileName":"xxxRadar.xmi"	
+	}, 
+    "vars": [  						
+        {
+            "name": "A", 			
+			"dataType": "Double",  
+            "value": "5.22", 		
+            "unit": "MHz",			
+		    "unitType": "FREQUENCY" 
+        },
+		{
+            "name": "B", 			
+			"dataType": "Double Array", 
+            "value": "[1.2, 2.2, 3.2]",
+            "unit": "ns",
+		    "unitType": "TIME"
+        }
+	]
+}
