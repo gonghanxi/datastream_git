@@ -178,19 +178,15 @@ bool AtoD_Block::Run()
     std::string A_outPortName = GetOutputPortName(0);
     std::string D_IPortName = GetOutputPortName(1);
     std::string D_QPortName = GetOutputPortName(2);
-    qDebug() << "Atod_Block::Run - inputData: 1111";
 
      auto inputData = ReadInputData<SystemVueModelBuilder::EnvelopeSignal>(A_INPortName);
      if(inputData.empty()) {
-         qDebug() << "inputData is empty ";
          if(IsVariableStepMode()) {
              return true;
          }
          return false;
      }
-     qDebug() << "Atod_Block::Run - inputData: 2222" << inputData.size();
      m_atod->A_Input = inputData;
-     qDebug() << "Atod_Block::Run - inputData: 3333" << inputData.size();
 
      if (!m_atod->Run()) {
          return false;
@@ -222,11 +218,6 @@ bool AtoD_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
 
     m_atod = std::make_unique<AtoD>();
-
-    AddInputPort("A_in", m_atod->A_in, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("A_out", m_atod->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddInputPort("D_I" , m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
-    AddOutputPort("D_Q",  m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
 
     SetDefaultParamters();
     simulator_param = getSimu();
@@ -279,6 +270,17 @@ bool AtoD_Block::Initialize()
 
     m_atod->A_in.SetStartTime(simulator_param.startTime);
     m_atod->A_out.SetStartTime(simulator_param.startTime);
+
+    int system_rate = 1;
+    if (m_ConversionType == AtoD::Downsampled)
+    {
+        system_rate = m_DownsampleFactor;
+    }
+
+    AddInputPort("A_in", m_atod->A_in, system_rate, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("A_out", m_atod->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("D_I" , m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
+    AddOutputPort("D_Q",  m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
 
     return true;
 }
