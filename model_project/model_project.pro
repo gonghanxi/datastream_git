@@ -200,6 +200,9 @@ PulseGen\
     Quantizer \
     Quantizer2D \
     RADAR_ADBF \
+    RADAR_AntennaPolarizationRx \
+    RADAR_AntennaPolarizationTx \
+    RADAR_Antenna_Rx \
 RADAR_BarkerCode\
 RADAR_CFAR\
 RADAR_CoIntgr\

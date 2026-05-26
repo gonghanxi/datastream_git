@@ -34,12 +34,12 @@ linux {
 }
 
 HEADERS += \
-        RADAR_ADBF.h \
-        RADAR_ADBF_Block.h
+        RADAR_AntennaPolarizationRx.h \
+        RADAR_AntennaPolarizationRx_Block.h
 
 SOURCES += \
-        RADAR_ADBF.cpp \
-        RADAR_ADBF_Block.cpp
+        RADAR_AntennaPolarizationRx.cpp \
+        RADAR_AntennaPolarizationRx_Block.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
