@@ -58,6 +58,8 @@ AsyncCommutatorInt \
     AsyncDistributorCx\
     AsyncDistributorEnv\
     AsyncDistributorInt \
+    AtoD \
+    AtoD_M \
     AutoCorr \
     Average\
     AverageCx \
@@ -197,6 +199,7 @@ PolynomialInt \
 PulseGen\
     Quantizer \
     Quantizer2D \
+    RADAR_ADBF \
 RADAR_BarkerCode\
 RADAR_CFAR\
 RADAR_CoIntgr\
@@ -218,6 +221,7 @@ RADAR_PULSE \
 RADAR_PulseCompression \
 RADAR_RangeMeas\
 RADAR_RCS\
+    RADAR_SAR_Echo \
 RADAR_Switch\
     RADAR_TargetDetect \
     RADAR_TargetTrack \
