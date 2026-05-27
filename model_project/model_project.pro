@@ -209,6 +209,8 @@ RADAR_CoIntgr\
 RADAR_CW \
 RADAR_Detector\
 RADAR_DOA\
+    RADAR_EWDeceptionJamming \
+    RADAR_EWJamming \
     RADAR_EchoGenerator \
 RADAR_Equation\
 RADAR_FSK\
@@ -272,6 +274,7 @@ Sub \
 SubCx\
 SubEnv \
 SubInt\
+    SwitchSPDT \
 TimeDelay\
 TimeDelayCx\
 TimeDelayEnv\

@@ -152,9 +152,11 @@ bool Amplifier_Block::Run()
     // ===== 3. 获取增益源 =====
     double gainSrc = m_gain;
     const bool hasControl = GetInputPort(GetInputPortName(1))->IsConnected();
-    std::vector<double> controlData;
     if (hasControl) {
-        controlData = ReadInputData<double>(controlPort);;
+        auto controlData = ReadInputData<double>(controlPort);
+        if (!controlData.empty()) {
+            gainSrc = controlData[0];
+        }
     }
 
     // ===== 4. 计算小信号增益 =====
@@ -220,6 +222,10 @@ bool Amplifier_Block::Run()
     std::vector<SystemVueModelBuilder::EnvelopeSignal> outputData(inputData.size());
     outputData[0U] = yout;
     WriteOutputData(outputPort, outputData);
+
+    // 推进算法内部计数器（原算法 TimedDFModel 框架自动调用）
+    m_amplifier->Advance();
+
     return true;
 }
 
@@ -328,31 +334,31 @@ Amplifier::GCTypeEnum Amplifier_Block::ConvertStringToGCType(const std::string& 
     if (lower == "none" || lower == "0") {
         return Amplifier::none;
     }
-    if (lower == "toi" || lower == "1") {
+    if (lower == "TOI" || lower == "1") {
         return Amplifier::TOI;
     }
-    if (lower == "dBc1" || lower == "2") {
-        return Amplifier::TOI;
+    if (lower == "dBc1" || lower == "dbc1" || lower == "2") {
+        return Amplifier::dBc1;
     }
-    if (lower == "toi+dbc1" || lower == "3") {
+    if (lower == "TOI_dBc1" || lower == "3") {
         return Amplifier::TOI_dBc1;
     }
-    if (lower == "psat+gcsat+toi" || lower == "4") {
+    if (lower == "PSat_GCSat_TOI" || lower == "4") {
         return Amplifier::PSat_GCSat_TOI;
     }
-    if (lower == "psat+gcsat+dbc1" || lower == "5") {
+    if (lower == "PSat_GCSat_dBc1" || lower == "5") {
         return Amplifier::PSat_GCSat_dBc1;
     }
-    if (lower == "psat+gcsat+toi+dbc1" || lower == "6") {
+    if (lower == "PSat_GCSat_TOI_dBc1" || lower == "6") {
         return Amplifier::PSat_GCSat_TOI_dBc1;
     }
-    if (lower == "rappnonlinearity" || lower == "7") {
+    if (lower == "RappNonlinearity" || lower == "7") {
         return Amplifier::RappNonlinearity;
     }
-    if (lower == "gain_compression_vs_input_power" || lower == "8") {
+    if (lower == "Gain_compression_vs_input_power" || lower == "8") {
         return Amplifier::Gain_compression_vs_input_power;
     }
-    if (lower == "am_am_and_ampm_vs_input_power" || lower == "9") {
+    if (lower == "AM_AM_and_AMPM_vs_input_power" || lower == "9") {
         return Amplifier::AM_AM_and_AMPM_vs_input_power;
     }
     return Amplifier::none;
