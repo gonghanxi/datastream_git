@@ -300,10 +300,10 @@ RADAR_Antenna_Rx_Block::ConvertStringToAntennaScanPattern(const std::string& val
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
     if (lower == "circular" || lower == "0")                 return SelectedAntennaScanPattern::CircularScan;
-    if (lower == "bidirectional sector" || lower == "1")     return SelectedAntennaScanPattern::BidirectionalSector;
-    if (lower == "unidirectional sector" || lower == "2")    return SelectedAntennaScanPattern::UnidirectionalSector;
-    if (lower == "bidirectional raster" || lower == "3")     return SelectedAntennaScanPattern::BidirectionalRaster;
-    if (lower == "unidirectional raster" || lower == "4")    return SelectedAntennaScanPattern::UnidirectionalRaster;
+    if (lower == "bidirectionalsector" || lower == "1")     return SelectedAntennaScanPattern::BidirectionalSector;
+    if (lower == "unidirectionalsector" || lower == "2")    return SelectedAntennaScanPattern::UnidirectionalSector;
+    if (lower == "bidirectionalraster" || lower == "3")     return SelectedAntennaScanPattern::BidirectionalRaster;
+    if (lower == "unidirectionalraster" || lower == "4")    return SelectedAntennaScanPattern::UnidirectionalRaster;
     return SelectedAntennaScanPattern::CircularScan;
 }
 

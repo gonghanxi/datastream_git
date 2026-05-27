@@ -153,6 +153,7 @@ Identity_M\
 IdentityCx_M \
 Impulse\
 IntToBits \
+    IntToReal \
     Integrator \
     IntegratorCx \
     IntegratorInt \
@@ -238,6 +239,7 @@ RADAR_VelocityMeas\
 Ramp\
 RampGen\
 RampSweepGen\
+    RealToInt \
     Reciprocal \
 RectToCx \
     RectToPolar \

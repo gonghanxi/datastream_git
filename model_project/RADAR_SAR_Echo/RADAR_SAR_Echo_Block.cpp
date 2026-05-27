@@ -139,14 +139,18 @@ bool RADAR_SAR_Echo_Block::Initialize()
 
 RADAR_SAR_Echo::SelectedSAR_Mode RADAR_SAR_Echo_Block::ConvertStringToSAR_Mode(const std::string &value)
 {
-//    const std::string lower = ToLowerCopy(TrimCopy(value));
-//    if (lower == "stripmap") {
-//        return RADAR_SAR_Echo::Stripmap;
-//    }
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "stripmap") {
+        return RADAR_SAR_Echo::Stripmap;
+    }
     return RADAR_SAR_Echo::Stripmap;
 }
 
 RADAR_SAR_Echo::SelectedEchoGenerate_Mode RADAR_SAR_Echo_Block::ConvertStringToEchoGenerate_Mode(const std::string &value)
 {
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "point_target") {
+        return RADAR_SAR_Echo::Point_Target;
+    }
     return RADAR_SAR_Echo::Point_Target;
 }

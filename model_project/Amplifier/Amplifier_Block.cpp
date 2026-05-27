@@ -301,10 +301,10 @@ Amplifier::QuantizationEnum Amplifier_Block::ConvertStringToQuantization(const s
     if (lower == "no" || lower == "0") {
         return Amplifier::NO;
     }
-    if (lower == "number_of_bits_uniform" || lower == "number of bits (uniform)" || lower == "1") {
+    if (lower == "number_of_bits_uniform" || lower == "1") {
         return Amplifier::Number_of_Bits_Uniform;
     }
-    if (lower == "custom_levels" || lower == "custom levels" || lower == "2") {
+    if (lower == "custom_levels" || lower == "2") {
         return Amplifier::Custom_Levels;
     }
     return Amplifier::NO;
@@ -322,7 +322,7 @@ Amplifier::GainErrorEnum Amplifier_Block::ConvertStringToGainError(const std::st
     if (lower == "uniform" || lower == "2") {
         return Amplifier::Uniform;
     }
-    if (lower == "custom_error" || lower == "custom error" || lower == "3") {
+    if (lower == "custom_error" || lower == "3") {
         return Amplifier::Custom_Error;
     }
     return Amplifier::None;
@@ -334,31 +334,31 @@ Amplifier::GCTypeEnum Amplifier_Block::ConvertStringToGCType(const std::string& 
     if (lower == "none" || lower == "0") {
         return Amplifier::none;
     }
-    if (lower == "TOI" || lower == "1") {
+    if (lower == "toi" || lower == "1") {
         return Amplifier::TOI;
     }
-    if (lower == "dBc1" || lower == "dbc1" || lower == "2") {
+    if (lower == "dbc1" || lower == "2") {
         return Amplifier::dBc1;
     }
-    if (lower == "TOI_dBc1" || lower == "3") {
+    if (lower == "toi_dbc1" || lower == "3") {
         return Amplifier::TOI_dBc1;
     }
-    if (lower == "PSat_GCSat_TOI" || lower == "4") {
+    if (lower == "psat_gcsat_toi" || lower == "4") {
         return Amplifier::PSat_GCSat_TOI;
     }
-    if (lower == "PSat_GCSat_dBc1" || lower == "5") {
+    if (lower == "psat_gcsat_dbc1" || lower == "5") {
         return Amplifier::PSat_GCSat_dBc1;
     }
-    if (lower == "PSat_GCSat_TOI_dBc1" || lower == "6") {
+    if (lower == "psat_gcsat_toi_dbc1" || lower == "6") {
         return Amplifier::PSat_GCSat_TOI_dBc1;
     }
-    if (lower == "RappNonlinearity" || lower == "7") {
+    if (lower == "rappnonlinearity" || lower == "7") {
         return Amplifier::RappNonlinearity;
     }
-    if (lower == "Gain_compression_vs_input_power" || lower == "8") {
+    if (lower == "gain_compression_vs_input_power" || lower == "8") {
         return Amplifier::Gain_compression_vs_input_power;
     }
-    if (lower == "AM_AM_and_AMPM_vs_input_power" || lower == "9") {
+    if (lower == "am_am_and_ampm_vs_input_power" || lower == "9") {
         return Amplifier::AM_AM_and_AMPM_vs_input_power;
     }
     return Amplifier::none;

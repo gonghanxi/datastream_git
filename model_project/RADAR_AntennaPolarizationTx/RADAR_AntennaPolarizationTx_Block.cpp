@@ -835,39 +835,39 @@ bool RADAR_AntennaPolarizationTx_Block::parseArrayString(const std::string& arra
 RADAR_AntennaPolarizationTx_Block::SelectedRadarWorkMode
 RADAR_AntennaPolarizationTx_Block::ConvertStringToRadarWorkMode(const std::string& value)
 {
-    const std::string s = ToLowerCopy(TrimCopy(value));
-    if (s == "tracking" || s == "0") { return SelectedRadarWorkMode::Tracking; }
-    if (s == "search"   || s == "1") { return SelectedRadarWorkMode::Search;   }
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "tracking" || lower == "0") { return SelectedRadarWorkMode::Tracking; }
+    if (lower == "search"   || lower == "1") { return SelectedRadarWorkMode::Search;   }
     return SelectedRadarWorkMode::Tracking;
 }
 
 RADAR_AntennaPolarizationTx_Block::SelectedElementPatternFileType
 RADAR_AntennaPolarizationTx_Block::ConvertStringToElementPatternFileType(const std::string& value)
 {
-    const std::string s = ToLowerCopy(TrimCopy(value));
-    if (s == "empro" || s == "0") { return SelectedElementPatternFileType::EMPro; }
-    if (s == "hfss"  || s == "1") { return SelectedElementPatternFileType::HFSS;  }
-    if (s == "cst"   || s == "2") { return SelectedElementPatternFileType::CST;   }
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "empro" || lower == "0") { return SelectedElementPatternFileType::EMPro; }
+    if (lower == "hfss"  || lower == "1") { return SelectedElementPatternFileType::HFSS;  }
+    if (lower == "cst"   || lower == "2") { return SelectedElementPatternFileType::CST;   }
     return SelectedElementPatternFileType::EMPro;
 }
 
 RADAR_AntennaPolarizationTx_Block::SelectedUserDefinedAntennaPattern
 RADAR_AntennaPolarizationTx_Block::ConvertStringToUserDefinedAntennaPattern(const std::string& value)
 {
-    const std::string s = ToLowerCopy(TrimCopy(value));
-    if (s == "userdefine2d" || s == "0") { return SelectedUserDefinedAntennaPattern::UserDefine2D; }
-    if (s == "userdefine3d" || s == "1") { return SelectedUserDefinedAntennaPattern::UserDefine3D; }
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "userdefine2d" || lower == "0") { return SelectedUserDefinedAntennaPattern::UserDefine2D; }
+    if (lower == "userdefine3d" || lower == "1") { return SelectedUserDefinedAntennaPattern::UserDefine3D; }
     return SelectedUserDefinedAntennaPattern::UserDefine3D;
 }
 
 RADAR_AntennaPolarizationTx_Block::SelectedAntennaScanPattern
 RADAR_AntennaPolarizationTx_Block::ConvertStringToAntennaScanPattern(const std::string& value)
 {
-    const std::string s = ToLowerCopy(TrimCopy(value));
-    if (s == "circular"              || s == "0") { return SelectedAntennaScanPattern::CircularScan;         }
-    if (s == "bidirectional sector"  || s == "1") { return SelectedAntennaScanPattern::BidirectionalSector;  }
-    if (s == "unidirectional sector" || s == "2") { return SelectedAntennaScanPattern::UnidirectionalSector; }
-    if (s == "bidirectional raster"  || s == "3") { return SelectedAntennaScanPattern::BidirectionalRaster;  }
-    if (s == "unidirectional raster" || s == "4") { return SelectedAntennaScanPattern::UnidirectionalRaster; }
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "circular"              || lower == "0") { return SelectedAntennaScanPattern::CircularScan;         }
+    if (lower == "bidirectionalsector"  || lower == "1") { return SelectedAntennaScanPattern::BidirectionalSector;  }
+    if (lower == "unidirectionalsector" || lower == "2") { return SelectedAntennaScanPattern::UnidirectionalSector; }
+    if (lower == "bidirectionalraster"  || lower == "3") { return SelectedAntennaScanPattern::BidirectionalRaster;  }
+    if (lower == "unidirectionalraster" || lower == "4") { return SelectedAntennaScanPattern::UnidirectionalRaster; }
     return SelectedAntennaScanPattern::CircularScan;
 }
