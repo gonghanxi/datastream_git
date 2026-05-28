@@ -121,6 +121,7 @@ void AtoD_M_Block::SetParameters()
 {
     m_PhaseNoiseData = primdata.data();
     m_PhaseNoiseDataSize =  static_cast<double>(primdata.size());
+    
     if(!m_atod_m) {
         return;
     }
@@ -130,6 +131,7 @@ void AtoD_M_Block::SetParameters()
     m_atod_m->DistortionModel = m_DistortionModel;
     m_atod_m->EnableJitter = m_EnableJitter;
     m_atod_m->RJrms = m_RJrms;
+
     m_atod_m->PhaseNoiseData = m_PhaseNoiseData;
     m_atod_m->PhaseNoiseDataSize = m_PhaseNoiseDataSize;
 
@@ -272,8 +274,8 @@ bool AtoD_M_Block::Initialize()
         system_rate = m_DownsampleFactor;
     }
 
-    AddInputPort("A_in", m_atod_m->A_in, system_rate, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("A_out", m_atod_m->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
+    AddInputPort("A_in", m_atod_m->A_in, system_rate, Block::DataType::MATRIX_ENVELOPE);
+    AddOutputPort("A_out", m_atod_m->A_out, 1, Block::DataType::MATRIX_ENVELOPE);
     AddOutputPort("D_I" , m_atod_m->D_I, 1, Block::DataType::MATRIX_INT);
     AddOutputPort("D_Q",  m_atod_m->D_Q, 1, Block::DataType::MATRIX_INT);
 

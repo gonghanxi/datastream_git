@@ -63,7 +63,36 @@ void SwitchSPDT_Block::SetParameters()
 bool SwitchSPDT_Block::Setup()
 {
     Block::Setup();
-    return true;
+
+    bool bStatus = true;
+
+    if (m_VThreshold <= 0)
+    {
+        LOG_ERROR("VThreshold must be > 0");
+        bStatus = false;
+    }
+    if (m_TOn1 < 0)
+    {
+        LOG_ERROR("TOn1 must be >= 0");
+        bStatus = false;
+    }
+    if (m_TOff1 < 0)
+    {
+        LOG_ERROR("TOff1 must be >= 0");
+        bStatus = false;
+    }
+    if (m_TOn2 < 0)
+    {
+        LOG_ERROR("TOn2 must be >= 0");
+        bStatus = false;
+    }
+    if (m_TOff2 < 0)
+    {
+        LOG_ERROR("TOff2 must be >= 0");
+        bStatus = false;
+    }
+
+    return bStatus;
 }
 
 bool SwitchSPDT_Block::Run()

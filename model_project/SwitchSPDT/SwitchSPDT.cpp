@@ -107,27 +107,27 @@ bool SwitchSPDT::Setup()
 
 	if (VThreshold <= 0)
 	{
-		POST_ERROR("VThreshold must be > 0");
+        LOG_ERROR("VThreshold must be > 0");
 		bStatus = false;
 	}
 	if (TOn1 < 0)
 	{
-		POST_ERROR("TOn1 must be >= 0");
+        LOG_ERROR("TOn1 must be >= 0");
 		bStatus = false;
 	}
 	if (TOff1 < 0)
 	{
-		POST_ERROR("TOff1 must be >= 0");
+        LOG_ERROR("TOff1 must be >= 0");
 		bStatus = false;
 	}
 	if (TOn2 < 0)
 	{
-		POST_ERROR("TOn2 must be >= 0");
+        LOG_ERROR("TOn2 must be >= 0");
 		bStatus = false;
 	}
 	if (TOff2 < 0)
 	{
-		POST_ERROR("TOff2 must be >= 0");
+        LOG_ERROR("TOff2 must be >= 0");
 		bStatus = false;
 	}
 

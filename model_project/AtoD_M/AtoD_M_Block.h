@@ -41,7 +41,7 @@ private:
 
     AtoD_M::EnableJitterEnum m_EnableJitter;
     double m_RJrms;
-
+    
     double* m_PhaseNoiseData;
     int     m_PhaseNoiseDataSize;
     AtoD_M::PN_TypeEnum m_PN_Type;

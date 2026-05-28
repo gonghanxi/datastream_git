@@ -114,6 +114,7 @@ Delay\
 DelayCx\
 DelayEnv\
 DelayInt\
+    Demapper \
 Demodulator\
     DeMux \
     Dirichlet \
@@ -204,6 +205,8 @@ PulseGen\
     RADAR_AntennaPolarizationRx \
     RADAR_AntennaPolarizationTx \
     RADAR_Antenna_Rx \
+    RADAR_Antenna_Tx \
+    RADAR_Antenna_Tx2 \
 RADAR_BarkerCode\
 RADAR_CFAR\
 RADAR_CoIntgr\
@@ -277,6 +280,7 @@ SubCx\
 SubEnv \
 SubInt\
     SwitchSPDT \
+    SwitchSPST \
 TimeDelay\
 TimeDelayCx\
 TimeDelayEnv\
