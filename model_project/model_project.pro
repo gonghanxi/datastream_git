@@ -42,6 +42,7 @@ unix {
 #通过ModelDesignHelper.pro include ModelDesign.pri 专为代码分析创建的辅助项目文件，不参与实际构建
 SUBDIRS += \
 #$$PWD/../ModelDesign/ModelDesignHelper.pro \
+    Abs_M \
 Add \
 AddCx \
 AddEnv \
@@ -63,6 +64,7 @@ AsyncCommutatorInt \
     AutoCorr \
     Average\
     AverageCx \
+    AvgSqrErr_M \
     BCH_Decoder \
     BCH_Encoder \
     BER \
@@ -94,6 +96,7 @@ CommutatorEnv \
 CommutatorInt \
 ComplexExpGen \
     Compress\
+    Conjugate_M \
 Const \
 ConstCx \
     ConvolutionalCoder \
@@ -104,7 +107,9 @@ ConstInt\
     CrossCorr\
     CxToEnv_M \
 CxToPolar\
+    CxToPolar_M \
 CxToRect \
+    CxToRect_M \
     CyclicShift \
     CyclicShiftCx \
     CyclicShiftInt \
@@ -117,6 +122,7 @@ DelayInt\
     Demapper \
 Demodulator\
     DeMux \
+    Diagonal_M \
     Dirichlet \
     Distributor\
     DistributorCx \
@@ -245,6 +251,7 @@ RampSweepGen\
     RealToInt \
     Reciprocal \
 RectToCx \
+    RectToCx_M \
     RectToPolar \
     RepeatCx \
     RepeatEnv \

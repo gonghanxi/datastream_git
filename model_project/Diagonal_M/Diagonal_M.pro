@@ -2,7 +2,6 @@ QT = core
 CONFIG += c++17 cmdline
 CONFIG += dll
 TEMPLATE = lib
-TARGET = RADAR_CW
 
 # 定义DLL导出宏
 DEFINES += SYSTEMVUEMODELBUILDER_EXPORTS
@@ -15,6 +14,7 @@ win32 {
 
 linux {
     LIBS += -L$$PWD/../../ModelDesign/lib -lDataStream
+    DEFINES += QT_NO_DEBUG_OUTPUT
     LIBS += -lm
     CONFIG += unversioned_libname
     CONFIG -= plugin
@@ -32,10 +32,20 @@ linux {
     QMAKE_LFLAGS_SONAME =
     VERSION =
 }
+# The following define makes your compiler emit warnings if you use
+# any Qt feature that has been marked deprecated (the exact warnings
+# depend on your compiler). Please consult the documentation of the
+# deprecated API in order to know how to port your code away from it.
+DEFINES += QT_DEPRECATED_WARNINGS
+
+# You can also make your code fail to compile if it uses deprecated APIs.
+# In order to do so, uncomment the following line.
+# You can also select to disable deprecated APIs only up to a certain version of Qt.
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        RADAR_CW.cpp \
-        RADAR_CW_Block.cpp
+    Diagonal_M.cpp \
+    Diagonal_M_Block.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -43,5 +53,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    RADAR_CW.h \
-    RADAR_CW_Block.h
+    Diagonal_M.h \
+    Diagonal_M_Block.h

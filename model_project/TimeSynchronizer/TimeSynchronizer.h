@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-class TimeSynchronizer : public SystemVueModelBuilder::DFModel {
+class SYSTEMVUEMODELBUILDER_API TimeSynchronizer : public SystemVueModelBuilder::DFModel {
 public:
 	enum ModeEnum { ZeroPadding = 0, TimeDelay = 1 };
 
