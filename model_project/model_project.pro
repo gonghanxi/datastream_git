@@ -122,6 +122,7 @@ DelayInt\
     Demapper \
 Demodulator\
     DeMux \
+    DiagonalCx_M \
     Diagonal_M \
     Dirichlet \
     Distributor\
@@ -171,6 +172,7 @@ IntToBits \
     InverseCx_M \
 Inverse_M \
     Limit \
+    Limit_M \
 LinearQuantizer\
 LPF_Butterworth\
 LPF_ChebyshevI\
@@ -191,15 +193,19 @@ MpyCx\
 MpyEnv \
 MpyInt\
 Modulator \
+    MxCom_M \
+    MxDecom_M \
     OSF \
 Oscillator \
     PAM_Demapper \
+    PackBus_M \
     PackCx_M \
     Pack_M \
     PeakDetector \
     PhaseComparator \
 PhaseShifter \
 PolarToCx\
+    PolarToCx_M \
     PolarToRect \
 Polynomial \
 PolynomialCx \
@@ -207,6 +213,7 @@ PolynomialInt \
 PulseGen\
     Quantizer \
     Quantizer2D \
+    Quantizer_M \
     RADAR_ADBF \
     RADAR_AntennaPolarizationRx \
     RADAR_AntennaPolarizationTx \

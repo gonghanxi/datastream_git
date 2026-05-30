@@ -298,15 +298,12 @@ bool SinkCx_M_Block::Done()
             default:
                 break;
             }
-            qDebug() << "Sink_M_Block::Done - numRows: " << numRows;
-            qDebug() << "Sink_M_Block::Done - numCols: " << numCols;
+
             for (int m = 1; m <= numRows; m++)
             {
                 for (int n = 1; n <= numCols; n++)
                 {
 
-                    qDebug() << "Sink_M_Block::Done - m: " << m;
-                    qDebug() << "Sink_M_Block::Done - n: " << n;
                     // 按"Sink_Data_[行][列]":[数据]的格式写json字段
                     if (m == numRows && n == numCols)
                     {
