@@ -47,31 +47,37 @@ bool PhaseComparator_Block::DataStreamRun()
 {
     BufferReader* s1 = GetInputPort("s1");
     BufferReader* s2 = GetInputPort("s2");
+    Buffer* output = GetOutputPort("output");
     auto s1Data = ReadInputData<EnvelopeSignal>(GetInputPortName(0));
     auto s2Data = ReadInputData<EnvelopeSignal>(GetInputPortName(1));
-    if (s1Data.empty() || s2Data.empty()) return false;
     std::vector<EnvelopeSignal> outputData(1);
     const double t = simulator_param.startTime + static_cast<double>(m_phase->GetCount()) / simulator_param.samplingRate;
 
-    double fc1 = s1->getCharacterizationFrequency();
-    double fc2 = s2->getCharacterizationFrequency();
+    const double fc1 = s1->getCharacterizationFrequency();
+    const double fc2 = s2->getCharacterizationFrequency();
 
-    // 参考原算法：检查频率有效性
-    if (!std::isfinite(fc1) || fc1 < 0.0) fc1 = 0.0;
-    if (!std::isfinite(fc2) || fc2 < 0.0) fc2 = 0.0;
+    if (fc1 <= 0.0 || fc2 <= 0.0)
+    {
+        LOG_ERROR("PhaseComparator: inputs must be envelope signals with characterization frequency > 0.");
+    }
 
-    // 参考原算法：目标频率为 fc1（保持原始频率）
-    const std::complex<double> x1 = s1Data[0].ConvertToNewFc(fc1, fc1, t);
-    const std::complex<double> x2 = s2Data[0].ConvertToNewFc(fc2, fc1, t);
+    m_phase->fcOut_ = fc1;
+    output->setCharacterizationFrequency(m_phase->fcOut_);
 
-    // 参考原算法：分别计算两个信号的相位
-    const double theta1 = std::atan2(x1.imag(), x1.real());
-    const double theta2 = std::atan2(x2.imag(), x2.real());
-    const double dTheta = m_phase->WrapToPi(theta1 - theta2);
+    const double fcOut = m_phase->fcOut_;
+
+    const std::complex<double> x1 =
+        s1Data[0].ConvertToNewFc(fc1, fcOut, t);
+    const std::complex<double> x2 =
+        s2Data[0].ConvertToNewFc(fc2, fcOut, t);
+
+    const std::complex<double> z = x1 * std::conj(x2);
+    const double dTheta = std::atan2(z.imag(), z.real());
 
     const double scaleRad2VoltDeg = GainConstant * (180.0 / PC_PI);
 
     double outVal = 0.0;
+
     switch (PhaseCharacteristicType)
     {
     case PhaseComparator::PhaseFreq:
@@ -89,11 +95,13 @@ bool PhaseComparator_Block::DataStreamRun()
         }
         break;
     }
+
     case PhaseComparator::Sinusoidal:
     {
         outVal = scaleRad2VoltDeg * std::sin(dTheta);
         break;
     }
+
     case PhaseComparator::Triangular:
     default:
     {
@@ -113,6 +121,7 @@ bool PhaseComparator_Block::TimeDrivenRun()
 {
     BufferReader* s1 = GetInputPort("s1");
     BufferReader* s2 = GetInputPort("s2");
+    Buffer* output = GetOutputPort("output");
     auto s1Data = ReadInputData<EnvelopeSignal>(GetInputPortName(0));
     auto s2Data = ReadInputData<EnvelopeSignal>(GetInputPortName(1));
 
@@ -123,26 +132,32 @@ bool PhaseComparator_Block::TimeDrivenRun()
     std::vector<EnvelopeSignal> outputData(1);
     const double t = simulator_param.startTime + static_cast<double>(m_phase->GetCount()) / simulator_param.samplingRate;
 
-    double fc1 = s1->getCharacterizationFrequency();
-    double fc2 = s2->getCharacterizationFrequency();
+    const double fc1 = s1->getCharacterizationFrequency();
+    const double fc2 = s2->getCharacterizationFrequency();
 
-    // 参考原算法：检查频率有效性
-    if (!std::isfinite(fc1) || fc1 < 0.0) fc1 = 0.0;
-    if (!std::isfinite(fc2) || fc2 < 0.0) fc2 = 0.0;
+    if (fc1 <= 0.0 || fc2 <= 0.0)
+    {
+        LOG_ERROR("PhaseComparator: inputs must be envelope signals with characterization frequency > 0.");
+    }
+
+    m_phase->fcOut_ = fc1;
+    output->setCharacterizationFrequency(m_phase->fcOut_);
+
+    const double fcOut = m_phase->fcOut_;
 
     if(m_s1Buffer.size() >= 1 && m_s2Buffer.size() >= 1) {
-        // 参考原算法：目标频率为 fc1（保持原始频率）
-        const std::complex<double> x1 = m_s1Buffer[0].ConvertToNewFc(fc1, fc1, t);
-        const std::complex<double> x2 = m_s2Buffer[0].ConvertToNewFc(fc2, fc1, t);
+        const std::complex<double> x1 =
+            m_s1Buffer[0].ConvertToNewFc(fc1, fcOut, t);
+        const std::complex<double> x2 =
+            m_s2Buffer[0].ConvertToNewFc(fc2, fcOut, t);
 
-        // 参考原算法：分别计算两个信号的相位
-        const double theta1 = std::atan2(x1.imag(), x1.real());
-        const double theta2 = std::atan2(x2.imag(), x2.real());
-        const double dTheta = m_phase->WrapToPi(theta1 - theta2);
+        const std::complex<double> z = x1 * std::conj(x2);
+        const double dTheta = std::atan2(z.imag(), z.real());
 
         const double scaleRad2VoltDeg = GainConstant * (180.0 / PC_PI);
 
         double outVal = 0.0;
+
         switch (PhaseCharacteristicType)
         {
         case PhaseComparator::PhaseFreq:
@@ -160,11 +175,13 @@ bool PhaseComparator_Block::TimeDrivenRun()
             }
             break;
         }
+
         case PhaseComparator::Sinusoidal:
         {
             outVal = scaleRad2VoltDeg * std::sin(dTheta);
             break;
         }
+
         case PhaseComparator::Triangular:
         default:
         {

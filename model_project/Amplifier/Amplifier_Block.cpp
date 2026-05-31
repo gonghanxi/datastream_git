@@ -152,11 +152,9 @@ bool Amplifier_Block::Run()
     // ===== 3. 获取增益源 =====
     double gainSrc = m_gain;
     const bool hasControl = GetInputPort(GetInputPortName(1))->IsConnected();
+    std::vector<double> controlData;
     if (hasControl) {
-        auto controlData = ReadInputData<double>(controlPort);
-        if (!controlData.empty()) {
-            gainSrc = controlData[0];
-        }
+        controlData = ReadInputData<double>(controlPort);;
     }
 
     // ===== 4. 计算小信号增益 =====
@@ -222,10 +220,6 @@ bool Amplifier_Block::Run()
     std::vector<SystemVueModelBuilder::EnvelopeSignal> outputData(inputData.size());
     outputData[0U] = yout;
     WriteOutputData(outputPort, outputData);
-
-    // 推进算法内部计数器（原算法 TimedDFModel 框架自动调用）
-    m_amplifier->Advance();
-
     return true;
 }
 
@@ -301,10 +295,10 @@ Amplifier::QuantizationEnum Amplifier_Block::ConvertStringToQuantization(const s
     if (lower == "no" || lower == "0") {
         return Amplifier::NO;
     }
-    if (lower == "number_of_bits_uniform" || lower == "1") {
+    if (lower == "number_of_bits_uniform" || lower == "number of bits (uniform)" || lower == "1") {
         return Amplifier::Number_of_Bits_Uniform;
     }
-    if (lower == "custom_levels" || lower == "2") {
+    if (lower == "custom_levels" || lower == "custom levels" || lower == "2") {
         return Amplifier::Custom_Levels;
     }
     return Amplifier::NO;
@@ -322,7 +316,7 @@ Amplifier::GainErrorEnum Amplifier_Block::ConvertStringToGainError(const std::st
     if (lower == "uniform" || lower == "2") {
         return Amplifier::Uniform;
     }
-    if (lower == "custom_error" || lower == "3") {
+    if (lower == "custom_error" || lower == "custom error" || lower == "3") {
         return Amplifier::Custom_Error;
     }
     return Amplifier::None;
@@ -337,19 +331,19 @@ Amplifier::GCTypeEnum Amplifier_Block::ConvertStringToGCType(const std::string& 
     if (lower == "toi" || lower == "1") {
         return Amplifier::TOI;
     }
-    if (lower == "dbc1" || lower == "2") {
-        return Amplifier::dBc1;
+    if (lower == "dBc1" || lower == "2") {
+        return Amplifier::TOI;
     }
-    if (lower == "toi_dbc1" || lower == "3") {
+    if (lower == "toi+dbc1" || lower == "3") {
         return Amplifier::TOI_dBc1;
     }
-    if (lower == "psat_gcsat_toi" || lower == "4") {
+    if (lower == "psat+gcsat+toi" || lower == "4") {
         return Amplifier::PSat_GCSat_TOI;
     }
-    if (lower == "psat_gcsat_dbc1" || lower == "5") {
+    if (lower == "psat+gcsat+dbc1" || lower == "5") {
         return Amplifier::PSat_GCSat_dBc1;
     }
-    if (lower == "psat_gcsat_toi_dbc1" || lower == "6") {
+    if (lower == "psat+gcsat+toi+dbc1" || lower == "6") {
         return Amplifier::PSat_GCSat_TOI_dBc1;
     }
     if (lower == "rappnonlinearity" || lower == "7") {

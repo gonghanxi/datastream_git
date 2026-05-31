@@ -38,7 +38,7 @@ private:
     std::queue<double> m_VelocitytQueue;    // 输出分发队列
     std::queue<int> m_IndextQueue;
 
-    double m_lastVelocity;                 // 上次输出值（用于保持）
+    double m_lastVelocity;
     int m_lastIndex;
 
     int m_inputCount;                    // 当前已累积输入数

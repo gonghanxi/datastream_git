@@ -1293,4 +1293,3 @@ size_t Block::GetBusConnectionCount(const std::string &inputPortName) const
     }
     return it->second.size();
 }
-

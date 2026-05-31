@@ -44,53 +44,110 @@ bool UpSampleCx_Block::ValidatePhase() const
 bool UpSampleCx_Block::Setup()
 {
 	Block::Setup();
+    while(!m_outputQueue.empty()) m_outputQueue.pop();
 	return true;
 }
 
 bool UpSampleCx_Block::Run()
 {
-	if (!CanProcess()) {
-		return false;
-	}
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
+}
 
-	std::string inputPortName = GetInputPortName(0);
-	std::string outputPortName = GetOutputPortName(0);
+bool UpSampleCx_Block::DataStreamRun()
+{
+    std::string inputPortName = GetInputPortName(0);
+    std::string outputPortName = GetOutputPortName(0);
 
-	auto inputData = ReadInputData<std::complex<double>>(inputPortName);
-	if (inputData.empty()) {
-		return true;
-	}
+    auto inputData = ReadInputData<std::complex<double>>(inputPortName);
+    if (inputData.empty()) {
+        return false;
+    }
 
-	if (m_mode == UpSampleCx::Insertzeros) {
-		if (!ValidatePhase()) {
-			std::cout << "UpSampleCx: Phase must be >= 0 and < Factor." << std::endl;
-			return false;
-		}
-	}
+    size_t inLen = inputData.size();
+    size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
+    std::vector<std::complex<double>> outputData;
+    outputData.reserve(outLen);
 
-	const size_t inLen = inputData.size();
-	const size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
-	std::vector<std::complex<double>> outputData;
-	outputData.reserve(outLen);
+    if (m_mode == UpSampleCx::Insertzeros) {
+        for (size_t i = 0; i < inLen; ++i) {
+            // Fill Factor samples with zeros
+            for (int j = 0; j < m_factor; ++j) {
+                outputData.push_back(0.0);
+            }
+            // Place input sample at Phase (if valid)
+            if (m_phase >= 0 && m_phase < m_factor) {
+                const size_t base = i * static_cast<size_t>(m_factor);
+                outputData[base + static_cast<size_t>(m_phase)] = inputData[i];
+            }
+        }
+    } else {
+        for (size_t i = 0; i < inLen; ++i) {
+            for (int j = 0; j < m_factor; ++j) {
+                outputData.push_back(inputData[i]);
+            }
+        }
+    }
 
-	if (m_mode == UpSampleCx::Insertzeros) {
-		for (size_t i = 0; i < inLen; ++i) {
-			for (int j = 0; j < m_factor; ++j) {
-				outputData.push_back(std::complex<double>(0.0, 0.0));
-			}
-			const size_t base = i * static_cast<size_t>(m_factor);
-			outputData[base + static_cast<size_t>(m_phase)] = inputData[i];
-		}
-	} else {
-		for (size_t i = 0; i < inLen; ++i) {
-			for (int j = 0; j < m_factor; ++j) {
-				outputData.push_back(inputData[i]);
-			}
-		}
-	}
+    WriteOutputData(outputPortName, outputData);
 
-	WriteOutputData(outputPortName, outputData);
-	return true;
+    return true;
+}
+
+bool UpSampleCx_Block::TimeDrivenRun()
+{
+    std::string inputPortName = GetInputPortName(0);
+    std::string outputPortName = GetOutputPortName(0);
+
+    auto inputData = ReadInputData<std::complex<double>>(inputPortName);
+    if (inputData.empty()) {
+        return true;
+    }
+
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+
+    if(m_inputBuffer.size() >= 1) {
+        size_t inLen = m_inputBuffer.size();
+        size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
+        std::vector<std::complex<double>> outputData;
+        outputData.reserve(outLen);
+
+        if (m_mode == UpSampleCx::Insertzeros) {
+            for (size_t i = 0; i < inLen; ++i) {
+                // Fill Factor samples with zeros
+                for (int j = 0; j < m_factor; ++j) {
+                    outputData.push_back(0.0);
+                }
+                // Place input sample at Phase (if valid)
+                if (m_phase >= 0 && m_phase < m_factor) {
+                    const size_t base = i * static_cast<size_t>(m_factor);
+                    outputData[base + static_cast<size_t>(m_phase)] = m_inputBuffer[i];
+                }
+            }
+        } else {
+            for (size_t i = 0; i < inLen; ++i) {
+                for (int j = 0; j < m_factor; ++j) {
+                    outputData.push_back(m_inputBuffer[i]);
+                }
+            }
+        }
+
+        for(const auto& val : outputData) m_outputQueue.push(val);
+
+        if (!m_outputQueue.empty()) {
+            std::complex<double> outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[UpSampleCx_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue.real() << "," << outputValue.imag();
+            m_inputBuffer.clear();
+        }
+    }
+    return true;
 }
 
 bool UpSampleCx_Block::Initialize()

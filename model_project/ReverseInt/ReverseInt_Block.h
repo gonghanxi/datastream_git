@@ -3,7 +3,7 @@
 
 #include "Block.h"
 #include "ReverseInt.h"
-
+#include <queue>
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API ReverseInt_Block : public SystemVueModelBuilder::Block
@@ -22,6 +22,15 @@ private:
 
 	int m_n;
 	std::unique_ptr<ReverseInt> m_reverseInt;
+
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+    // ========== 时间驱动缓冲队列 ==========
+    std::vector<int> m_inputBuffer;
+    std::queue<int> m_outputQueue;
+    int m_lastOutput;
+    int m_inputCount;                    // 当前已累积输入数
+    int m_outputCount;                   // 当前已分发输出数
 };
 
 RegAlgo(ReverseInt_Block);

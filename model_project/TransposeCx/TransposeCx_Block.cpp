@@ -8,6 +8,7 @@ TransposeCx_Block::TransposeCx_Block(const std::string &name)
 bool TransposeCx_Block::Setup()
 {
     Block::Setup();
+    while(!m_outputQueue.empty()) m_outputQueue.pop();
     return true;
 }
 
@@ -27,17 +28,8 @@ bool TransposeCx_Block::Initialize()
 
 bool TransposeCx_Block::Run()
 {
-    auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
-    std::vector<std::complex<double>> outputData(SamplesInRow * NumberOfRows);
-    for (int cols = 0; cols < SamplesInRow; cols++)
-    {
-        for (int rows = 0; rows < NumberOfRows; rows++)
-        {
-            outputData[cols*NumberOfRows + rows] = inputData[rows*SamplesInRow + cols];
-        }
-    }
-    WriteOutputData(GetOutputPortName(0), outputData);
-    return true;
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
 }
 
 void TransposeCx_Block::SetParameters()
@@ -64,4 +56,53 @@ bool TransposeCx_Block::ModelSetup()
         LOG_ERROR("SamplesInRow and NumberOfRows must not be smaller than 1.");
         return false;
     }
+}
+
+bool TransposeCx_Block::DataStreamRun()
+{
+    auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
+    std::vector<std::complex<double>> outputData(SamplesInRow * NumberOfRows);
+    for (int cols = 0; cols < SamplesInRow; cols++)
+    {
+        for (int rows = 0; rows < NumberOfRows; rows++)
+        {
+            outputData[cols*NumberOfRows + rows] = inputData[rows*SamplesInRow + cols];
+        }
+    }
+    WriteOutputData(GetOutputPortName(0), outputData);
+    return true;
+}
+
+bool TransposeCx_Block::TimeDrivenRun()
+{
+    auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
+    if(inputData.empty()) return true;
+
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+
+    if(m_inputBuffer.size() >= static_cast<size_t>(SamplesInRow * NumberOfRows)) {
+        std::vector<std::complex<double>> outputData(SamplesInRow * NumberOfRows);
+        for (int cols = 0; cols < SamplesInRow; cols++)
+        {
+            for (int rows = 0; rows < NumberOfRows; rows++)
+            {
+                outputData[cols*NumberOfRows + rows] = m_inputBuffer[rows*SamplesInRow + cols];
+            }
+        }
+        for(const auto& val : outputData) m_outputQueue.push(val);
+
+        if (!m_outputQueue.empty()) {
+            std::complex<double> outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[TransposeCx_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue.real() << "," << outputValue.imag();
+            m_inputBuffer.clear();
+        }
+    }
+    return true;
 }

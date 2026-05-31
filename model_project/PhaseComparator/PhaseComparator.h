@@ -24,7 +24,6 @@ public:
 	ERESULT PropagateCharacterizationFrequency();
 	virtual bool Initialize() override;
 	virtual bool Run() override;
-    bool Setup() override;
 
 	SystemVueModelBuilder::EnvelopeCircularBuffer s1;     
 	SystemVueModelBuilder::EnvelopeCircularBuffer s2;     

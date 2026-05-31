@@ -108,6 +108,22 @@ bool RADAR_VelocityMeas_Block::TimeDrivenRun()
 
         m_VelocitytQueue.push(velocityValue);
         m_IndextQueue.push(fmaxIndex);
+        if (!m_VelocitytQueue.empty() || !m_IndextQueue.empty()) {
+            double velValue = m_VelocitytQueue.front();
+            m_VelocitytQueue.pop();
+            int indexValue = m_IndextQueue.front();
+            m_IndextQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(outputVelocityPortName, std::vector<double>{velValue});
+            WriteOutputData(outputIndexPortName, std::vector<int>{indexValue});
+            m_lastVelocity = velValue;
+            m_lastIndex = indexValue;
+
+            qDebug() << "[RADAR_VelocityMeas_Block] 分发输出:" << m_outputCount
+                     << " value:" << velValue << "|" << indexValue;
+            m_inputBuffer.clear();
+        }
     }
 
 

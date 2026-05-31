@@ -3,7 +3,7 @@
 
 #include "Variance.h"
 #include "Block.h"
-
+#include <queue>
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API Variance_Block : public SystemVueModelBuilder::Block
@@ -26,6 +26,17 @@ private:
 	double m_sum = 0.0;
 	double m_sumSqr = 0.0;
 	int m_sumN = 0;
+
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+    // ========== 时间驱动缓冲队列 ==========
+    std::vector<double> m_inBuffer;
+    std::queue<double> m_meanQueue;
+    std::queue<double> m_varianceQueue;
+    double m_lastmean;
+    double m_lastvariance;
+    int m_inputCount;
+    int m_outputCount;
 };
 
 RegAlgo(Variance_Block);

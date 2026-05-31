@@ -9,6 +9,7 @@ bool VarDelayCx_Block::Setup()
 {
     if(!ModelSetup()) return false;
     Block::Setup();
+    while(!m_outputQueue.empty()) m_outputQueue.pop();
     return true;
 }
 
@@ -26,6 +27,40 @@ bool VarDelayCx_Block::Initialize()
 }
 
 bool VarDelayCx_Block::Run()
+{
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
+}
+
+void VarDelayCx_Block::SetParameters()
+{
+    if(!m_VarDelay) return;
+    m_VarDelay->MaxDelay = MaxDelay;
+}
+
+void VarDelayCx_Block::SetDefaultParameters()
+{
+    MaxDelay = 10;
+}
+
+bool VarDelayCx_Block::ModelSetup()
+{
+    if (MaxDelay < 0)
+    {
+        LOG_ERROR("VarDelay: MaxDelay must be >= 0.");
+        return false;
+    }
+
+    m_iMaxDelay = static_cast<size_t>(MaxDelay);
+    m_iDelay = m_iMaxDelay;
+
+    m_buffer.ResizeMemory(m_iMaxDelay + 1, true, 0);
+    m_buffer.SetHistoryDepth(m_iMaxDelay + 1);
+
+    return true;
+}
+
+bool VarDelayCx_Block::DataStreamRun()
 {
     auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
     std::vector<std::complex<double>> outputData(1);
@@ -55,30 +90,66 @@ bool VarDelayCx_Block::Run()
     return true;
 }
 
-void VarDelayCx_Block::SetParameters()
+bool VarDelayCx_Block::TimeDrivenRun()
 {
-    if(!m_VarDelay) return;
-    m_VarDelay->MaxDelay = MaxDelay;
-}
+    auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
+    if(inputData.empty()) return true;
 
-void VarDelayCx_Block::SetDefaultParameters()
-{
-    MaxDelay = 10;
-}
+    m_inputBuffer.push_back(inputData[0]);
 
-bool VarDelayCx_Block::ModelSetup()
-{
-    if (MaxDelay < 0)
+    std::vector<std::complex<double>> outputData(1);
+
+    bool CanprocessData = false;
+    BufferReader* control = GetInputPort(GetInputPortName(1));
+    if (control->IsConnected())
     {
-        LOG_ERROR("VarDelay: MaxDelay must be >= 0.");
-        return false;
+        auto controlData = ReadInputData<int>(control->GetName());
+        if(controlData.empty()) return true;
+        m_controlBuffer.push_back(controlData[0]);
+        if(m_inputBuffer.size() >= 1 && m_controlBuffer.size() >= 1) {
+            CanprocessData = true;
+        }
+
     }
+    else {
+        if(m_inputBuffer.size() >= 1) {
+            CanprocessData = true;
+        }
+    }
+    if(CanprocessData) {
+        if (control->IsConnected()) {
+            int ctrlVal = m_controlBuffer[0];
 
-    m_iMaxDelay = static_cast<size_t>(MaxDelay);
-    m_iDelay = m_iMaxDelay;
+            if (ctrlVal <= 0)
+            {
+                m_iDelay = 0;
+            }
+            else
+            {
+                m_iDelay = static_cast<size_t>(ctrlVal);
+                if (m_iDelay > m_iMaxDelay)
+                    m_iDelay = m_iMaxDelay;
+            }
+        }
+        m_buffer[m_iMaxDelay] = m_inputBuffer[0];
 
-    m_buffer.ResizeMemory(m_iMaxDelay + 1, true, 0);
-    m_buffer.SetHistoryDepth(m_iMaxDelay + 1);
+        outputData[0] = m_buffer[m_iMaxDelay - m_iDelay];
+        m_buffer.Advance();
+
+        m_outputQueue.push(outputData[0]);
+        if (!m_outputQueue.empty()) {
+            std::complex<double> outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[VarDelayCx_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue.real() << "," << outputValue.imag();
+            m_inputBuffer.clear();
+        }
+    }
 
     return true;
 }

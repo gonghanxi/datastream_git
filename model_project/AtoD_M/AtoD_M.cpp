@@ -337,7 +337,7 @@ bool AtoD_M::Run()
 {
 	double t = A_out.GetTime(0, GetCount());
 
-	const SystemVueModelBuilder::EnvelopeMatrix& in0 = A_in[0];
+    const SystemVueModelBuilder::EnvelopeMatrix& in0 = A_Input[0];
 	const std::size_t rows = in0.NumRows();
 	const std::size_t cols = in0.NumColumns();
 	const std::size_t elemCount = in0.NumElements();
@@ -530,7 +530,7 @@ void AtoD_M::ensure_state_count_(std::size_t n)
 std::complex<double> AtoD_M::read_matrix_sample_(int idx, std::size_t elem)
 {
 	const unsigned int uidx = static_cast<unsigned int>(idx < 0 ? 0 : idx);
-	const SystemVueModelBuilder::EnvelopeMatrix& m = A_in[uidx];
+    const SystemVueModelBuilder::EnvelopeMatrix& m = A_Input[uidx];
 
 	if (elem >= m.NumElements())
 		return std::complex<double>(0.0, 0.0);

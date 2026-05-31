@@ -218,7 +218,7 @@ bool RADAR_SAR_Echo::Run()
 	// 输入的目标信息需要符合格式
 	if (TargetInfo.NumElements() % 3)
 	{
-		POST_ERROR("Point Target Information should format as [range_n, cross_n, rcs_n;]");
+        LOG_ERROR("Point Target Information should format as [range_n, cross_n, rcs_n;]");
 		return false;
 	}
 
@@ -229,6 +229,7 @@ bool RADAR_SAR_Echo::Run()
 	for (int i = 0; i < Nslow*Nfast; i++)
 	{
         outputData[i] = 0;
+//        output[i] = 0;
 	}
 
 	for (int i = 0; i < Ntarget; i++)
@@ -258,7 +259,8 @@ bool RADAR_SAR_Echo::Run()
 			for (int n = 0; n < Nslow; n++)
 			{
                 outputData[m*Nslow+n] += rcs_n * std::exp(imag_I*phase(n, m));
-				//output[n*Nfast + m] += rcs_n * std::exp(imag_I*phase(n, m))*(1.0*((Dfast(n, m) > 0) & (Dfast(n, m) < Tr))*(std::abs(Dslow(n)) < (Lsar / 2)));
+//                output[m*Nslow+n] += rcs_n * std::exp(imag_I*phase(n, m));
+//                output[n*Nfast + m] += rcs_n * std::exp(imag_I*phase(n, m))*(1.0*((Dfast(n, m) > 0) & (Dfast(n, m) < Tr))*(std::abs(Dslow(n)) < (Lsar / 2)));
 			}
 		}
 	}

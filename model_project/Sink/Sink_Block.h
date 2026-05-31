@@ -28,8 +28,8 @@ using namespace SystemVueModelBuilder;
 
 // 缓冲区中单个数据点的结构：时间戳 + 数值
 struct DataPoint {
-    double time;
-    double value;
+    double time; // 时间戳（秒）
+    double value;// 数据值
 };
 
 class SYSTEMVUEMODELBUILDER_API Sink_Block : public SystemVueModelBuilder::Block
@@ -57,20 +57,17 @@ private:
     char* combinePathWithJsonSuffix(const fs::path& linkKeyFolder, const char* m_fileName);
     void SetDefaultParameters();
 
-    // 文件操作方法
+    // 文件操作
     bool openFileForWrite();          // 首次创建文件并写入 [
-    bool openFileForAppend();         // 追加模式打开
+    bool openFileForAppend();         // 追加模式打开（用于Flush中途写入）
     void closeFileProperly();         // 补全 ] 并关闭文件
     void cleanup();
 
-    // 写入单个数据点（使用缓冲区中的时间和值）
+    // 核心写入方法：将缓冲区中第 bufferIndex 个点写入流，使用 dataIndex 作为序号
     void writeDataPointToStream(size_t bufferIndex, unsigned long long dataIndex);
+    void RunDealData(); // 缓冲区满时批量写入
+    void flushToFile(); // 时间驱动模式下定期刷新
 
-    // 缓冲区满时的批量写入
-    void RunDealData();
-
-    // 时间驱动中途刷新（仍保留，但遵循新结构）
-    void flushToFile();
     bool isTimeDrivenMode() const;
     void setTimeDrivenMode(bool enabled);
     double GetCurrentSimulationTime() const;

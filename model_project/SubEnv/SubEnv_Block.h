@@ -3,7 +3,7 @@
 
 #include "SubEnv.h"
 #include "Block.h"
-
+#include <queue>
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API SubEnv_Block : public SystemVueModelBuilder::Block
@@ -34,6 +34,16 @@ private:
 	double fcOut;
 	double fc, fcmax, fcmin, fcmean;
 	unsigned long long m_firingCount = 0;
+
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+    // ========== 时间驱动缓冲队列 ==========
+    std::vector<EnvelopeSignal> m_posBuffer;
+    std::map<BufferReader*, std::vector<EnvelopeSignal>> m_negBuffer;
+    std::queue<EnvelopeSignal> m_outputQueue;
+    EnvelopeSignal m_lastOutput;
+    int m_inputCount;
+    int m_outputCount;
 };
 
 RegAlgo(SubEnv_Block);

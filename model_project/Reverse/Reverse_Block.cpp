@@ -13,55 +13,19 @@ Reverse_Block::Reverse_Block(const std::string &name)
 bool Reverse_Block::Setup()
 {
     Block::Setup();
-
-    if (IsVariableStepMode()) {
-        // 计算模型采样周期
-        // 基础步长 = 1.0 / 仿真器采样率
-        double baseStep = 1.0 / getSimu().samplingRate;
-        m_samplePeriod = baseStep * m_N;
-
-        // 初始化缓冲区大小
-        m_inputBuffer.reserve(m_N);
-        m_inputCount = 0;
-        m_outputCount = 0;
-
-        // 清空输出队列
-        while (!m_outputQueue.empty()) {
-            m_outputQueue.pop();
-        }
-
-        //
-
-        qDebug() << "[Reverse_Block] 变步长模型初始化"
-                 << " N:" << m_N
-                 << " 采样周期:" << m_samplePeriod
-                 << " 基础步长:" << baseStep;
+    while (!m_outputQueue.empty()) {
+        m_outputQueue.pop();
     }
     return true;
 }
 
 bool Reverse_Block::Run()
 {
-    std::string InputPort = GetInputPortName(0);
-    std::string OutputPort = GetOutputPortName(0);
-
     // ========== 变步长模式 ==========
     if (IsVariableStepMode()) {
         return TimeDrivenRun();
     }
-
-    // ========== 数据流模式 ==========
-    auto InputData = ReadInputData<double>(InputPort);
-    size_t N = InputData.size();
-    std::vector<double> OutputData;
-    OutputData.reserve(N);
-    for(size_t i = 0; i < N; i++) {
-        OutputData.push_back(InputData[N - i - 1]);
-    }
-    WriteOutputData(OutputPort, OutputData);
-    m_lastOutput = OutputData.empty() ? m_lastOutput : OutputData[0];
-
-    return true;
+    return DataStreamRun();
 }
 
 bool Reverse_Block::Initialize()
@@ -134,10 +98,39 @@ int Reverse_Block::GetInputAccumulateCount() const
     return 1;
 }
 
-// ========== 私有方法 ==========
-
-void Reverse_Block::processAccumulatedData()
+bool Reverse_Block::DataStreamRun()
 {
+    std::string InputPort = GetInputPortName(0);
+    std::string OutputPort = GetOutputPortName(0);
+    // ========== 数据流模式 ==========
+    auto InputData = ReadInputData<double>(InputPort);
+    size_t N = InputData.size();
+    std::vector<double> OutputData;
+    OutputData.reserve(N);
+    for(size_t i = 0; i < N; i++) {
+        OutputData.push_back(InputData[N - i - 1]);
+    }
+    WriteOutputData(OutputPort, OutputData);
+    m_lastOutput = OutputData.empty() ? m_lastOutput : OutputData[0];
+
+    return true;
+}
+
+bool Reverse_Block::TimeDrivenRun()
+{
+    std::string InputPort = GetInputPortName(0);
+    std::string OutputPort = GetOutputPortName(0);
+    // ----- 步骤1: 读取输入数据并累积 -----
+    auto InputData = ReadInputData<double>(InputPort);
+    if(InputData.empty()) return true;
+
+
+    // 将新数据加入累积缓冲区
+    for (size_t i = 0; i < InputData.size(); i++) {
+            m_inputBuffer.push_back(InputData[i]);
+    }
+
+    // ----- 步骤2: 检查是否累积够N个，执行处理 -----
     // 对累积的N个数据进行反转处理
     std::vector<double> outputData;
     outputData.reserve(m_N);
@@ -151,49 +144,6 @@ void Reverse_Block::processAccumulatedData()
         m_outputQueue.push(outputData[i]);
     }
 
-    // 清空输入缓冲区
-    m_inputBuffer.clear();
-
-    qDebug() << "[Reverse_Block] deal success - input: " << m_N
-             << ", output: " << m_N
-             << " queue size:" << m_outputQueue.size();
-}
-
-bool Reverse_Block::TimeDrivenRun()
-{
-    std::string InputPort = GetInputPortName(0);
-    std::string OutputPort = GetOutputPortName(0);
-    // ----- 步骤1: 读取输入数据并累积 -----
-    auto InputData = ReadInputData<double>(InputPort);
-
-    qDebug() << "is variable mode: "<< (GetOutputPort(OutputPort)->IsVariableMode() ? "true" : "false");
-    std::cout << "InputData: " << std::endl;
-    for(size_t i = 0; i < InputData.size(); i++) {
-        std::cout << InputData[i] << " ";
-    }
-    std::cout << std::endl;
-
-    if (!InputData.empty()) {
-        // 将新数据加入累积缓冲区
-        for (size_t i = 0; i < InputData.size(); i++) {
-            if (m_inputCount < m_N) {
-                m_inputBuffer.push_back(InputData[i]);
-                m_inputCount++;
-            }
-        }
-
-        qDebug() << "[Reverse_Block] 累积输入:" << m_inputCount
-                 << "/" << m_N
-                 << " 本次收到:" << InputData.size();
-    }
-
-    // ----- 步骤2: 检查是否累积够N个，执行处理 -----
-    if (m_inputCount >= m_N) {
-        processAccumulatedData();
-        m_inputCount = 0;
-        m_outputCount = 0;
-    }
-
     // ----- 步骤3: 从输出队列取一个数据输出 -----
     if (!m_outputQueue.empty()) {
         double outputValue = m_outputQueue.front();
@@ -204,10 +154,8 @@ bool Reverse_Block::TimeDrivenRun()
         m_lastOutput = outputValue;
 
         qDebug() << "[Reverse_Block] 分发输出:" << m_outputCount
-                 << "/" << m_N
                  << " value:" << outputValue;
         return true;
     }
-    qDebug() << "[Reverse_Block] 无输出 保持值:" << m_lastOutput;
     return true;
 }

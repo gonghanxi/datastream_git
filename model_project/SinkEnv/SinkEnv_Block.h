@@ -26,6 +26,13 @@
 #endif
 
 using namespace SystemVueModelBuilder;
+
+        // 缓冲区中单个数据点的结构：时间戳 + 数值
+        struct DataPoint {
+            double time; // 时间戳（秒）
+            EnvelopeSignal value;// 数据值
+        };
+
 class SYSTEMVUEMODELBUILDER_API SinkEnv_Block : public SystemVueModelBuilder::Block
 {
 public:
@@ -36,6 +43,8 @@ public:
     bool Run() override;
     bool Initialize() override;
     bool Done() override;
+    bool Flush() override;
+    bool IsCollectionComplete() override;
 
     void SetParameters(int SampleStart = 0, int SampleStop = 1,
                        double TimeStart = 0.0, double TimeStop = 1.0,
@@ -48,20 +57,25 @@ private:
     char* combinePathWithJsonSuffix(const fs::path& linkKeyFolder, const char* m_fileName);
     void SetDefaultParameters();
 
-    bool openFileForAppend();
+    // 文件操作
+    bool openFileForWrite();          // 首次创建文件并写入 [
+    bool openFileForAppend();         // 追加模式打开（用于Flush中途写入）
+    void closeFileProperly();         // 补全 ] 并关闭文件
     void cleanup();
 
-    void RunDealData();
-    void WriteBitShiftRegisterData(int i);
+    // 核心写入方法：将缓冲区中第 bufferIndex 个点写入流，使用 dataIndex 作为序号
+    void writeDataPointToStream(size_t bufferIndex, unsigned long long dataIndex);
+    void RunDealData(); // 缓冲区满时批量写入
+    void flushToFile(); // 时间驱动模式下定期刷新
 
-    //SinkTime格式修改
-    QString formatSinkTime(double timeValue) const;
-    double roundToPrecision(double value, int decimals) const;
+    bool isTimeDrivenMode() const;
+    void setTimeDrivenMode(bool enabled);
+    double GetCurrentSimulationTime() const;
 
     // 修改成员变量
     QFile m_qfile;  // 使用QFile替代std::ofstream
     QTextStream m_stream;
-    char* FileName;
+
 
     std::unique_ptr<SinkEnv> m_sinkenv;
 
@@ -75,15 +89,21 @@ private:
 
 
     QString m_fullPath;
-    unsigned long long Index;
-    double sample_time;
-    size_t m_iBuffer;
-    std::complex<double>* m_pdBuffer;
-    std::ofstream outputFile;
+    unsigned long long Index;          // 实际成功记录的数据点序号（每写入一条递增）
+    size_t m_iBuffer;                  // 当前缓冲区中数据点个数
+    DataPoint* m_pdBuffer;             // 缓冲区（存储时间和数值）
+    char* FileName;
     std::string m_UserId;
 
     //后端需要的写入路径 格式为 /01/xxx.json
     QString m_WritePath;
+
+    // 驱动模式相关
+    bool m_isTimeDrivenMode = false;
+    bool m_fileOpenedForAppend = false;
+    int m_flushCounter = 0;
+    int m_flushInterval = 100;
+    double m_currentSimulationTime = 0.0;
 };
 RegAlgo(SinkEnv_Block);
 #endif // SINKENV_BLOCK_H

@@ -186,7 +186,7 @@ bool AsyncCommutatorCx_Block::TimeDrivenRun()
         }
 
         // 按照 BlockSizes 顺序从每个子端口缓冲区取出数据，组成一个输出块
-        std::vector<std::complex<double>> outputBlock;
+        std::vector<double> outputBlock;
         outputBlock.reserve(totalSamples);
         for (int i = 0; i < numInputs; ++i) {
             auto* reader = bridge_readers[i].bridgeReader;

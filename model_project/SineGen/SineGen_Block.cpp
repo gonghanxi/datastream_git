@@ -70,10 +70,6 @@ bool SineGen_Block::Setup()
 
 bool SineGen_Block::Run()
 {
-    if (!CanProcess()) {
-        return false;
-    }
-
     const double sampleRate = (m_sampleRateOption == SineGen::TimedFromSampleRate)
         ? m_sampleRate
         : simulator_param.samplingRate;

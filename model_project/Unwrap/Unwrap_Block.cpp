@@ -29,16 +29,12 @@ bool Unwrap_Block::Setup()
 
 bool Unwrap_Block::Run()
 {
-    if (!CanProcess()) {
-        return false;
-    }
-
     std::string inputPort = GetInputPortName(0);
     std::string outputPort = GetOutputPortName(0);
 
     auto inputData = ReadInputData<double>(inputPort);
     if (inputData.empty()) {
-        return false;
+        return true;
     }
     std::vector<double> outputData(inputData.size());
 

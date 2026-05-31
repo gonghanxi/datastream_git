@@ -29,12 +29,10 @@ public:
 private:
     void SetDefaultParameters();
 
-    // ========== 数据处理 ==========
-    void processAccumulatedData();  // 处理累积的数据
-
     std::unique_ptr<Reverse> m_reverse;
     int m_N;
 
+    bool DataStreamRun();
     bool TimeDrivenRun();
     // ========== 时间驱动缓冲队列 ==========
     std::vector<double> m_inputBuffer;   // 输入累积缓冲区

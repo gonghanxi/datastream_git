@@ -22,33 +22,71 @@ void ReverseInt_Block::SetParameters(int n)
 bool ReverseInt_Block::Setup()
 {
 	Block::Setup();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
 	return true;
 }
 
 bool ReverseInt_Block::Run()
 {
-	if (!CanProcess()) {
-		return false;
-	}
+    if (IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
+}
 
-	std::string inputPort = GetInputPortName(0);
-	std::string outputPort = GetOutputPortName(0);
+bool ReverseInt_Block::DataStreamRun()
+{
+    std::string inputPort = GetInputPortName(0);
+    std::string outputPort = GetOutputPortName(0);
 
-	auto inputData = ReadInputData<int>(inputPort);
-	if (inputData.empty()) {
-		return true;
-	}
+    auto inputData = ReadInputData<int>(inputPort);
+    if (inputData.empty()) {
+        return false;
+    }
 
-	std::vector<int> outputData;
-	outputData.reserve(inputData.size());
+    std::vector<int> outputData;
+    outputData.reserve(inputData.size());
 
-	for (size_t i = 0; i < inputData.size(); ++i) {
-		outputData.push_back(inputData[inputData.size() - 1 - i]);
-	}
+    for (size_t i = 0; i < inputData.size(); ++i) {
+        outputData.push_back(inputData[inputData.size() - 1 - i]);
+    }
 
-	WriteOutputData(outputPort, outputData);
+    WriteOutputData(outputPort, outputData);
 
-	return true;
+    return true;
+}
+
+bool ReverseInt_Block::TimeDrivenRun()
+{
+    std::string inputPort = GetInputPortName(0);
+    std::string outputPort = GetOutputPortName(0);
+
+    auto inputData = ReadInputData<int>(inputPort);
+    if (inputData.empty()) {
+        return true;
+    }
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+
+    if(m_inputBuffer.size() >= static_cast<size_t>(m_n)) {
+        std::vector<int> outputData;
+        outputData.reserve(m_inputBuffer.size());
+
+        for (size_t i = 0; i < m_inputBuffer.size(); ++i) {
+            outputData.push_back(m_inputBuffer[m_inputBuffer.size() - 1 - i]);
+        }
+
+        for(const auto& val : outputData) m_outputQueue.push(val);
+        if (!m_outputQueue.empty()) {
+            int outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(outputPort, std::vector<int>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[ReverseInt_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue;
+        }
+    }
+    return true;
 }
 
 bool ReverseInt_Block::Initialize()

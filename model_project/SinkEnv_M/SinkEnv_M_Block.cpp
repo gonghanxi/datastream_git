@@ -10,7 +10,7 @@ SinkEnv_M_Block::SinkEnv_M_Block(const std::string &name)
 }
 SinkEnv_M_Block::~SinkEnv_M_Block()
 {
-    delete[] m_pdBuffer;
+    cleanup();
 }
 
 bool SinkEnv_M_Block::Setup()
@@ -18,7 +18,7 @@ bool SinkEnv_M_Block::Setup()
     Block::Setup();
 
 
-    // 计算要收集的样本总数
+    // 检查收集范围是否超出文件大小限制（2GB）
     long long totalSamples = 0;
 
     switch (m_StartStopOption) {
@@ -42,10 +42,6 @@ bool SinkEnv_M_Block::Setup()
 
     if (totalSamples > static_cast<long long>(maxSamples)) {
         char errorMsg[256];
-        snprintf(errorMsg, sizeof(errorMsg),
-                 "Data collection range too large. Maximum samples allowed: %lu (%.2f GB)",
-                 maxSamples,
-                 (maxSamples * sizeof(double)) / (1024.0 * 1024.0 * 1024.0));
         LOG_ERROR(errorMsg, sizeof(errorMsg),"Data collection range too large. Maximum samples allowed: %lu (%.2f GB)"
                   ,maxSamples,(maxSamples * sizeof(double)) / (1024.0 * 1024.0 * 1024.0));
         return false;
@@ -70,41 +66,17 @@ bool SinkEnv_M_Block::Setup()
     qDebug() << "UserId: " << UserId;
 
     if (!subsystemName.isEmpty()) {
-        // 有子系统名称：链路名_子系统名_实例名_Id.json
-        if(!UserId.isEmpty()) {
-            fileName = QString("%1_%2_%3_%4.json")
-                    .arg(linkName)
-                    .arg(subsystemName)
-                    .arg(instanceName)
-                    .arg(UserId);
-        }
-        else {
-            fileName = QString("%1_%2_%3.json")
-                    .arg(linkName)
-                    .arg(subsystemName)
-                    .arg(instanceName);
-        }
-
-        //        qDebug() << "use subsystem name:" << fileName;
+        if (!UserId.isEmpty())
+            fileName = QString("%1_%2_%3_%4.json").arg(linkName, subsystemName, instanceName, UserId);
+        else
+            fileName = QString("%1_%2_%3.json").arg(linkName, subsystemName, instanceName);
     } else {
-        // 没有子系统名称：链路名_实例名_Id.json
-        if(!UserId.isEmpty()) {
-            fileName = QString("%1_%2_%3.json")
-                    .arg(linkName)
-                    .arg(instanceName)
-                    .arg(UserId);
-        }
-        else {
-            fileName = QString("%1_%2.json")
-                    .arg(linkName)
-                    .arg(instanceName);
-        }
-
-        //        qDebug() << "not use subsystem name:" << fileName;
+        if (!UserId.isEmpty())
+            fileName = QString("%1_%2_%3.json").arg(linkName, instanceName, UserId);
+        else
+            fileName = QString("%1_%2.json").arg(linkName, instanceName);
     }
 
-    qDebug() << "folderPath: " << folderPath;
-    qDebug() << "fileName: " << fileName;
     QString fullPath = folderPath + "/" + fileName;
 
     //后端存储路径
@@ -116,22 +88,27 @@ bool SinkEnv_M_Block::Setup()
     strcpy(FileName, pathBytes.constData());
 
     // 初始化缓冲区
-    m_pdBuffer = new EnvelopeMatrix[FILEWRITER_BUFFER_SIZE];
+    m_pdBuffer = new DataPoint[FILEWRITER_BUFFER_SIZE];
     m_iBuffer = 0;
 
-    qDebug() << "m_fullPath: " << m_fullPath;
     m_fullPath = fullPath;
 
-    //更新sink的读取速率
-    BufferReader* inputReader = GetInputPort(GetInputPortName(0));
-    Buffer* outputBuffer = inputReader->GetConnectedBuffer();
-    size_t WriteSize = outputBuffer->GetWriteSize();
-    size_t ReadSize = inputReader->GetReadSize();
+    // 匹配上游读写大小（数据流模式）
+    if (!IsVariableStepMode()) {
+        BufferReader* inputReader = GetInputPort(GetInputPortName(0));
+        Buffer* outputBuffer = inputReader->GetConnectedBuffer();
+        size_t WriteSize = outputBuffer->GetWriteSize();
+        size_t ReadSize  = inputReader->GetReadSize();
+        if (WriteSize != ReadSize) {
+            inputReader->SetReadSize(outputBuffer->GetWriteSize());
+        }
+    }
 
-    qDebug() << "Sink Setup - 上游 buffer writesize: " << WriteSize;
-    qDebug() << "Sink Setup - Sink reader readsize: " << ReadSize;
-    if(WriteSize != ReadSize) {
-        inputReader->SetReadSize(outputBuffer->GetWriteSize());
+    // 检测并启用时间驱动模式
+    if (IsVariableStepMode()) {
+        m_isTimeDrivenMode = true;
+        m_flushInterval = 100;
+        qDebug() << "[Sink_Block] 检测到时间驱动模式，启用定期刷新, 间隔:" << m_flushInterval;
     }
 
     return true;
@@ -139,37 +116,85 @@ bool SinkEnv_M_Block::Setup()
 
 bool SinkEnv_M_Block::Run()
 {
+    // 获取当前仿真时间（时间驱动有效，数据流返回0但不使用）
+    if (m_isTimeDrivenMode) {
+        m_currentSimulationTime = GetCurrentTime();
+    }
 
-    // 获取输入端口名称
     std::string inputPortName = GetInputPortName(0);
     BufferReader* inputReader = GetInputPort(inputPortName);
 
-
-
-
-    if(inputReader->GetConnectedBuffer()->GetDataType() != DataType::DOUBLE) {
-        // 读取数据
+    // 处理变长数据（TIMED_ENVELOPE_MATRIX）或普通 DOUBLE
+    // 读取一个或多个数据点
+    // 对于每个数据点：
+    //   1. 确定时间戳（时间驱动用真实时间，数据流模式根据采样率计算）
+    //   2. 存入缓冲区（DataPoint{time, value}）
+    //   3. 缓冲区满则调用 RunDealData() 批量写入
+    if (inputReader->GetConnectedBuffer()->GetDataType() != DataType::DOUBLE) {
         auto inputData = ReadInputData<EnvelopeMatrix>(inputPortName);
-        if(inputData.empty()) {
-            return false;
+        if (inputData.empty()) {
+            return true;  // 无数据，静默跳过
         }
 
-        // 处理数据
-        for(size_t i = 0; i < inputData.size(); i++) {
-            m_pdBuffer[m_iBuffer++] = inputData[i];
+        for (size_t i = 0; i < inputData.size(); ++i) {
+            // 计算当前数据点的时间戳（数据流模式）或使用真实时间
+            double timeVal = 0.0;
+            if (m_isTimeDrivenMode) {
+                timeVal = m_currentSimulationTime;
+            } else {
+                switch (m_StartStopOption) {
+                case SinkEnv_M::Auto:
+                    timeVal = (Index - 1) / m_sampleRate;
+                    break;
+                case SinkEnv_M::Time:
+                    timeVal = m_TimeStart + (Index - 1) / m_sampleRate;
+                    break;
+                case SinkEnv_M::Samples:
+                    timeVal = 0.0;  // 不使用
+                    break;
+                }
+            }
 
-            // 缓冲区满了，立即写入文件
+            m_pdBuffer[m_iBuffer].time  = timeVal;
+            m_pdBuffer[m_iBuffer].value = inputData[i];
+            ++m_iBuffer;
+            ++m_flushCounter;
+            ++Index;  // 全局序号递增
+
+            // 缓冲区满则写入
             RunDealData();
         }
     }
+    // 处理单个 ENVELOPE_MATRIX 数据
     else {
-//        DoubleMatrix inputData;
-//        if(!inputReader->ReadData(inputData)) {
-//            LOG_ERROR("Sink '" , GetName(), "' read Double data Failed!");
-//            return false;
+//        EnvelopeMatrix inputData;
+//        if (!inputReader->ReadData(inputData)) {
+//            return true;  // 无数据，静默跳过
 //        }
-//        m_pdBuffer[m_iBuffer++] = inputData;
-//        // 缓冲区满了，立即写入文件
+
+//        double timeVal = 0.0;
+//        if (m_isTimeDrivenMode) {
+//            timeVal = m_currentSimulationTime;
+//        } else {
+//            switch (m_StartStopOption) {
+//            case Sink_M::Auto:
+//                timeVal = (Index - 1) / m_sampleRate;
+//                break;
+//            case Sink_M::Time:
+//                timeVal = m_TimeStart + (Index - 1) / m_sampleRate;
+//                break;
+//            case Sink_M::Samples:
+//                timeVal = 0.0;
+//                break;
+//            }
+//        }
+
+//        m_pdBuffer[m_iBuffer].time  = timeVal;
+//        m_pdBuffer[m_iBuffer].value = inputData;
+//        ++m_iBuffer;
+//        ++m_flushCounter;
+//        ++Index;
+
 //        RunDealData();
     }
 
@@ -216,153 +241,69 @@ bool SinkEnv_M_Block::Initialize()
 
 bool SinkEnv_M_Block::Done()
 {
-    // 如果文件已经打开，直接写入剩余数据
-    if (m_qfile.isOpen()) {
-        // 文件已打开，跳过打开文件的步骤
-    } else {
-        // 文件未打开，才执行打开操作
-        m_qfile.setFileName(m_fullPath);
-        if (!m_qfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            LOG_INFO("无法创建文件:", m_qfile.errorString().toStdString());
-            return false;
-        }
-
-        m_stream.setDevice(&m_qfile);
-        m_stream.setCodec("UTF-8");
-        m_stream << "[" << "\r\n";
-        m_stream.flush();
-    }
+    qDebug() << "[SinkEnv_M_Block] Done - 处理剩余数据"
+             << (m_isTimeDrivenMode ? "时间驱动" : "数据流");
 
     if (m_iBuffer == 0) {
-        // 直接结束JSON数组
-        if (m_qfile.isOpen()) {
-            m_stream << "\r\n]";
-            m_stream.flush();
-            m_qfile.close();
+        if (m_fileOpenedForAppend) {
+            closeFileProperly();
         }
         cleanup();
         return true;
     }
 
-    // 确保文件打开
-    if (!m_qfile.isOpen()) {
+    // 确保文件可写
+    if (!m_fileOpenedForAppend) {
+        if (!openFileForWrite()) {
+            cleanup();
+            return false;
+        }
+    } else if (!m_qfile.isOpen()) {
         if (!openFileForAppend()) {
             cleanup();
             return false;
         }
     }
 
+    // 计算起始序号 (Index 已指向下一个未分配的序号)
+    unsigned long long startIndex = Index - m_iBuffer;
 
-    // 写入剩余数据
-    qDebug() << "Sink Done - begin";
-    qDebug() << "Sink_M_Block::Done - m_pdBuffer: " << m_pdBuffer->NumDimensions();
-    qDebug() << "Sink_M_Block::Done - m_iBuffer: " << m_iBuffer;
-    for (size_t i = 0; i < m_iBuffer; i++) {
-        if(IsBitShiftRegister()) {
-//            WriteBitShiftRegisterData(i);
-        }
-        else {
-            // 如果不是第一条数据，需要加逗号
-            if (Index > 1) {
-//                m_stream << ",\r\n";
-            } else if (i > 0) {
-                m_stream << ",\r\n";
-            }
-            numCols = m_pdBuffer[i].NumColumns();
-            numRows = m_pdBuffer[i].NumRows();
-
-            m_stream << "\t{\r\n";
-            m_stream << "\t\t\"Index\": " << Index << ",\r\n";
-
-            switch (m_StartStopOption) {
-            case SinkEnv_M::Auto: {
-                double timeValue = (Index - 1) / m_sampleRate;
-//                m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-                m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
-                break;
-            }
-            case SinkEnv_M::Samples: {
-                m_stream << "\t\t\"Sink_Index\": " << m_SampleStart + Index - 1 << ",\r\n";
-                break;
-            }
-            case SinkEnv_M::Time: {
-                double timeValue = m_TimeStart + (Index - 1) / m_sampleRate;
-//                m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-                m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
-                break;
-            }
-            default:
-                break;
-            }
-            qDebug() << "Sink_M_Block::Done - numRows: " << numRows;
-            qDebug() << "Sink_M_Block::Done - numCols: " << numCols;
-            for (int m = 1; m <= numRows; m++)
-            {
-                for (int n = 1; n <= numCols; n++)
-                {
-
-                    qDebug() << "Sink_M_Block::Done - m: " << m;
-                    qDebug() << "Sink_M_Block::Done - n: " << n;
-                    // 按"Sink_Data_[行][列]":[数据]的格式写json字段
-                    if (m == numRows && n == numCols)
-                    {
-
-                        // 最后一行不加逗号
-                        m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).real() << "," << "\r\n";
-                        m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).imag() << "\r\n";
-                    }
-                    else
-                    {
-                        m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).real() << "," << "\r\n";
-                        m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).imag() << "," << "\r\n";
-                    }
-                }
-            }
-            if (i == m_iBuffer - 1)
-            {
-                // 若为文件尾，去除多余逗号并补上中括号
-                m_stream << "\t}" << "\r\n";
-                m_stream << "]" << "\r\n";
-            }
-            else
-            {
-                m_stream << "\t}," << "\r\n";
-            }
-
-            Index++;
-        }
+    for (size_t i = 0; i < m_iBuffer; ++i) {
+        writeDataPointToStream(i, startIndex + i);
     }
 
-    // 结束JSON数组
-//    m_stream << "\r\n]";
-    m_stream.flush();
-
-    // 关闭文件
-    m_qfile.close();
-
-    // 验证文件
-    QString filePath = QString::fromUtf8(FileName);
-    LOG_INFO("结果写入文件路径: ", m_WritePath.toStdString());
-    QFile checkFile(filePath);
-    if (checkFile.open(QIODevice::ReadOnly)) {
-
-        // 读取并显示前200个字符
-        QByteArray preview = checkFile.read(200);
-
-        // 如果是空的或只有[
-        if (checkFile.size() <= 2) {
-        }
-
-        checkFile.close();
-    } else {
-    }
-
-
+    closeFileProperly();
     cleanup();
-
+    std::cout << "[RESULT]结果写入文件路径: " << m_WritePath.toStdString() << std::endl;
     return true;
 }
 
+bool SinkEnv_M_Block::Flush()
+{
+    if (m_isTimeDrivenMode && m_flushCounter >= m_flushInterval) {
+        flushToFile();
+        m_flushCounter = 0;
+        return true;
+    }
+    return false;
+}
+
+bool SinkEnv_M_Block::IsCollectionComplete()
+{
+    unsigned long long collected = Index - 1;   // 实际已记录点数
+
+    switch (m_StartStopOption) {
+    case SinkEnv_M::Auto:
+        return collected >= getSimu().num_Samples;
+    case SinkEnv_M::Samples:
+        return collected >= static_cast<unsigned long long>(m_SampleStop - m_SampleStart + 1);
+    case SinkEnv_M::Time:
+        // 时间模式下当仿真时间达到或超过 TimeStop 时完成
+        return m_currentSimulationTime >= m_TimeStop;
+    default:
+        return false;
+    }
+}
 void SinkEnv_M_Block::SetParameters()
 {
     if(m_sink) {
@@ -480,192 +421,93 @@ void SinkEnv_M_Block::SetDefaultParameters()
     m_fileName = nullptr;
 }
 
-bool SinkEnv_M_Block::openFileForAppend()
+// ---------- 文件操作 ----------
+bool SinkEnv_M_Block::openFileForWrite()
 {
-    QString filePath = QString::fromUtf8(FileName);
-    m_qfile.setFileName(filePath);
-
-    if (!m_qfile.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        LOG_INFO("打开文件失败:",m_qfile.errorString().toStdString());
+    m_qfile.setFileName(m_fullPath);
+    if (!m_qfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        LOG_INFO("[SinkEnv_M_Block] 无法创建文件:", m_qfile.errorString().toStdString());
         return false;
-    }
-
-    // 移动到文件末尾
-    m_qfile.seek(m_qfile.size());
-
-    // 如果文件不是以[开头，说明有问题
-    if (m_qfile.size() == 0) {
-        m_stream << "[";
     }
 
     m_stream.setDevice(&m_qfile);
     m_stream.setCodec("UTF-8");
+    m_stream << "[" << "\r\n";
+    m_stream.flush();
 
+    m_fileOpenedForAppend = true;
+    qDebug() << "[SinkEnv_M_Block] 文件已创建:" << m_fullPath;
     return true;
+}
+
+bool SinkEnv_M_Block::openFileForAppend()
+{
+    QString filePath = QString::fromUtf8(FileName);
+    m_qfile.setFileName(filePath);
+    if (!m_qfile.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        LOG_INFO("打开文件失败:", m_qfile.errorString().toStdString());
+        return false;
+    }
+    m_qfile.seek(m_qfile.size());
+    if (m_qfile.size() == 0) {
+        m_stream << "[";
+    }
+    m_stream.setDevice(&m_qfile);
+    m_stream.setCodec("UTF-8");
+    return true;
+}
+
+void SinkEnv_M_Block::closeFileProperly()
+{
+    if (!m_qfile.isOpen()) return;
+    m_stream << "\r\n]";
+    m_stream.flush();
+    m_qfile.close();
+    m_fileOpenedForAppend = false;
 }
 
 void SinkEnv_M_Block::cleanup()
 {
-    // 清理缓冲区
     if (m_pdBuffer) {
         delete[] m_pdBuffer;
         m_pdBuffer = nullptr;
     }
-
     m_iBuffer = 0;
 
-    // 确保文件关闭
     if (m_qfile.isOpen()) {
         m_qfile.close();
     }
 
-    // 清理FileName内存
     if (FileName) {
         delete[] FileName;
         FileName = nullptr;
     }
 }
 
-void SinkEnv_M_Block::RunDealData()
+// ---------- 核心写入（根据 StartStopOption 选择字段）----------
+void SinkEnv_M_Block::writeDataPointToStream(size_t bufferIndex, unsigned long long dataIndex)
 {
-    if(m_iBuffer == FILEWRITER_BUFFER_SIZE) {
-        // 创建并初始化文件
-        m_qfile.setFileName(m_fullPath);
-        if (!m_qfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            LOG_INFO("无法创建文件:",m_qfile.errorString().toStdString());
-            return;
-        }
+    const DataPoint& pt = m_pdBuffer[bufferIndex];
 
-        m_stream.setDevice(&m_qfile);
-        m_stream.setCodec("UTF-8");
-        m_stream << "[" << "\n";
-        m_stream.flush();
-
-        // 确保文件打开
-        if (!m_qfile.isOpen()) {
-            if (!openFileForAppend()) {
-                return;
-            }
-        }
-
-        // 写入缓冲区数据
-        for(int j = 0; j < FILEWRITER_BUFFER_SIZE; j++) {
-            //BitShiftRegister模型不同写入方法
-            if(IsBitShiftRegister()) {
-//                WriteBitShiftRegisterData(j);
-            }
-            else {
-                // 如果不是第一条数据，需要加逗号
-                if (Index > 1 || j > 0) {
-                    m_stream << ",\r\n";
-                }
-                numCols = m_pdBuffer[j].NumColumns();
-                numRows = m_pdBuffer[j].NumRows();
-
-                m_stream << "\t{\r\n";
-                m_stream << "\t\t\"Index\": " << Index << ",\r\n";
-
-                switch (m_StartStopOption) {
-                case SinkEnv_M::Auto: {
-                    double timeValue = (Index - 1) / m_sampleRate;
-//                    m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-                    m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
-                    break;
-                }
-                case SinkEnv_M::Samples:
-                    m_stream << "\t\t\"Sink_Index\": " << m_SampleStart + Index - 1 << ",\r\n";
-                    break;
-                case SinkEnv_M::Time: {
-                    double timeValue = m_TimeStart + (Index - 1) / m_sampleRate;
-//                    m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-                    m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
-                    break;
-                }
-                default:
-                    break;
-                }
-
-                for (int m = 1; m <= numRows; m++)
-                {
-                    for (int n = 1; n <= numCols; n++)
-                    {
-                        // 按"Sink_Data_[行][列]":[数据]的格式写json字段
-                        if (m == numRows && n == numCols)
-                        {
-                            // 最后一行不加逗号
-                            m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[j](m - 1, n - 1).real() << "," << "\r\n";
-                            m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[j](m - 1, n - 1).imag() << "\r\n";
-                        }
-                        else
-                        {
-                            m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[j](m - 1, n - 1).real() << "," << "\r\n";
-                            m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[j](m - 1, n - 1).imag() << "," << "\r\n";
-                        }
-                    }
-                }
-                m_stream << "\t}," << "\r\n";
-
-                Index++;
-            }
-        }
-        m_stream.flush();
-        m_iBuffer = 0; // 重置缓冲区
-    }
-}
-
-void SinkEnv_M_Block::WriteBitShiftRegisterData(int i)
-{
-    int NumBits = GetBitShiftRegisterNumBits();
-    // 如果不是第一条数据，需要加逗号
-    if (Index > 1) {
-        m_stream << ",\r\n";
-    } else if (i > 0) {
+    // JSON 分隔符
+    if (dataIndex > 1) {
         m_stream << ",\r\n";
     }
+    numCols = pt.value.NumColumns();
+    numRows = pt.value.NumRows();
 
     m_stream << "\t{\r\n";
-    m_stream << "\t\t\"Index\": " << Index << ",\r\n";
+    m_stream << "\t\t\"Index\": " << dataIndex << ",\r\n";
 
     switch (m_StartStopOption) {
-    case SinkEnv_M::Auto: {
-        // 计算在位移寄存器中的相对位置
-        int bitPosition = (Index - 1) % NumBits;
-        int dataIndex = (Index - 1) / NumBits;
-
-        // 原来每个数据的时间间隔
-        double originalInterval = 1.0 / m_sampleRate;
-        // 平分后的时间间隔
-        double dividedInterval = originalInterval / NumBits;
-
-        // 计算新的时间值
-        double timeValue = dataIndex / m_sampleRate + bitPosition * dividedInterval;
-
-//        m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-        m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
+    case SinkEnv_M::Auto:
+    case SinkEnv_M::Time:
+        // 输出时间字段，值已在 Run 中根据模式计算好
+        m_stream << "\t\t\"Sink_Time\": " << pt.time << ",\r\n";
         break;
-    }
-    case SinkEnv_M::Samples: {
-        m_stream << "\t\t\"Sink_Index\": " << m_SampleStart + Index - 1 << ",\r\n";
-        break;
-    }
-    case SinkEnv_M::Time: {
-        // 计算在位移寄存器中的相对位置
-        int bitPosition = (Index - 1) % NumBits;
-        int dataIndex = (Index - 1) / NumBits;
-
-        // 原来每个数据的时间间隔
-        double originalInterval = 1.0 / m_sampleRate;
-        // 平分后的时间间隔
-        double dividedInterval = originalInterval / NumBits;
-
-        // 计算新的时间值
-        double timeValue = m_TimeStart + dataIndex / m_sampleRate + bitPosition * dividedInterval;
-
-//        m_stream << "\t\t\"Sink_Time\": " << formatSinkTime(timeValue) << ",\r\n";
-        m_stream << "\t\t\"Sink_Time\": " << timeValue << ",\r\n";
-        break;
-    }
-    default:
+    case SinkEnv_M::Samples:
+        // 输出序号字段
+        m_stream << "\t\t\"Sink_Index\": " << (m_SampleStart + dataIndex - 1) << ",\r\n";
         break;
     }
 
@@ -677,90 +519,62 @@ void SinkEnv_M_Block::WriteBitShiftRegisterData(int i)
             if (m == numRows && n == numCols)
             {
                 // 最后一行不加逗号
-                m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).real() << "," << "\r\n";
-                m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).imag() << "," << "\r\n";
+                m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << pt.value(m - 1, n - 1).real() << "," << "\r\n";
+                m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << pt.value(m - 1, n - 1).imag() << "\r\n";
             }
             else
             {
-                m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).real() << "," << "\r\n";
-                m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << m_pdBuffer[i](m - 1, n - 1).imag() << "," << "\r\n";
+                m_stream << "\t\t" << R"("(re)Sink_Data_)" << m << n << R"(":)" << pt.value(m - 1, n - 1).real() << "," << "\r\n";
+                m_stream << "\t\t" << R"("(im)Sink_Data_)" << m << n << R"(":)" << pt.value(m - 1, n - 1).imag() << "," << "\r\n";
             }
         }
     }
     m_stream << "\t}," << "\r\n";
-
-    Index++;
+    m_stream << "\t}";
 }
 
-QString SinkEnv_M_Block::formatSinkTime(double timeValue) const
+void SinkEnv_M_Block::RunDealData()
 {
-    if (timeValue == 0.0) {
-        return "0";
+    if (m_iBuffer < FILEWRITER_BUFFER_SIZE)
+        return;
+
+    // 确保文件处于写入状态
+    if (!m_fileOpenedForAppend) {
+        if (!openFileForWrite()) return;
+    } else if (!m_qfile.isOpen()) {
+        if (!openFileForAppend()) return;
     }
 
-    double absValue = std::abs(timeValue);
+    // 起始序号 = 下一个序号 - 缓冲区数量
+    unsigned long long startIndex = Index - m_iBuffer;
 
-    // 阈值：1e-6 (0.000001)
-    const double SCIENTIFIC_THRESHOLD = 0.000001;
-
-    if (absValue < SCIENTIFIC_THRESHOLD) {
-        // 使用科学计数法
-        // 先舍入到合适精度，避免过长的小数
-        double roundedValue = timeValue;
-
-        // 对于非常小的数，舍入到 12 位有效数字
-        if (absValue < 1e-10) {
-            roundedValue = std::round(timeValue * 1e12) / 1e12;
-        }
-
-        QString scientificStr = QString::number(roundedValue, 'e', 12);
-
-        // 简化科学计数法格式
-        int ePos = scientificStr.indexOf('e', Qt::CaseInsensitive);
-        if (ePos != -1) {
-            QString mantissa = scientificStr.left(ePos);
-            QString exponent = scientificStr.mid(ePos);
-
-            // 去掉尾数末尾的零
-            while (mantissa.length() > 1 && mantissa.endsWith('0')) {
-                mantissa.chop(1);
-            }
-            if (mantissa.endsWith('.')) {
-                mantissa.chop(1);
-            }
-
-            // 简化指数：去掉前导零，如 e-07 -> e-7
-            if (exponent.length() >= 4 && (exponent[1] == '-' || exponent[1] == '+')) {
-                QString expNum = exponent.mid(2);
-                // 去掉前导零
-                while (expNum.length() > 1 && expNum.startsWith('0')) {
-                    expNum.remove(0, 1);
-                }
-                exponent = exponent.left(2) + expNum;
-            }
-
-            return mantissa + exponent;
-        }
-
-        return scientificStr;
-    } else {
-        // 使用固定6位小数格式
-        // 先舍入到6位小数，消除浮点误差
-        double roundedValue = std::round(timeValue * 1000000.0) / 1000000.0;
-
-        // 格式化为固定6位小数
-        QString result = QString::number(roundedValue, 'f', 6);
-
-        // 确保显示完整的6位小数（不删除末尾的零）
-        // 但需要处理一个特殊情况：如果数值本来就是整数，比如 1.0
-        // 但根据你的需求，0.0009 应该显示为 0.000900，所以保留所有零
-
-        return result;
+    for (size_t j = 0; j < m_iBuffer; ++j) {
+        writeDataPointToStream(j, startIndex + j);
     }
+    m_stream.flush();
+    m_iBuffer = 0;
 }
 
-double SinkEnv_M_Block::roundToPrecision(double value, int decimals) const
+// ---------- 时间驱动中途刷新 ----------
+void SinkEnv_M_Block::flushToFile()
 {
-    double factor = std::pow(10.0, decimals);
-    return std::round(value * factor) / factor;
+    if (m_iBuffer == 0) return;
+
+    if (!m_fileOpenedForAppend) {
+        if (!openFileForWrite()) return;
+    } else if (!m_qfile.isOpen()) {
+        if (!openFileForAppend()) return;
+    }
+
+    unsigned long long startIndex = Index - m_iBuffer;
+
+    for (size_t i = 0; i < m_iBuffer; ++i) {
+        writeDataPointToStream(i, startIndex + i);
+    }
+    m_stream.flush();
+    m_iBuffer = 0;
 }
+
+bool SinkEnv_M_Block::isTimeDrivenMode() const { return m_isTimeDrivenMode; }
+void SinkEnv_M_Block::setTimeDrivenMode(bool enabled) { m_isTimeDrivenMode = enabled; }
+double SinkEnv_M_Block::GetCurrentSimulationTime() const { return m_currentSimulationTime; }

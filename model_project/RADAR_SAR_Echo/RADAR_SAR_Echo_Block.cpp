@@ -76,6 +76,7 @@ bool RADAR_SAR_Echo_Block::Setup()
 
 bool RADAR_SAR_Echo_Block::Run()
 {
+    qDebug()<<"RADAR_SAR_Echo - Run begin";
     if (!m_RADAR_SAR_Echo->Run()) {
         return false;
     }
@@ -130,8 +131,13 @@ bool RADAR_SAR_Echo_Block::Initialize()
 
     int rate = m_RADAR_SAR_Echo->output.GetRate();
 
+    qDebug() << "m_RADAR_SAR_Echo->output.GetRate(): " << rate;
 
-    AddOutputPort("output", m_RADAR_SAR_Echo->output, rate, Block::DataType::CIRCULAR_BUFFER_DCOMPLEX);
+    std::complex<double>* tempBuffer = nullptr;
+
+    AddOutputPort<DComplexCircularBuffer, std::complex<double>>("output", m_RADAR_SAR_Echo->output,
+                                                                rate, Block::DataType::CIRCULAR_BUFFER_DCOMPLEX,
+                                                                tempBuffer, rate);
 
     return true;
 
@@ -139,18 +145,14 @@ bool RADAR_SAR_Echo_Block::Initialize()
 
 RADAR_SAR_Echo::SelectedSAR_Mode RADAR_SAR_Echo_Block::ConvertStringToSAR_Mode(const std::string &value)
 {
-    const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "stripmap") {
-        return RADAR_SAR_Echo::Stripmap;
-    }
+//    const std::string lower = ToLowerCopy(TrimCopy(value));
+//    if (lower == "stripmap") {
+//        return RADAR_SAR_Echo::Stripmap;
+//    }
     return RADAR_SAR_Echo::Stripmap;
 }
 
 RADAR_SAR_Echo::SelectedEchoGenerate_Mode RADAR_SAR_Echo_Block::ConvertStringToEchoGenerate_Mode(const std::string &value)
 {
-    const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "point_target") {
-        return RADAR_SAR_Echo::Point_Target;
-    }
     return RADAR_SAR_Echo::Point_Target;
 }

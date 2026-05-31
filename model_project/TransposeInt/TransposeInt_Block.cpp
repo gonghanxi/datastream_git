@@ -8,6 +8,7 @@ TransposeInt_Block::TransposeInt_Block(const std::string &name)
 bool TransposeInt_Block::Setup()
 {
     Block::Setup();
+    while(!m_outputQueue.empty()) m_outputQueue.pop();
     return true;
 }
 
@@ -27,17 +28,8 @@ bool TransposeInt_Block::Initialize()
 
 bool TransposeInt_Block::Run()
 {
-    auto inputData = ReadInputData<int>(GetInputPortName(0));
-    std::vector<int> outputData(SamplesInRow * NumberOfRows);
-    for (int cols = 0; cols < SamplesInRow; cols++)
-    {
-        for (int rows = 0; rows < NumberOfRows; rows++)
-        {
-            outputData[cols*NumberOfRows + rows] = inputData[rows*SamplesInRow + cols];
-        }
-    }
-    WriteOutputData(GetOutputPortName(0), outputData);
-    return true;
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
 }
 
 void TransposeInt_Block::SetParameters()
@@ -64,4 +56,53 @@ bool TransposeInt_Block::ModelSetup()
         LOG_ERROR("SamplesInRow and NumberOfRows must not be smaller than 1.");
         return false;
     }
+}
+
+bool TransposeInt_Block::DataStreamRun()
+{
+    auto inputData = ReadInputData<int>(GetInputPortName(0));
+    std::vector<int> outputData(SamplesInRow * NumberOfRows);
+    for (int cols = 0; cols < SamplesInRow; cols++)
+    {
+        for (int rows = 0; rows < NumberOfRows; rows++)
+        {
+            outputData[cols*NumberOfRows + rows] = inputData[rows*SamplesInRow + cols];
+        }
+    }
+    WriteOutputData(GetOutputPortName(0), outputData);
+    return true;
+}
+
+bool TransposeInt_Block::TimeDrivenRun()
+{
+    auto inputData = ReadInputData<int>(GetInputPortName(0));
+    if(inputData.empty()) return true;
+
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+
+    if(m_inputBuffer.size() >= static_cast<size_t>(SamplesInRow * NumberOfRows)) {
+        std::vector<int> outputData(SamplesInRow * NumberOfRows);
+        for (int cols = 0; cols < SamplesInRow; cols++)
+        {
+            for (int rows = 0; rows < NumberOfRows; rows++)
+            {
+                outputData[cols*NumberOfRows + rows] = m_inputBuffer[rows*SamplesInRow + cols];
+            }
+        }
+        for(const auto& val : outputData) m_outputQueue.push(val);
+
+        if (!m_outputQueue.empty()) {
+            int outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<int>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[TransposeInt_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue;
+            m_inputBuffer.clear();
+        }
+    }
+    return true;
 }

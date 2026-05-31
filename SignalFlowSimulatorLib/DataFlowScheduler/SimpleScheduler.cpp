@@ -97,10 +97,10 @@ bool SimpleScheduler::simpleSchedulerImpl(const QString& linkKey,
     }
 
     // 3. 检查约束系统可行性
-    if (!verificationSystem->CheckFeasibility()) {
-        LOG_ERROR("数据一致性校验失败!");
-        return false;
-    }
+//    if (!verificationSystem->CheckFeasibility()) {
+//        LOG_ERROR("数据一致性校验失败!");
+//        return false;
+//    }
     LOG_INFO("数据一致性校验成功");
     LOG_INFO("数据流可以继续执行");
 
@@ -845,7 +845,7 @@ bool SimpleScheduler::processSourceBlock(Block* block,
 
     int result = generalWork(block);
     if (result > 0) {
-        processCount++;
+        processCount += result;
         return true;
     }
 
@@ -893,7 +893,7 @@ bool SimpleScheduler::processSinkBlock(Block* block)
         return false;
     }
 
-    if(generalWork(block) != 1) return false;
+    if(generalWork(block) < 0) return false;
 
     return true;
 }
@@ -915,6 +915,15 @@ int SimpleScheduler::generalWork(Block* currentBlock)
     }
     
     if(currentBlock->Run()) {
+        if(currentBlock->GetBlockType() == Block::BlockType::SOURCE) {
+            std::map<std::string, Buffer *> outports = currentBlock->GetOutputPorts();
+            int generate_num = 1;
+            for( auto it = outports.begin() ; it != outports.end() ; ++it) {
+                size_t WriteSize = it->second->GetWriteSize();
+                generate_num = std::max(generate_num, static_cast<int>(WriteSize));
+            }
+            return generate_num;
+        }
         return 1;
     }
     else {

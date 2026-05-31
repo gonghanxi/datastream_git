@@ -3,7 +3,7 @@
 
 #include "Block.h"
 #include "UpSample.h"
-
+#include <queue>
 using namespace SystemVueModelBuilder;
 class SYSTEMVUEMODELBUILDER_API UpSample_Block : public SystemVueModelBuilder::Block
 {
@@ -24,6 +24,15 @@ private:
 	int m_phase;
 
 	std::unique_ptr<UpSample> m_upSample;
+
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+    // ========== 时间驱动缓冲队列 ==========
+    std::vector<double> m_inputBuffer;
+    std::queue<double> m_outputQueue;
+    double m_lastOutput;
+    int m_inputCount;
+    int m_outputCount;
 };
 RegAlgo(UpSample_Block);
 #endif // UPSAMPLE_BLOCK_H

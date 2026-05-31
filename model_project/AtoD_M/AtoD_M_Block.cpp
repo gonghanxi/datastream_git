@@ -121,7 +121,6 @@ void AtoD_M_Block::SetParameters()
 {
     m_PhaseNoiseData = primdata.data();
     m_PhaseNoiseDataSize =  static_cast<double>(primdata.size());
-    
     if(!m_atod_m) {
         return;
     }
@@ -131,7 +130,6 @@ void AtoD_M_Block::SetParameters()
     m_atod_m->DistortionModel = m_DistortionModel;
     m_atod_m->EnableJitter = m_EnableJitter;
     m_atod_m->RJrms = m_RJrms;
-
     m_atod_m->PhaseNoiseData = m_PhaseNoiseData;
     m_atod_m->PhaseNoiseDataSize = m_PhaseNoiseDataSize;
 
@@ -274,8 +272,8 @@ bool AtoD_M_Block::Initialize()
         system_rate = m_DownsampleFactor;
     }
 
-    AddInputPort("A_in", m_atod_m->A_in, system_rate, Block::DataType::MATRIX_ENVELOPE);
-    AddOutputPort("A_out", m_atod_m->A_out, 1, Block::DataType::MATRIX_ENVELOPE);
+    AddInputPort("A_in", m_atod_m->A_in, system_rate, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("A_out", m_atod_m->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
     AddOutputPort("D_I" , m_atod_m->D_I, 1, Block::DataType::MATRIX_INT);
     AddOutputPort("D_Q",  m_atod_m->D_Q, 1, Block::DataType::MATRIX_INT);
 
@@ -285,10 +283,10 @@ bool AtoD_M_Block::Initialize()
 AtoD_M::OutputDigitalFormatEnum AtoD_M_Block::ConvertStringToOutputDigitalFormatEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "offset_binary") {
+    if (lower == "Offset_binary") {
         return AtoD_M::Offset_binary;
     }
-    if (lower == "twos_complement" || lower == "1") {
+    if (lower == "Twos_complement" || lower == "1") {
         return AtoD_M::Twos_complement;
     }
     return AtoD_M::Offset_binary;
@@ -297,19 +295,19 @@ AtoD_M::OutputDigitalFormatEnum AtoD_M_Block::ConvertStringToOutputDigitalFormat
 AtoD_M::DistortionModelEnum AtoD_M_Block::ConvertStringToDistortionModelEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "distortion_none") {
+    if (lower == "Distortion_None") {
         return AtoD_M::Distortion_None;
     }
-    if (lower == "jitter_inl_dnl" || lower == "1") {
+    if (lower == "Jitter_INL_DNL" || lower == "1") {
         return AtoD_M::Jitter_INL_DNL;
     }
-    if (lower == "enob_value" || lower == "2") {
+    if (lower == "ENOB_value" || lower == "2") {
         return AtoD_M::ENOB_value;
     }
-    if (lower == "snr_and_harmonics" || lower == "3") {
+    if (lower == "SNR_and_Harmonics" || lower == "3") {
         return AtoD_M::SNR_and_Harmonics;
     }
-    if (lower == "sinad_and_sfdr" || lower == "4") {
+    if (lower == "SINAD_and_SFDR" || lower == "4") {
         return AtoD_M::SINAD_and_SFDR;
     }
     return AtoD_M::Distortion_None;
@@ -318,13 +316,13 @@ AtoD_M::DistortionModelEnum AtoD_M_Block::ConvertStringToDistortionModelEnum(con
 AtoD_M::EnableJitterEnum AtoD_M_Block::ConvertStringToEnableJitterEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "jitter_no") {
+    if (lower == "Jitter_No") {
         return AtoD_M::Jitter_No;
     }
-    if (lower == "time_domain" || lower == "1") {
+    if (lower == "Time_Domain" || lower == "1") {
         return AtoD_M::Time_Domain;
     }
-    if (lower == "frequency_domain" || lower == "2") {
+    if (lower == "Frequency_Domain" || lower == "2") {
         return AtoD_M::Frequency_Domain;
     }
     return AtoD_M::Jitter_No;
@@ -333,13 +331,13 @@ AtoD_M::EnableJitterEnum AtoD_M_Block::ConvertStringToEnableJitterEnum(const std
 AtoD_M::PN_TypeEnum AtoD_M_Block::ConvertStringToPN_TypeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "random_pn") {
+    if (lower == "Random_PN") {
         return AtoD_M::Random_PN;
     }
-    if (lower == "fixed_freq_offset" || lower == "1") {
+    if (lower == "Fixed_freq_offset" || lower == "1") {
         return AtoD_M::Fixed_freq_offset;
     }
-    if (lower == "fixed_freq_offset_and_amplitude" || lower == "2") {
+    if (lower == "Fixed_freq_offset_and_amplitude" || lower == "2") {
         return AtoD_M::Fixed_freq_offset_and_amplitude;
     }
     return AtoD_M::Random_PN;
@@ -348,19 +346,19 @@ AtoD_M::PN_TypeEnum AtoD_M_Block::ConvertStringToPN_TypeEnum(const std::string& 
 AtoD_M::FFT_SizeEnum AtoD_M_Block::ConvertStringToFFT_SizeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "fft_2_12") {
+    if (lower == "FFT_2_12") {
         return AtoD_M::FFT_2_12;
     }
-    if (lower == "fft_2_13" || lower == "1") {
+    if (lower == "FFT_2_13" || lower == "1") {
         return AtoD_M::FFT_2_13;
     }
-    if (lower == "fft_2_14" || lower == "2") {
+    if (lower == "FFT_2_14" || lower == "2") {
         return AtoD_M::FFT_2_14;
     }
-    if (lower == "fft_2_15" || lower == "3") {
+    if (lower == "FFT_2_15" || lower == "3") {
         return AtoD_M::FFT_2_15;
     }
-    if (lower == "fft_2_16" || lower == "4") {
+    if (lower == "FFT_2_16" || lower == "4") {
         return AtoD_M::FFT_2_16;
     }
     return AtoD_M::FFT_2_12;
@@ -369,16 +367,16 @@ AtoD_M::FFT_SizeEnum AtoD_M_Block::ConvertStringToFFT_SizeEnum(const std::string
 AtoD_M::SNR_ModelEnum AtoD_M_Block::ConvertStringToSNR_ModelEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "quantization_and_jitter") {
+    if (lower == "Quantization_and_Jitter") {
         return AtoD_M::Quantization_and_Jitter;
     }
-    if (lower == "quantization_and_inl_dnl" || lower == "1") {
+    if (lower == "Quantization_and_INL_DNL" || lower == "1") {
         return AtoD_M::Quantization_and_INL_DNL;
     }
-    if (lower == "quantization_and_jitter_or_inl_dnl" || lower == "2") {
+    if (lower == "Quantization_and_Jitter_or_INL_DNL" || lower == "2") {
         return AtoD_M::Quantization_and_Jitter_or_INL_DNL;
     }
-    if (lower == "quantization_jitter_and_thermal_noise" || lower == "3") {
+    if (lower == "Quantization_Jitter_and_Thermal_Noise" || lower == "3") {
         return AtoD_M::Quantization_Jitter_and_Thermal_Noise;
     }
     return AtoD_M::Quantization_and_Jitter;
@@ -387,10 +385,10 @@ AtoD_M::SNR_ModelEnum AtoD_M_Block::ConvertStringToSNR_ModelEnum(const std::stri
 AtoD_M::ConversionTypeEnum AtoD_M_Block::ConvertStringToConversionTypeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "clocked") {
+    if (lower == "Clocked") {
         return AtoD_M::Clocked;
     }
-    if (lower == "downsampled" || lower == "1") {
+    if (lower == "Downsampled" || lower == "1") {
         return AtoD_M::Downsampled;
     }
     return AtoD_M::Clocked;
@@ -398,10 +396,10 @@ AtoD_M::ConversionTypeEnum AtoD_M_Block::ConvertStringToConversionTypeEnum(const
 AtoD_M::AntiAliasingFilterEnum AtoD_M_Block::ConvertStringToAntiAliasingFilterEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "aa_off") {
+    if (lower == "AA_OFF") {
         return AtoD_M::AA_OFF;
     }
-    if (lower == "aa_on" || lower == "1") {
+    if (lower == "AA_ON" || lower == "1") {
         return AtoD_M::AA_ON;
     }
     return AtoD_M::AA_OFF;

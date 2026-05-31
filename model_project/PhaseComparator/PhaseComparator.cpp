@@ -1,7 +1,6 @@
 #include "PhaseComparator.h"
 
 #include <cmath>
-#include <complex>
 
 static const double PC_PI = 3.14159265358979323846;
 static const double PC_TWO_PI = 2.0 * PC_PI;
@@ -16,33 +15,31 @@ DEFINE_MODEL_INTERFACE(PhaseComparator)
 	{
 		SystemVueModelBuilder::DFPort port = ADD_MODEL_INPUT(s1);
 		port.SetName("s1");
-		port.SetDescription("input signal 1");
+		port.SetDescription("input signal 1 (envelope)");
 	}
 	{
 		SystemVueModelBuilder::DFPort port = ADD_MODEL_INPUT(s2);
 		port.SetName("s2");
-		port.SetDescription("input signal 2");
+		port.SetDescription("input signal 2 (envelope)");
 	}
 	{
 		SystemVueModelBuilder::DFPort port = ADD_MODEL_OUTPUT(output);
 		port.SetName("output");
-		port.SetDescription("output signal");
+		port.SetDescription("output signal (envelope)");
 	}
 
 	{
 		SystemVueModelBuilder::DFParam enumParam =
 			ADD_MODEL_ENUM_PARAM(PhaseCharacteristicType, PhaseCharacteristicTypeEnum);
-		enumParam.SetName("PhaseCharacteristicType");
-		enumParam.SetDescription("Type of analog phase comparator");
+		enumParam.SetDescription("Type of analog phase comparator: PhaseFreq, Sinusoidal, Triangular");
 		enumParam.AddEnumeration("PhaseFreq", PhaseFreq);
 		enumParam.AddEnumeration("Sinusoidal", Sinusoidal);
 		enumParam.AddEnumeration("Triangular", Triangular);
-		enumParam.SetDefaultValue("PhaseFreq");
+		enumParam.SetDefaultValue("0");
 	}
 
 	{
 		SystemVueModelBuilder::DFParam param = ADD_MODEL_PARAM(GainConstant);
-		param.SetName("GainConstant");
 		param.SetUnit(SystemVueModelBuilder::Units::NONE);
 		param.SetDefaultValue("1");
 		param.SetDescription("Small signal gain constant, in volts per degree");
@@ -50,7 +47,6 @@ DEFINE_MODEL_INTERFACE(PhaseComparator)
 
 	{
 		SystemVueModelBuilder::DFParam param = ADD_MODEL_PARAM(MaxAngle);
-		param.SetName("MaxAngle");
 		param.SetUnit(SystemVueModelBuilder::Units::NONE);
 		param.SetDefaultValue("360");
 		param.SetDescription(
@@ -59,7 +55,7 @@ DEFINE_MODEL_INTERFACE(PhaseComparator)
 
 	return true;
 }
-#endif
+#endif  
 
 PhaseComparator::PhaseComparator()
 	: s1()
@@ -72,34 +68,23 @@ PhaseComparator::PhaseComparator()
 {
 }
 
-bool PhaseComparator::Setup()
-{
-	// 帮助文档说明：每次读 s1、s2 各 1 个 sample，输出 1 个 sample。
-	// 这里显式设置 rate，解决第一个点没有正常 firing、保持默认 0 的问题。
-	s1.SetRate(1U);
-	s2.SetRate(1U);
-	output.SetRate(1U);
-
-	// 注意：
-	// 这里不要调用 PropagateCharacterizationFrequency() 去检查 s1/s2 的 Fc。
-	// Setup 阶段上游 CxToEnv 的 Fc 可能还没完全传播，过早检查会误报 fc=0。
-	fcOut_ = 0.0;
-	output.SetCharacterizationFrequency(fcOut_);
-
-	return true;
-}
-
 ERESULT PhaseComparator::PropagateCharacterizationFrequency()
 {
-	// 内置 PhaseComparator 输出的是相位比较结果/控制电压，
-	// 是 baseband/DC 实数控制量，不是 RF 包络本身。
-	// 因此输出表征频率固定为 0。
-	fcOut_ = 0.0;
+	bool bStatus = true;
+
+	const double fc1 = s1.GetCharacterizationFrequency();
+	const double fc2 = s2.GetCharacterizationFrequency();
+
+	if (fc1 <= 0.0 || fc2 <= 0.0)
+	{
+		POST_ERROR("PhaseComparator: inputs must be envelope signals with characterization frequency > 0.");
+		bStatus = false;
+	}
+
+	fcOut_ = fc1;
 	output.SetCharacterizationFrequency(fcOut_);
 
-	// 不在这里硬性检查输入 Fc。
-	// 否则在 SystemVue 传播顺序中可能会因为暂时读到 0 而误报。
-	return true;
+	return bStatus;
 }
 
 bool PhaseComparator::Initialize()
@@ -110,9 +95,9 @@ bool PhaseComparator::Initialize()
 		return false;
 	}
 
-	if (!std::isfinite(MaxAngle) || MaxAngle < 0.0)
+	if (MaxAngle < 0.0)
 	{
-		POST_ERROR("PhaseComparator: MaxAngle must be finite and >= 0.");
+		POST_ERROR("PhaseComparator: MaxAngle must be >= 0.");
 		return false;
 	}
 
@@ -144,21 +129,15 @@ double PhaseComparator::TriangularPhase(double thetaRad)
 {
 	double x = WrapToPi(thetaRad);
 
-	// 帮助文档图示：
-	// triangular(-pi)   = 0
-	// triangular(-pi/2) = -pi/2
-	// triangular(0)     = 0
-	// triangular(pi/2)  = pi/2
-	// triangular(pi)    = 0
-	if (x < -PC_PI / 2.0)
+	if (x < 0.0)                  
 	{
-		return -x - PC_PI;
+		return 0.5 * x;
 	}
-	else if (x <= PC_PI / 2.0)
+	else if (x <= PC_PI / 2.0)    
 	{
 		return x;
 	}
-	else
+	else                          
 	{
 		return -x + PC_PI;
 	}
@@ -166,29 +145,19 @@ double PhaseComparator::TriangularPhase(double thetaRad)
 
 bool PhaseComparator::Run()
 {
-	const double t = s1.GetTime(0, GetCount());
+	const double t = output.GetTime(0, GetCount());
 
-	double fc1 = s1.GetCharacterizationFrequency();
-	double fc2 = s2.GetCharacterizationFrequency();
-
-	if (!std::isfinite(fc1) || fc1 < 0.0)
-		fc1 = 0.0;
-
-	if (!std::isfinite(fc2) || fc2 < 0.0)
-		fc2 = 0.0;
+	const double fc1 = s1.GetCharacterizationFrequency();
+	const double fc2 = s2.GetCharacterizationFrequency();
+	const double fcOut = fcOut_;   
 
 	const std::complex<double> x1 =
-		s1[0].ConvertToNewFc(fc1, fc1, t);
-
+		s1[0].ConvertToNewFc(fc1, fcOut, t);
 	const std::complex<double> x2 =
-		s2[0].ConvertToNewFc(fc2, fc1, t);
+		s2[0].ConvertToNewFc(fc2, fcOut, t);
 
-	// 内置帮助文档是分别定义 θ1(t)、θ2(t)，再做 θ1(t)-θ2(t)。
-	// 不要用 angle(x1*conj(x2))，因为当 x2=0+j0 时乘积为 0，
-	// 会导致第一个点输出 0，而内置会得到 theta2=0，输出 theta1。
-	const double theta1 = std::atan2(x1.imag(), x1.real());
-	const double theta2 = std::atan2(x2.imag(), x2.real());
-	const double dTheta = WrapToPi(theta1 - theta2);
+	const std::complex<double> z = x1 * std::conj(x2);
+	const double dTheta = std::atan2(z.imag(), z.real());   
 
 	const double scaleRad2VoltDeg = GainConstant * (180.0 / PC_PI);
 
@@ -227,7 +196,7 @@ bool PhaseComparator::Run()
 	}
 	}
 
-	output[0] = outVal;
+	output[0] = std::complex<double>(outVal, 0.0);
 
 	return true;
 }

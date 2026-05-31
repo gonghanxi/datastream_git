@@ -102,7 +102,7 @@ bool Window_Block::Initialize()
     try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
     
     if (m_sampleRate <= 0.0) {
-        std::cout << "SampleRate must be greater than 0." << std::endl;
+        LOG_ERROR("SampleRate must be greater than 0.");
         return false;
     }
     try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { }

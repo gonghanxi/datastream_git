@@ -3,7 +3,7 @@
 
 #include "Block.h"
 #include "ReverseEnv.h"
-
+#include <queue>
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API ReverseEnv_Block : public SystemVueModelBuilder::Block
@@ -22,6 +22,15 @@ private:
 
 	int m_n;
 	std::unique_ptr<ReverseEnv> m_reverseEnv;
+
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+    // ========== 时间驱动缓冲队列 ==========
+    std::vector<EnvelopeSignal> m_inputBuffer;
+    std::queue<EnvelopeSignal> m_outputQueue;
+    EnvelopeSignal m_lastOutput;
+    int m_inputCount;                    // 当前已累积输入数
+    int m_outputCount;                   // 当前已分发输出数
 };
 
 RegAlgo(ReverseEnv_Block);

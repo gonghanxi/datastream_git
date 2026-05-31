@@ -22,57 +22,116 @@ void UpSample_Block::SetParameters(int factor, UpSample::ModeEnum mode, int phas
 		m_upSample->Factor = m_factor;
 		m_upSample->Phase = m_phase;
 		m_upSample->Mode = m_mode;
-	}
+    }
+}
+
+bool UpSample_Block::DataStreamRun()
+{
+    std::string inputPortName = GetInputPortName(0);
+    std::string outputPortName = GetOutputPortName(0);
+
+    auto inputData = ReadInputData<double>(inputPortName);
+    if (inputData.empty()) {
+        return false;
+    }
+
+    size_t inLen = inputData.size();
+    size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
+    std::vector<double> outputData;
+    outputData.reserve(outLen);
+
+    if (m_mode == UpSample::Insertzeros) {
+        for (size_t i = 0; i < inLen; ++i) {
+            // Fill Factor samples with zeros
+            for (int j = 0; j < m_factor; ++j) {
+                outputData.push_back(0.0);
+            }
+            // Place input sample at Phase (if valid)
+            if (m_phase >= 0 && m_phase < m_factor) {
+                const size_t base = i * static_cast<size_t>(m_factor);
+                outputData[base + static_cast<size_t>(m_phase)] = inputData[i];
+            }
+        }
+    } else {
+        for (size_t i = 0; i < inLen; ++i) {
+            for (int j = 0; j < m_factor; ++j) {
+                outputData.push_back(inputData[i]);
+            }
+        }
+    }
+
+    WriteOutputData(outputPortName, outputData);
+
+    return true;
+}
+
+bool UpSample_Block::TimeDrivenRun()
+{
+    std::string inputPortName = GetInputPortName(0);
+    std::string outputPortName = GetOutputPortName(0);
+
+    auto inputData = ReadInputData<double>(inputPortName);
+    if (inputData.empty()) {
+        return true;
+    }
+
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+
+    if(m_inputBuffer.size() >= 1) {
+        size_t inLen = m_inputBuffer.size();
+        size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
+        std::vector<double> outputData;
+        outputData.reserve(outLen);
+
+        if (m_mode == UpSample::Insertzeros) {
+            for (size_t i = 0; i < inLen; ++i) {
+                // Fill Factor samples with zeros
+                for (int j = 0; j < m_factor; ++j) {
+                    outputData.push_back(0.0);
+                }
+                // Place input sample at Phase (if valid)
+                if (m_phase >= 0 && m_phase < m_factor) {
+                    const size_t base = i * static_cast<size_t>(m_factor);
+                    outputData[base + static_cast<size_t>(m_phase)] = m_inputBuffer[i];
+                }
+            }
+        } else {
+            for (size_t i = 0; i < inLen; ++i) {
+                for (int j = 0; j < m_factor; ++j) {
+                    outputData.push_back(m_inputBuffer[i]);
+                }
+            }
+        }
+
+        for(const auto& val : outputData) m_outputQueue.push(val);
+
+        if (!m_outputQueue.empty()) {
+            double outputValue = m_outputQueue.front();
+            m_outputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<double>{outputValue});
+            m_lastOutput = outputValue;
+
+            qDebug() << "[UpSample_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue;
+            m_inputBuffer.clear();
+        }
+    }
+    return true;
 }
 
 bool UpSample_Block::Setup()
 {
 	Block::Setup();
+    while(!m_outputQueue.empty()) m_outputQueue.pop();
 	return true;
 }
 
 bool UpSample_Block::Run()
 {
-	if (!CanProcess()) {
-		return false;
-	}
-
-	std::string inputPortName = GetInputPortName(0);
-	std::string outputPortName = GetOutputPortName(0);
-
-	auto inputData = ReadInputData<double>(inputPortName);
-	if (inputData.empty()) {
-		return true;
-	}
-
-	size_t inLen = inputData.size();
-	size_t outLen = inLen * static_cast<size_t>(std::max(1, m_factor));
-	std::vector<double> outputData;
-	outputData.reserve(outLen);
-
-	if (m_mode == UpSample::Insertzeros) {
-		for (size_t i = 0; i < inLen; ++i) {
-			// Fill Factor samples with zeros
-			for (int j = 0; j < m_factor; ++j) {
-				outputData.push_back(0.0);
-			}
-			// Place input sample at Phase (if valid)
-			if (m_phase >= 0 && m_phase < m_factor) {
-				const size_t base = i * static_cast<size_t>(m_factor);
-				outputData[base + static_cast<size_t>(m_phase)] = inputData[i];
-			}
-		}
-	} else {
-		for (size_t i = 0; i < inLen; ++i) {
-			for (int j = 0; j < m_factor; ++j) {
-				outputData.push_back(inputData[i]);
-			}
-		}
-	}
-
-	WriteOutputData(outputPortName, outputData);
-
-	return true;
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
 }
 
 bool UpSample_Block::Initialize()

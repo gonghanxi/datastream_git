@@ -9,6 +9,7 @@ RADAR_WaveGate_Block::RADAR_WaveGate_Block(const std::string &name)
 bool RADAR_WaveGate_Block::Setup()
 {
     Block::Setup();
+    while(!m_OutputQueue.empty()) m_OutputQueue.pop();
     return true;
 }
 
@@ -18,6 +19,93 @@ void RADAR_WaveGate_Block::SetDefaultParameters()
     StartTime = 0;
     GateTime = 20e-6;
     SampleRate = 10e6;
+}
+
+bool RADAR_WaveGate_Block::DataStreamRun()
+{
+    std::string inputPort = GetInputPortName(0);
+    std::string gatePort = GetInputPortName(1);
+
+    auto inputData = ReadInputData<std::complex<double>>(inputPort);
+    std::vector<std::complex<double>> outputData(m_radar->output.GetRate());
+
+    if (GetInputPort(gatePort)->IsConnected())
+    {
+        auto gateData = ReadInputData<double>(gatePort);
+        StartTime = gateData[0];
+    }
+
+    int StartN	= StartTime * SampleRate;
+    int GateN = GateTime * SampleRate;
+    int StopN = StartN + GateN;
+
+    // 每个PRI都设一个波门
+    for (int i = 0; i < StopN; i++)
+    {
+        outputData[i] = inputData[i + StartN];
+    }
+
+    WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}
+
+bool RADAR_WaveGate_Block::TimeDrivenRun()
+{
+    std::string inputPort = GetInputPortName(0);
+    std::string gatePort = GetInputPortName(1);
+    size_t inputRate = GetInputPort(inputPort)->GetReadSize();
+    size_t outputRate = GetOutputPort(GetOutputPortName(0))->GetWriteSize();
+
+    auto inputData = ReadInputData<std::complex<double>>(inputPort);
+    if(inputData.empty()) return true;
+
+    for(const auto& val : inputData) m_inputBuffer.push_back(val);
+    if (GetInputPort(gatePort)->IsConnected())
+    {
+        auto gateData = ReadInputData<double>(gatePort);
+        StartTime = gateData[0];
+        m_GCBuffer.push_back(gateData[0]);
+    }
+
+    bool CanprocessData = false;
+    if(GetInputPort(gatePort)->IsConnected()) {
+        if(m_inputBuffer.size() >= inputRate && m_GCBuffer.size() >= 1) {
+            CanprocessData = true;
+        }
+    }
+    else {
+        if(m_inputBuffer.size() >= inputRate) {
+            CanprocessData = true;
+        }
+    }
+    if(CanprocessData) {
+        std::vector<std::complex<double>> outputData(outputRate);
+        int StartN	= StartTime * SampleRate;
+        int GateN = GateTime * SampleRate;
+        int StopN = StartN + GateN;
+
+        // 每个PRI都设一个波门
+        for (int i = 0; i < StopN; i++)
+        {
+            outputData[i] = m_inputBuffer[i + StartN];
+        }
+        for(const auto& val : outputData) m_OutputQueue.push(val);
+        if (!m_OutputQueue.empty()) {
+            std::complex<double> outputValue = m_OutputQueue.front();
+            m_OutputQueue.pop();
+            m_outputCount++;
+
+            WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
+
+            m_lastOutput = outputValue;
+
+            qDebug() << "[RADAR_WaveGate_Block] 分发输出:" << m_outputCount
+                     << " value:" << outputValue.real() << "," << outputValue.imag();
+            m_inputBuffer.clear();
+        }
+    }
+    return true;
 }
 
 void RADAR_WaveGate_Block::SetParameters()
@@ -70,30 +158,6 @@ bool RADAR_WaveGate_Block::Initialize()
 
 bool RADAR_WaveGate_Block::Run()
 {
-
-    std::string inputPort = GetInputPortName(0);
-    std::string gatePort = GetInputPortName(1);
-
-    auto inputData = ReadInputData<std::complex<double>>(inputPort);
-    std::vector<std::complex<double>> outputData(m_radar->output.GetRate());
-
-    if (GetInputPort(gatePort)->IsConnected())
-    {
-        auto gateData = ReadInputData<double>(gatePort);
-        StartTime = gateData[0];
-    }
-
-    int StartN	= StartTime * SampleRate;
-    int GateN = GateTime * SampleRate;
-    int StopN = StartN + GateN;
-
-    // 每个PRI都设一个波门
-    for (int i = 0; i < StopN; i++)
-    {
-        outputData[i] = inputData[i + StartN];
-    }
-
-    WriteOutputData(GetOutputPortName(0), outputData);
-
-    return true;
+    if(IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
 }

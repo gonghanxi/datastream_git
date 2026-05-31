@@ -480,6 +480,37 @@ public:
                           size_t writeSize, DataType dataType);
     Buffer* AddOutputPort(const std::string& portName, SystemVueModelBuilder::TimedCircularBuffer<DComplexMatrix>& externalPort,
                           size_t writeSize, DataType dataType);
+
+    template<typename BufferType, typename MemoryType>
+    Buffer* AddOutputPort(const std::string& portName, BufferType& externalPort,
+                          size_t writeSize, DataType dataType, MemoryType* bufferMemory, size_t memorySize = 1024)
+    {
+        //检查是否添加过相同端口
+        if(m_outputPorts.find(portName) != m_outputPorts.end()) {
+            qDebug() << QString::fromStdString(m_name) << ": Output port '" << QString::fromStdString(portName) << "' already exists";
+            return m_outputPorts[portName];
+        }
+        bufferMemory = new MemoryType[memorySize];
+        externalPort.SetBuffer(bufferMemory, memorySize, 1);
+        externalPort.Initialize();
+        Buffer* buffer = new Buffer(portName, writeSize, dataType);
+
+        bool success = buffer->SetExternalCircularBuffer(&externalPort);
+        if (!success) {
+            qDebug() << "ERROR: Failed to set external circular buffer";
+            delete[] bufferMemory;
+            delete buffer;
+            return nullptr;
+        }
+        buffer->EnsureCircularBuffer();
+
+        m_outputPorts[portName] = buffer;
+        m_outputPortDataTypes[portName] = dataType;
+        m_outputPortNames.push_back(portName);
+        m_outputPortNameToIndex[portName] = m_outputPortNames.size() - 1;
+
+        return buffer;
+    }
     //--------------------------------------------------------------
     //设置输出文件
     void SetOutputFile(const std::string& filename);

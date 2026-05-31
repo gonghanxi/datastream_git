@@ -21,7 +21,7 @@ bool Sink_Block::Setup()
 {
     Block::Setup();
 
-    // 计算理论最大样本数（仅用于警告）
+    // 检查收集范围是否超出文件大小限制（2GB）
     long long totalSamples = 0;
     switch (m_StartStopOption) {
     case Sink::Auto:
@@ -53,7 +53,7 @@ bool Sink_Block::Setup()
         dir.mkpath(".");
     }
 
-    // 构造文件名
+    // 根据链路名、子系统名、实例名等构造唯一文件名，最终路径存入 FileName
     QString fileName;
     QString linkName = QString::fromStdString(getSimu().linkName);
     QString subsystemName = QString::fromStdString(getSubsystemName());
@@ -80,7 +80,7 @@ bool Sink_Block::Setup()
     FileName = new char[pathBytes.size() + 1];
     strcpy(FileName, pathBytes.constData());
 
-    // 初始化缓冲区（改为结构体数组）
+    // 分配 DataPoint 缓冲区（存储时间和数值）
     m_pdBuffer = new DataPoint[FILEWRITER_BUFFER_SIZE];
     m_iBuffer = 0;
     m_fullPath = fullPath;
@@ -102,6 +102,7 @@ bool Sink_Block::Setup()
         m_flushInterval = 100;
         qDebug() << "[Sink_Block] 检测到时间驱动模式，启用定期刷新, 间隔:" << m_flushInterval;
     }
+    qDebug() << "Sink::Setup - m_isTimeDrivenMode: " << (m_isTimeDrivenMode ? "true" : "false");
 
     return true;
 }
@@ -116,7 +117,12 @@ bool Sink_Block::Run()
     std::string inputPortName = GetInputPortName(0);
     BufferReader* inputReader = GetInputPort(inputPortName);
 
-    // 处理变长数据（TIMED_DOUBLE）
+    // 处理变长数据（TIMED_DOUBLE）或普通 DOUBLE
+    // 读取一个或多个数据点
+    // 对于每个数据点：
+    //   1. 确定时间戳（时间驱动用真实时间，数据流模式根据采样率计算）
+    //   2. 存入缓冲区（DataPoint{time, value}）
+    //   3. 缓冲区满则调用 RunDealData() 批量写入
     if (inputReader->GetConnectedBuffer()->GetDataType() != DataType::DOUBLE) {
         auto inputData = ReadInputData<double>(inputPortName);
         if (inputData.empty()) {
