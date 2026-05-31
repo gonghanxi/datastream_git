@@ -17,7 +17,7 @@ public:
 
 	// Ports
 	SystemVueModelBuilder::DoubleCircularBufferBus input;
-	SystemVueModelBuilder::CircularBuffer< SystemVueModelBuilder::Matrix<double> > output;
+    SystemVueModelBuilder::CircularBuffer< SystemVueModelBuilder::Matrix<double>> output;
 	
 	// Parameter
 	int NumRows;

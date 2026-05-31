@@ -132,6 +132,7 @@ Demodulator\
 DownSample \
 DownSampleCx\
 DownSampleEnv\
+    DownSampleVarPhase \
 DtoA\
 EnvFcChange\
     EnvFcChange_M \
@@ -171,6 +172,7 @@ IntToBits \
     InterleaveDeinterleaveInt \
     InverseCx_M \
 Inverse_M \
+    Latch \
     Limit \
     Limit_M \
 LinearQuantizer\
@@ -270,6 +272,8 @@ ReverseInt\
     Rotate \
     Repeat\
 SDomainIIR \
+    SVD_M \
+    SampleMean_M \
 SetSampleRate\
 SetSampleRateCx\
 SetSampleRateEnv\
@@ -293,6 +297,8 @@ Sub \
 SubCx\
 SubEnv \
 SubInt\
+    SubMxCx_M \
+    SubMx_M \
     SwitchSPDT \
     SwitchSPST \
 TimeDelay\
@@ -300,6 +306,8 @@ TimeDelayCx\
 TimeDelayEnv\
 TimeDelayInt\
     TimeSynchronizer \
+    ToeplitzCx_M \
+    Toeplitz_M \
     Transpose \
     TransposeCx \
     TransposeCx_M \
@@ -308,6 +316,7 @@ TimeDelayInt\
     Transpose_M \
     Trig\
     TrigCx \
+    UnpackBus_M \
     UnpackCx_M \
     Unpack_M \
     Unwrap \
