@@ -43,6 +43,7 @@ unix {
 SUBDIRS += \
 #$$PWD/../ModelDesign/ModelDesignHelper.pro \
     Abs_M \
+    AdaptLinQuant \
 Add \
 AddCx \
 AddEnv \
@@ -62,6 +63,7 @@ AsyncCommutatorInt \
     AtoD \
     AtoD_M \
     AutoCorr \
+    AverageCxWOffset \
     Average\
     AverageCx \
     AvgSqrErr_M \
@@ -88,6 +90,7 @@ ChirpGen \
 Chop \
 ChopCx \
 ChopInt \
+    ChopVarOffset \
     CoderRS \
     Combiner_M \
 Commutator \
@@ -115,6 +118,7 @@ CxToRect \
     CyclicShiftInt \
     DB \
     DeScrambler \
+    DeadZone \
 Delay\
 DelayCx\
 DelayEnv\
@@ -140,6 +144,7 @@ EnvToCx \
     EnvToCx_M \
 EnvToData\
     Expand \
+    FFT_Shift \
 FreqMpyDiv\
 FFT_Cx\
 Gain \
@@ -182,6 +187,7 @@ LPF_ChebyshevII\
     LogAmp \
     LogVDet \
     Logic \
+    LookUpTable \
     M_PSK \
     Mapper \
 Math\
@@ -195,9 +201,11 @@ MpyCx\
 MpyEnv \
 MpyInt\
 Modulator \
+    Mux \
     MxCom_M \
     MxDecom_M \
     OSF \
+    OrderTwoInt \
 Oscillator \
     PAM_Demapper \
     PackBus_M \
@@ -273,6 +281,7 @@ ReverseInt\
     Repeat\
 SDomainIIR \
     SVD_M \
+    SampleHold \
     SampleMean_M \
 SetSampleRate\
 SetSampleRateCx\
@@ -308,6 +317,7 @@ TimeDelayInt\
     TimeSynchronizer \
     ToeplitzCx_M \
     Toeplitz_M \
+    Trainer \
     Transpose \
     TransposeCx \
     TransposeCx_M \

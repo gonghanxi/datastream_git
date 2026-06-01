@@ -1,20 +1,22 @@
 #pragma once
+
 #include "ModelBuilder.h"
 #include "DFModel.h"
 #include "CircularBuffer.h"
 #include "Matrix.h"
 
-#include <cstddef>   
-#include <cmath>     
-#include <vector>    
+#include <cstddef>
+#include <cmath>
 
-class SYSTEMVUEMODELBUILDER_API AvgSqrErr_M : public SystemVueModelBuilder::DFModel {
+class SYSTEMVUEMODELBUILDER_API AvgSqrErr_M : public SystemVueModelBuilder::DFModel
+{
 public:
 	DECLARE_MODEL_INTERFACE(AvgSqrErr_M);
 
 	AvgSqrErr_M();
+
 	bool Setup() override;
-	bool Run()   override;
+	bool Run() override;
 
 	SystemVueModelBuilder::CircularBuffer<
 		SystemVueModelBuilder::Matrix<double>
@@ -26,15 +28,5 @@ public:
 
 	SystemVueModelBuilder::CircularBuffer<double> output;
 
-	int NumInputsToAverage;   
-
-private:
-	std::vector<double> m_ring;  
-	int    m_head;               
-	double m_accumSSE;           
-	int    m_count;              
-
-	int    m_rows;
-	int    m_cols;
-	bool   m_shapeInit;
+	int NumInputsToAverage;
 };

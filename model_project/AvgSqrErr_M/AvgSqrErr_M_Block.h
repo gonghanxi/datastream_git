@@ -5,6 +5,7 @@
 #include "AvgSqrErr_M.h"
 
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -20,24 +21,20 @@ public:
     bool Run()        override;
     bool Initialize() override;
 
+    void SetParameters();
+
 private:
     void SetDefaultParameters();
-    void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     std::unique_ptr<AvgSqrErr_M> m_AvgSqrErr_M;
     int m_NumInputsToAverage;
 
-    // 矩阵尺寸状态（用于滑动窗口）
-    int m_rows;
-    int m_cols;
-    bool m_shapeInit;
-
-    // 滑动窗口状态
-    std::vector<double> m_ring;
-    int m_head;
-    double m_accumSSE;
-    int m_count;
+    // 时间驱动缓冲
+    std::vector<SystemVueModelBuilder::Matrix<double>> m_input1Buffer;
+    std::vector<SystemVueModelBuilder::Matrix<double>> m_input2Buffer;
+    std::queue<double> m_outputQueue;
 };
 
 RegAlgo(AvgSqrErr_M_Block);
