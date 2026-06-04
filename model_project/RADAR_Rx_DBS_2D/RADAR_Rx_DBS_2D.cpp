@@ -1,0 +1,348 @@
+#include "RADAR_Rx_DBS_2D.h"
+
+#ifndef SV_CODE_GEN
+DEFINE_MODEL_INTERFACE(RADAR_Rx_DBS_2D)
+{
+	SET_MODEL_DESCRIPTION("2D Rectangular Array Digital Beam Synthesis");
+	//SET_MODEL_SYMBOL("SYM_RADAR_Rx_DBS_2D");
+	SET_MODEL_CATEGORY("Array Signal Processing");
+
+	// --------- 端口 ---------
+	{
+		auto p = ADD_MODEL_INPUT(input);
+		p.SetDescription("input signal");
+	}
+	{
+		auto p = ADD_MODEL_INPUT(InTheta);
+		p.SetDescription("The array direction angle theta in radians");
+		p.SetOptional(true);
+	}
+	{
+		auto p = ADD_MODEL_INPUT(InPhi);
+		p.SetDescription("The array direction angle phi in radians");
+		p.SetOptional(true);
+	}
+	{
+		auto p = ADD_MODEL_OUTPUT(output);
+		p.SetDescription("output signal");
+	}
+
+	// --------- 参数 ---------
+	{
+		auto p = ADD_MODEL_PARAM(NumOfAntx);
+		p.SetDefaultValue("4");
+		p.SetDescription("Number of Antenna in X axis");
+	}
+	{
+		auto p = ADD_MODEL_PARAM(NumOfAnty);
+		p.SetDefaultValue("4");
+		p.SetDescription("Number of Antenna in Y axis");
+	}
+	{
+		auto p = ADD_MODEL_PARAM(Dx);
+		p.SetDefaultValue("0.5");
+		p.SetDescription("Antenna Spacing in wavelengths of X axis");
+	}
+	{
+		auto p = ADD_MODEL_PARAM(Dy);
+		p.SetDefaultValue("0.5");
+		p.SetDescription("Antenna Spacing in wavelengths of Y axis");
+	}
+	{
+		auto p = ADD_MODEL_PARAM(Theta);
+		p.SetDefaultValue("0");
+		// 保留单位显示（界面对齐）
+		p.SetUnit(SystemVueModelBuilder::Units::ANGLE);
+		p.SetDescription("The array direction angle which is the angle of scan measured from broadside");
+	}
+	{
+		auto p = ADD_MODEL_PARAM(Phi);
+		p.SetDefaultValue("0");
+		p.SetUnit(SystemVueModelBuilder::Units::ANGLE);
+		p.SetDescription("array direction angle which is the angle of scan measured from the x-axis");
+	}
+
+	// Window_Type
+	{
+		auto p = ADD_MODEL_ENUM_PARAM(Window_Type, Window_TypeEnum);
+		p.AddEnumeration("Rectangle", RADAR_Rx_DBS_2D::Rectangle);
+		p.AddEnumeration("Bartlett", RADAR_Rx_DBS_2D::Bartlett);
+		p.AddEnumeration("Hanning", RADAR_Rx_DBS_2D::Hanning);
+		p.AddEnumeration("Hamming", RADAR_Rx_DBS_2D::Hamming);
+		p.AddEnumeration("Blackman", RADAR_Rx_DBS_2D::Blackman);
+		p.AddEnumeration("SteepBlackman", RADAR_Rx_DBS_2D::SteepBlackman);
+		p.AddEnumeration("Kaiser", RADAR_Rx_DBS_2D::Kaiser);
+		p.SetDefaultValue("Rectangle");
+		p.SetDescription("The windowing type");
+	}
+
+	// Kaiser 参数：仅 Kaiser 可见
+	{
+		auto p = ADD_MODEL_PARAM(WindowParameters);
+		p.SetDefaultValue("0");
+		p.SetDescription(
+			"the value Beta defined in Kaiser window function which is a non-negative value to determine the Kaiser window shape."
+			"Beta=Alpah*Pl. This parameter is only used when Kaiser window is used in Window_Type");
+		p.SetHideCondition("Window_Type ~= 6");
+	}
+
+	return true;
+}
+#endif // SV_CODE_GEN
+
+RADAR_Rx_DBS_2D::RADAR_Rx_DBS_2D()
+	: NumOfAntx(4)
+	, NumOfAnty(4)
+	, Dx(0.5)
+	, Dy(0.5)
+	, Theta(0.0)
+	, Phi(0.0)
+	, Window_Type(Rectangle)
+	, WindowParameters(0.0)
+{
+}
+
+// Kaiser I0：VS2017 兼容实现（与 Tx 保持一致）
+double RADAR_Rx_DBS_2D::i0_bessel(double x)
+{
+	static const double i0A[] = {
+		-4.41534164647933937950E-18,  3.33079451882223809783E-17,
+		-2.43127984654795469359E-16,  1.71539128555513303061E-15,
+		-1.16853328779934516808E-14,  7.67618549860493561688E-14,
+		-4.85644678311192946090E-13,  2.95505266312963983461E-12,
+		-1.72682629144155570723E-11,  9.67580903537323691224E-11,
+		-5.18979560163526290666E-10,  2.65982372468238665035E-9,
+		-1.30002500998624804212E-8,   6.04699502254191894932E-8,
+		-2.67079385394061173391E-7,   1.11738753912010371815E-6,
+		-4.41673835845875056359E-6,   1.64484480707288970893E-5,
+		-5.75419501008210370398E-5,   1.88502885095841655729E-4,
+		-5.76375574538582365885E-4,   1.63947561694133579842E-3,
+		-4.32430999505057594430E-3,   1.05464603945949983183E-2,
+		-2.37374148058994688156E-2,   4.93052842396707084878E-2,
+		-9.49010970480476444210E-2,   1.71620901522208775349E-1,
+		-3.04682672343198398683E-1,   6.76795274409476084995E-1
+	};
+
+	static const double i0B[] = {
+		-7.23318048787475395456E-18, -4.83050448594418207126E-18,
+		 4.46562142029675999901E-17,  3.46122286769746109310E-17,
+		-2.82762398051658348494E-16, -3.42548561967721913462E-16,
+		 1.77256013305652638360E-15,  3.81168066935262242075E-15,
+		-9.55484669882830764870E-15, -4.15056934728722208663E-14,
+		 1.54008621752140982691E-14,  3.85277838274214270114E-13,
+		 7.18012445138366623367E-13, -1.79417853150680611778E-12,
+		-1.32158118404477131188E-11, -3.14991652796324136454E-11,
+		 1.18891471078464383424E-11,  4.94060238822496958910E-10,
+		 3.39623202570838634515E-9,   2.26666899049817806459E-8,
+		 2.04891858946906374183E-7,   2.89137052083475648297E-6,
+		 6.88975834691682398426E-5,   3.36911647825569408990E-3,
+		 8.04490411014108831608E-1
+	};
+
+	auto chbevl = [](double xx, const double* coef, int n) -> double {
+		double b0 = coef[0], b1 = 0.0, b2 = 0.0;
+		for (int i = 1; i < n; ++i)
+		{
+			b2 = b1;
+			b1 = b0;
+			b0 = xx * b1 - b2 + coef[i];
+		}
+		return 0.5 * (b0 - b2);
+	};
+
+	const double ax = std::fabs(x);
+	if (ax <= 8.0)
+	{
+		const double y = chbevl(ax / 2.0 - 2.0, i0A, (int)(sizeof(i0A) / sizeof(i0A[0])));
+		return std::exp(ax) * y;
+	}
+	else
+	{
+		const double y = chbevl(32.0 / ax - 2.0, i0B, (int)(sizeof(i0B) / sizeof(i0B[0])));
+		return std::exp(ax) * y / std::sqrt(ax);
+	}
+}
+
+void RADAR_Rx_DBS_2D::make_window(Window_TypeEnum type, int L, double beta, std::vector<double>& w)
+{
+	w.assign(std::max(L, 1), 1.0);
+	if (L <= 1) { w[0] = 1.0; return; }
+
+	auto omega = [L](int p) -> double {
+		// ★ 对齐内置：对称采样 denom = (L-1)
+		return kTwoPi * static_cast<double>(p) / static_cast<double>(L - 1);
+	};
+
+	switch (type)
+	{
+	case Rectangle:
+		for (int p = 0; p < L; ++p) w[p] = 1.0;
+		break;
+
+	case Bartlett:
+		for (int p = 0; p < L; ++p)
+		{
+			const double mid = 0.5 * (L - 1);
+			double val = 1.0 - std::fabs((p - mid) / mid);
+			if (val < 0.0) val = 0.0;
+			w[p] = val;
+		}
+		break;
+
+	case Hanning:
+		for (int p = 0; p < L; ++p)
+		{
+			const double th = omega(p);
+			w[p] = 0.5 * (1.0 - std::cos(th));
+		}
+		break;
+
+	case Hamming:
+		for (int p = 0; p < L; ++p)
+		{
+			const double th = omega(p);
+			w[p] = 0.54 - 0.46 * std::cos(th);
+		}
+		break;
+
+	case Blackman:
+		for (int p = 0; p < L; ++p)
+		{
+			const double th = omega(p);
+			w[p] = 0.42 - 0.5 * std::cos(th) + 0.08 * std::cos(2.0 * th);
+		}
+		break;
+
+	case Kaiser:
+	{
+		const double b = std::max(beta, 0.0);
+		const double denom = i0_bessel(b);
+		for (int p = 0; p < L; ++p)
+		{
+			const double t = 2.0 * p / static_cast<double>(L - 1) - 1.0;
+			w[p] = i0_bessel(b * std::sqrt(std::max(0.0, 1.0 - t * t))) / denom;
+		}
+	}
+	break;
+
+	case SteepBlackman:
+	{
+		// 与 Tx 保持一致（4-term，折返，分母 N=L-1）
+		const double a0 = 0.35875;
+		const double a1 = 0.48829;
+		const double a2 = 0.14128;
+		const double a3 = 0.01168;
+
+		const double PI = std::acos(-1.0);
+		const double N = static_cast<double>(L - 1);
+
+		for (int p = 0; p < L; ++p)
+		{
+			const int n = (p < (L / 2)) ? p : (L - p - 1);
+			const double th = 2.0 * PI * static_cast<double>(n) / N;
+
+			const double val = a0
+				- a1 * std::cos(th)
+				+ a2 * std::cos(2.0 * th)
+				- a3 * std::cos(3.0 * th);
+
+			w[p] = val;
+		}
+	}
+	break;
+
+	default:
+		for (int p = 0; p < L; ++p) w[p] = 1.0;
+		break;
+	}
+}
+
+void RADAR_Rx_DBS_2D::rebuild_cache_()
+{
+	nx_ = std::max(1, NumOfAntx);
+	ny_ = std::max(1, NumOfAnty);
+	nChExpected_ = nx_ * ny_;
+
+	xPos_.assign(nx_, 0.0);
+	yPos_.assign(ny_, 0.0);
+
+	// ★ 对齐内置：corner-origin
+	for (int m = 0; m < nx_; ++m) xPos_[m] = static_cast<double>(m) * Dx;
+	for (int n = 0; n < ny_; ++n) yPos_[n] = static_cast<double>(n) * Dy;
+
+	make_window(Window_Type, nx_, WindowParameters, wx_);
+	make_window(Window_Type, ny_, WindowParameters, wy_);
+
+	// ★ x-fast / row-major：idx = n*Nx + m
+	taper2d_.assign(nChExpected_, 1.0);
+	for (int n = 0; n < ny_; ++n)
+	{
+		for (int m = 0; m < nx_; ++m)
+		{
+			const int idx = n * nx_ + m;
+			taper2d_[idx] = wx_[m] * wy_[n];
+		}
+	}
+}
+
+bool RADAR_Rx_DBS_2D::Setup()
+{
+	thetaConnected_ = InTheta.IsConnected();
+	phiConnected_ = InPhi.IsConnected();
+
+	rebuild_cache_();
+
+	// 输出采样率继承输入第0路
+	const size_t busSize = input.GetSize();
+	if (busSize > 0)
+	{
+		const double fs = input[0].GetSampleRate();
+		if (fs > 0.0)
+			output.SetSampleRate(fs);
+	}
+
+	return true;
+}
+
+bool RADAR_Rx_DBS_2D::Run()
+{
+	const size_t busSize = input.GetSize();
+	if (busSize > 0)
+		(void)input[0].GetTime(0, GetCount()); // 驱动时间轴对齐
+
+	// 角度：端口优先（端口=rad），否则参数（界面=deg）
+	double theta = thetaConnected_ ? InTheta[0] : Theta;
+	double phi = phiConnected_ ? InPhi[0] : Phi;
+
+	// 仅当“看起来像度”才转弧度（保留 Units::ANGLE 界面对齐且避免二次换算）
+	if (!thetaConnected_ && std::fabs(theta) > kTwoPi) theta = deg2rad(theta);
+	if (!phiConnected_   && std::fabs(phi) > kTwoPi) phi = deg2rad(phi);
+
+	const double sTh = std::sin(theta);
+	const double ux = sTh * std::cos(phi);
+	const double uy = sTh * std::sin(phi);
+
+	const size_t nUse = std::min(busSize, static_cast<size_t>(nChExpected_));
+
+	Cx ysum(0.0, 0.0);
+
+	for (size_t idx = 0; idx < nUse; ++idx)
+	{
+		// x-fast / row-major
+		const int n = static_cast<int>(idx / nx_);
+		const int m = static_cast<int>(idx % nx_);
+
+		const double psi = kTwoPi * (xPos_[m] * ux + yPos_[n] * uy);
+
+		// ★★★ 关键修正：使用 exp(-j*psi) 与内置对齐（你现在的差异特征最像“符号选反”）
+		const double cs = std::cos(psi);
+		const double sn = std::sin(psi);
+		const Cx phase(cs, -sn); // exp(-j*psi)
+
+		const Cx xin = input[idx][0];
+		ysum += xin * (taper2d_[idx] * phase);
+	}
+
+	output[0] = ysum;
+	return true;
+}

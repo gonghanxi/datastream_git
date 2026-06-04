@@ -51,6 +51,7 @@ AddEnv \
     AddGuard \
 AddInt \
     AddNDensity \
+    AddNoise \
 Amplifier \
 AsyncCommutator \
 AsyncCommutatorCx \
@@ -193,6 +194,7 @@ LPF_ChebyshevII\
 Math\
 MathCx \
 MATLAB_Script\
+    MaxMin \
 Mixer \
     Modulo \
     ModuloInt \
@@ -211,6 +213,8 @@ Oscillator \
     PackBus_M \
     PackCx_M \
     Pack_M \
+    PattMatch \
+    PcwzLinear \
     PeakDetector \
     PhaseComparator \
 PhaseShifter \
@@ -232,6 +236,7 @@ PulseGen\
     RADAR_Antenna_Tx2 \
 RADAR_BarkerCode\
 RADAR_CFAR\
+    RADAR_Clutter_H \
 RADAR_CoIntgr\
 RADAR_CW \
 RADAR_Detector\
@@ -246,6 +251,8 @@ RADAR_LFM \
 RADAR_MatchedFilter\
 RADAR_MTD\
 RADAR_MTI\
+    RADAR_MultiCH_Rx \
+    RADAR_MultiCH_Tx \
 RADAR_NLFM\
 RADAR_PULSE \
     RADAR_Pd_Measurement \
@@ -253,11 +260,13 @@ RADAR_PULSE \
 RADAR_PulseCompression \
 RADAR_RangeMeas\
 RADAR_RCS\
+    RADAR_Rx_DBS_2D \
     RADAR_SAR_Echo \
 RADAR_Switch\
     RADAR_TargetDetect \
     RADAR_TargetTrack \
     RADAR_TargetTrajectory \
+    RADAR_Tx_DBS_2D \
 RADAR_UnAmbRange\
 RADAR_UnAmbVelocity\
 RADAR_VelocityMeas\
@@ -283,6 +292,7 @@ SDomainIIR \
     SVD_M \
     SampleHold \
     SampleMean_M \
+    SchmittTrig \
 SetSampleRate\
 SetSampleRateCx\
 SetSampleRateEnv\
