@@ -22,6 +22,9 @@ public:
     bool Run()        override;
     bool Initialize() override;
 
+    void SetDefaultParameters();
+    void SetParameters();
+
 private:
     bool DataStreamRun();
     bool TimeDrivenRun();

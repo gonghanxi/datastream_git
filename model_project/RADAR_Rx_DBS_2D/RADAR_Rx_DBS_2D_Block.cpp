@@ -4,6 +4,24 @@
 #include <cmath>
 #include <random>
 
+
+namespace {
+std::string TrimCopy(const std::string& value)
+{
+    std::string s = value;
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
+    return s;
+}
+
+std::string ToLowerCopy(const std::string& value)
+{
+    std::string s = value;
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return s;
+}
+}
+
 // ============================================================================
 // 构造函数
 // ============================================================================
@@ -210,25 +228,6 @@ bool RADAR_Rx_DBS_2D_Block::Initialize()
     AddOutputPort("output", m_algo->output,  1, Block::DataType::DCOMPLEX_BUS);
 
     return true;
-}
-
-// ============================================================================
-// ConvertStringTo
-// ============================================================================
-
-static std::string TrimCopy(const std::string& s)
-{
-    size_t start = s.find_first_not_of(" \t\n\r");
-    if (start == std::string::npos) return "";
-    size_t end = s.find_last_not_of(" \t\n\r");
-    return s.substr(start, end - start + 1);
-}
-
-static std::string ToLowerCopy(const std::string& s)
-{
-    std::string r = s;
-    for (char& c : r) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    return r;
 }
 
 RADAR_Rx_DBS_2D::Window_TypeEnum RADAR_Rx_DBS_2D_Block::ConvertStringToWindowType(const std::string& value)

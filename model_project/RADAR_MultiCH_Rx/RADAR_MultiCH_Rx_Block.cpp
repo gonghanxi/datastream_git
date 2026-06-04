@@ -238,6 +238,7 @@ bool RADAR_MultiCH_Rx_Block::Initialize()
     simulator_param = getSimu();
 
     // 解析参数
+    SetDefaultParameters();
     try { m_RefFreq  = std::stod(getParameter("RefFreq").Value); } catch (...) {}
     try { m_NDensity = std::stod(getParameter("NDensity").Value); } catch (...) {}
     try { m_NumOfCh  = std::stoi(getParameter("NumOfCh").Value); } catch (...) {}
@@ -252,6 +253,8 @@ bool RADAR_MultiCH_Rx_Block::Initialize()
 
     rebuildCache();
 
+    SetParameters();
+
     // 重置状态
     m_rng = std::mt19937(1);
     m_haveSpare = false;
@@ -262,6 +265,29 @@ bool RADAR_MultiCH_Rx_Block::Initialize()
     AddOutputPort("output", m_algo->output, 1, Block::DataType::DCOMPLEX_BUS);
 
     return true;
+}
+
+// ============================================================================
+// SetDefaultParameters — 设置参数默认值
+// ============================================================================
+
+void RADAR_MultiCH_Rx_Block::SetDefaultParameters()
+{
+    m_RefFreq  = 1e6;
+    m_NDensity = -173.975;
+    m_NumOfCh  = 16;
+}
+
+// ============================================================================
+// SetParameters — 将解析后的参数写入算法对象
+// ============================================================================
+
+void RADAR_MultiCH_Rx_Block::SetParameters()
+{
+    if (!m_algo) return;
+    m_algo->RefFreq  = m_RefFreq;
+    m_algo->NDensity = m_NDensity;
+    m_algo->NumOfCh  = m_NumOfCh;
 }
 
 // ============================================================================

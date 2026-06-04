@@ -20,8 +20,8 @@ public:
 	virtual bool	Run();
 
 	// Ports
-	SystemVueModelBuilder::EnvelopeCircularBufferBus inSignal;
-	SystemVueModelBuilder::CircularBufferBusT<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::Matrix<double>>> TxPlatformLoc;
+    SystemVueModelBuilder::EnvelopeCircularBufferBus inSignal;
+    SystemVueModelBuilder::CircularBufferBusT<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::Matrix<double>>> TxPlatformLoc;
 	SystemVueModelBuilder::CircularBufferBusT<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::Matrix<double>>> RxPlatformLoc;
 	SystemVueModelBuilder::CircularBufferBusT<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::Matrix<double>>> TargetScatterLoc;
 	SystemVueModelBuilder::DoubleCircularBufferBus TargetScatterRCS;

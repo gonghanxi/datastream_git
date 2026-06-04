@@ -126,6 +126,7 @@ bool RADAR_MultiCH_Tx_Block::Initialize()
     m_algo = std::make_unique<RADAR_MultiCH_Tx>();
 
     // 解析参数
+    SetDefaultParameters();
     try { m_NumOfCH = std::stoi(getParameter("NumOfCH").Value); } catch (...) {}
     try { m_TStep   = std::stod(getParameter("TStep").Value); } catch (...) {}
     try { m_FCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) {}
@@ -141,10 +142,35 @@ bool RADAR_MultiCH_Tx_Block::Initialize()
     // 解析 ImbalanceCoef 并缓存
     rebuildCache();
 
+    SetParameters();
+
     AddInputPort("input",  m_algo->input,  1, Block::DataType::DCOMPLEX_BUS);
     AddOutputPort("output", m_algo->output, 1, Block::DataType::ENVELOPE_BUS);
 
     return true;
+}
+
+// ============================================================================
+// SetDefaultParameters — 设置参数默认值
+// ============================================================================
+
+void RADAR_MultiCH_Tx_Block::SetDefaultParameters()
+{
+    m_NumOfCH  = 16;
+    m_TStep    = 1e-7;      // 1/10e6
+    m_FCarrier = 1.0e9;
+}
+
+// ============================================================================
+// SetParameters — 将解析后的参数写入算法对象
+// ============================================================================
+
+void RADAR_MultiCH_Tx_Block::SetParameters()
+{
+    if (!m_algo) return;
+    m_algo->NumOfCH  = m_NumOfCH;
+    m_algo->TStep    = m_TStep;
+    m_algo->FCarrier = m_FCarrier;
 }
 
 // ============================================================================

@@ -247,7 +247,11 @@ RADAR_DOA\
 RADAR_Equation\
 RADAR_FSK\
 RADAR_GainCtrl\
+    RADAR_Ground_Clutter \
+    RADAR_JammerLocation \
+    RADAR_JammingEffect \
 RADAR_LFM \
+    RADAR_LocInAntennaFrame \
 RADAR_MatchedFilter\
 RADAR_MTD\
 RADAR_MTI\
@@ -257,11 +261,14 @@ RADAR_NLFM\
 RADAR_PULSE \
     RADAR_Pd_Measurement \
     RADAR_Pf_Measurement \
+    RADAR_PhasedArrayRx \
+    RADAR_PhasedArrayTx \
 RADAR_PulseCompression \
 RADAR_RangeMeas\
 RADAR_RCS\
     RADAR_Rx_DBS_2D \
     RADAR_SAR_Echo \
+    RADAR_Sea_Clutter \
 RADAR_Switch\
     RADAR_TargetDetect \
     RADAR_TargetTrack \
