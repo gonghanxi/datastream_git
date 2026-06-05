@@ -1,6 +1,5 @@
 #include "RADAR_JammingEffect_Block.h"
 #include <QDir>
-#include <QFileInfo>
 #include <algorithm>
 #include <cctype>
 
@@ -34,15 +33,6 @@ RADAR_JammingEffect_Block::RADAR_JammingEffect_Block(const std::string &name)
 {
     DetectStatus = false;
     DetectCount = 0;
-    SweepIndex = 0;
-}
-
-RADAR_JammingEffect_Block::~RADAR_JammingEffect_Block()
-{
-    if (FileName) {
-        delete[] FileName;
-        FileName = nullptr;
-    }
 }
 
 // ============================================================================
@@ -146,11 +136,6 @@ bool RADAR_JammingEffect_Block::Initialize()
 
      SetParameters();
 
-     // 每个 sweep 重置检测状态
-     DetectCount  = 0;
-     DetectStatus = false;
-     SweepIndex++;
-
      AddInputPort("input", m_radar->input, 1, DataType::CIRCULAR_BUFFER_DOUBLE);
 
      return true;
@@ -218,53 +203,47 @@ bool RADAR_JammingEffect_Block::Run()
 }
 
 // ============================================================================
-// Done — 每个 sweep 追加一条结果 (支持多 sweep 模式)
+// Done — 仿真结束写结果文件 (from RADAR_JammingEffect::Finalize)
 // ============================================================================
 
 bool RADAR_JammingEffect_Block::Done()
 {
-    QFileInfo fileInfo(m_fullPath);
-    bool isFirstSweep = !fileInfo.exists() || fileInfo.size() <= 2;
-
-    if (isFirstSweep) {
-        // 首次 sweep：新建文件
+    // 如果文件已经打开，直接写入剩余数据
+    if (m_qfile.isOpen()) {
+        // 文件已打开，跳过打开文件的步骤
+    } else {
+        // 文件未打开，才执行打开操作
         m_qfile.setFileName(m_fullPath);
         if (!m_qfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             LOG_INFO("无法创建文件:", m_qfile.errorString().toStdString());
             return false;
         }
+
         m_stream.setDevice(&m_qfile);
         m_stream.setCodec("UTF-8");
         m_stream << "[" << "\r\n";
         m_stream.flush();
-    } else {
-        // 非首次 sweep：以读写模式打开，回退到文件末尾 ] 之前
-        m_qfile.setFileName(m_fullPath);
-        if (!m_qfile.open(QIODevice::ReadWrite | QIODevice::Text)) {
-            LOG_INFO("无法打开文件:", m_qfile.errorString().toStdString());
+    }
+
+    // 确保文件打开
+    if (!m_qfile.isOpen()) {
+        if (!openFileForAppend()) {
             cleanup();
             return false;
         }
-        // 文件末尾是 \r\n] (3 bytes)，回退到 ] 之前进行追加
-        m_qfile.seek(m_qfile.size() - 3);
-        m_stream.setDevice(&m_qfile);
-        m_stream.setCodec("UTF-8");
-        m_stream << "," << "\r\n";
     }
-
-    // 写入当前 sweep 结果（逐 sweep 公式，不乘 DetectionNum）
     m_stream << "\t{" << "\r\n";
-    m_stream << "\t\t" << R"("Index": )" << SweepIndex << "," << "\r\n";
+    m_stream << "\t\t" << R"("Index": )" << 1 << "," << "\r\n";
     m_stream << "\t\t" << R"("Detection Hit":)" << DetectCount << "," << "\r\n";
-    m_stream << "\t\t" << R"("True Target Count":)" << TargetsInPRI << "," << "\r\n";
+    m_stream << "\t\t" << R"("True Target Count":)" << TargetsInPRI * DetectionNum << "," << "\r\n";
 
     switch (JammingType)
     {
     case RADAR_JammingEffect::CoverJamming:
-        m_stream << "\t\t" << R"("Pd":)" << 1.0*DetectCount / TargetsInPRI << "\r\n";
+        m_stream << "\t\t" << R"("Pd":)" << 1.0*DetectCount / (TargetsInPRI*DetectionNum) << "\r\n";
         break;
     case RADAR_JammingEffect::DeceptionJamming:
-        m_stream << "\t\t" << R"("False Target Count":)" << FalseTargetNum << "\r\n";
+        m_stream << "\t\t" << R"("False Target Count":)" << FalseTargetNum * DetectionNum << "\r\n";
         break;
     default:
         break;
@@ -272,7 +251,7 @@ bool RADAR_JammingEffect_Block::Done()
 
     m_stream << "\t}" /*<< "\r\n"*/;
 
-    // 结束 JSON 数组
+    // 结束JSON数组
     m_stream << "\r\n]";
     m_stream.flush();
 
@@ -339,6 +318,12 @@ void RADAR_JammingEffect_Block::cleanup()
     // 确保文件关闭
     if (m_qfile.isOpen()) {
         m_qfile.close();
+    }
+
+    // 清理FileName内存
+    if (FileName) {
+        delete[] FileName;
+        FileName = nullptr;
     }
 }
 
@@ -413,8 +398,7 @@ bool RADAR_JammingEffect_Block::ModelSetup()
         LOG_ERROR("TargetThreshold must be > 0");
         bStatus = false;
     }
-    // 每个 sweep 收集一轮检测的数据（PRI_NUM * FFT_Size），由仿真框架控制 sweep 次数
-    m_control.Initialize(nullptr, Start, Start + PRI_NUM * FFT_Size);
+    m_control.Initialize(nullptr, Start, Start + PRI_NUM * FFT_Size * DetectionNum);
     return bStatus;
 }
 

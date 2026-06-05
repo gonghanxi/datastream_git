@@ -31,7 +31,7 @@ class SYSTEMVUEMODELBUILDER_API RADAR_JammingEffect_Block : public Block
 {
 public:
     RADAR_JammingEffect_Block(const std::string& name);
-    ~RADAR_JammingEffect_Block();
+    ~RADAR_JammingEffect_Block() = default;
 
     bool Setup() override;
     bool Initialize() override;
@@ -68,7 +68,6 @@ private:
 
     bool DetectStatus;
     int DetectCount;
-    int SweepIndex;
 
     SinkControl m_control;
 };

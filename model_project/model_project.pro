@@ -234,13 +234,18 @@ PulseGen\
     RADAR_Antenna_Rx \
     RADAR_Antenna_Tx \
     RADAR_Antenna_Tx2 \
+    RADAR_ArrayCouple \
 RADAR_BarkerCode\
+    RADAR_BinaryDetector \
 RADAR_CFAR\
+    RADAR_CFAR_M \
     RADAR_Clutter_H \
 RADAR_CoIntgr\
 RADAR_CW \
+    RADAR_CoIntgr_M \
 RADAR_Detector\
 RADAR_DOA\
+    RADAR_Detector_M \
     RADAR_EWDeceptionJamming \
     RADAR_EWJamming \
     RADAR_EchoGenerator \
@@ -250,7 +255,9 @@ RADAR_GainCtrl\
     RADAR_Ground_Clutter \
     RADAR_JammerLocation \
     RADAR_JammingEffect \
+    RADAR_Kalman \
 RADAR_LFM \
+    RADAR_LFMRef \
     RADAR_LocInAntennaFrame \
 RADAR_MatchedFilter\
 RADAR_MTD\
@@ -269,6 +276,7 @@ RADAR_RCS\
     RADAR_Rx_DBS_2D \
     RADAR_SAR_Echo \
     RADAR_Sea_Clutter \
+    RADAR_SignalAnalyzer \
 RADAR_Switch\
     RADAR_TargetDetect \
     RADAR_TargetTrack \
