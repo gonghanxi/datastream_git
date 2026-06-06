@@ -243,9 +243,11 @@ RADAR_CFAR\
 RADAR_CoIntgr\
 RADAR_CW \
     RADAR_CoIntgr_M \
+    RADAR_CornerReflectorLocation \
 RADAR_Detector\
 RADAR_DOA\
     RADAR_Detector_M \
+    RADAR_EWChaff \
     RADAR_EWDeceptionJamming \
     RADAR_EWJamming \
     RADAR_EchoGenerator \
@@ -259,12 +261,16 @@ RADAR_GainCtrl\
 RADAR_LFM \
     RADAR_LFMRef \
     RADAR_LocInAntennaFrame \
+    RADAR_MTD_M \
+    RADAR_MTI_M \
 RADAR_MatchedFilter\
 RADAR_MTD\
 RADAR_MTI\
     RADAR_MultiCH_Rx \
     RADAR_MultiCH_Tx \
 RADAR_NLFM\
+    RADAR_NonCoIntgr \
+    RADAR_NonCoIntgr_M \
 RADAR_PULSE \
     RADAR_Pd_Measurement \
     RADAR_Pf_Measurement \
@@ -277,6 +283,7 @@ RADAR_RCS\
     RADAR_SAR_Echo \
     RADAR_Sea_Clutter \
     RADAR_SignalAnalyzer \
+    RADAR_SummerBusRF \
 RADAR_Switch\
     RADAR_TargetDetect \
     RADAR_TargetTrack \
