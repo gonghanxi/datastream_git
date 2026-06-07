@@ -8,7 +8,7 @@ class SYSTEMVUEMODELBUILDER_API GrayDecoder_Block : public Block
 {
 public:
     GrayDecoder_Block(const std::string& name);
-    ~GrayDecoder_Block() = default;
+    ~GrayDecoder_Block();
     bool Setup() override;
     bool Run() override;
     bool Initialize() override;
@@ -16,11 +16,16 @@ public:
     void SetParameters();
 private:
     void SetDefaultParameters();
+    void FreeBuffersBlock();
     GrayDecoder::BitOrderE ConvertStringToBitOrderE(const std::string& value);
 
     std::unique_ptr<GrayDecoder> m_gray;
     int NumBits;
     GrayDecoder::BitOrderE m_BitOrder;
+
+    // ========== 原算法内部缓冲区 ==========
+    bool* inBits;
+    bool* outBits;
 
     bool DataStreamRun();
     bool TimeDrivenRun();

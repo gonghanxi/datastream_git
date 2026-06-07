@@ -331,19 +331,19 @@ Amplifier::GCTypeEnum Amplifier_Block::ConvertStringToGCType(const std::string& 
     if (lower == "toi" || lower == "1") {
         return Amplifier::TOI;
     }
-    if (lower == "dBc1" || lower == "2") {
-        return Amplifier::TOI;
+    if (lower == "dbc1" || lower == "2") {
+        return Amplifier::dBc1;
     }
-    if (lower == "toi+dbc1" || lower == "3") {
+    if (lower == "toi_dbc1" || lower == "3") {
         return Amplifier::TOI_dBc1;
     }
-    if (lower == "psat+gcsat+toi" || lower == "4") {
+    if (lower == "psat_gcsat_toi" || lower == "4") {
         return Amplifier::PSat_GCSat_TOI;
     }
-    if (lower == "psat+gcsat+dbc1" || lower == "5") {
+    if (lower == "psat_gcsat_dbc1" || lower == "5") {
         return Amplifier::PSat_GCSat_dBc1;
     }
-    if (lower == "psat+gcsat+toi+dbc1" || lower == "6") {
+    if (lower == "psat_gcsat_toi_dbc1" || lower == "6") {
         return Amplifier::PSat_GCSat_TOI_dBc1;
     }
     if (lower == "rappnonlinearity" || lower == "7") {

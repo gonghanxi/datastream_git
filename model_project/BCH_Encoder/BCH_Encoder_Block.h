@@ -17,21 +17,24 @@ public:
 private:
     void SetDefaultParameters();
     bool parseArrayString(const std::string& arrayStr, std::vector<int>& outArray);
-    bool ModelSetup();
+    void buildGeneratorBlock();
+    void encodeOneBlock(const std::vector<int>& u, std::vector<int>& c_out);
 
     std::unique_ptr<BCH_Encoder> m_bch;
     int M;
     int K;
     int MsgLength;
+    int Ks_ = 0;
+    int Ns_ = 0;
 
     int* GenPoly;
     int  GenPolySize;
     std::vector<int> gendata;
+    std::vector<int> g_;
+    int parityLen_ = 0;
 
     bool DataStreamRun();
     bool TimeDrivenRun();
-
-    //
     size_t m_maxBlock = 0;
     // ========== 时间驱动缓冲队列 ==========
     std::vector<int> m_MsgBuffer;   // 多输入累积缓冲区

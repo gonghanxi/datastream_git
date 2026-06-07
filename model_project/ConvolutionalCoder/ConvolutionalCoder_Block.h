@@ -18,7 +18,10 @@ public:
 private:
     void SetDefaultParameters();
     bool parseArrayString(const std::string& arrayStr, std::vector<int>& outArray);
-    bool ModelSetup();
+    int  boundaryCheckBlock();
+    int  bitReverseBlock(int mask, int constraintLen) const;
+    static int rateToNBlock(ConvolutionalCoder::CodingRateEnum r);
+    static int parityU32Block(uint32_t v);
     ConvolutionalCoder::CodingRateEnum ConvertStringToCodingRateEnum(const std::string& value);
     ConvolutionalCoder::ZeroTailEnum ConvertStringToZeroTailEnum(const std::string& value);
 
@@ -34,6 +37,14 @@ private:
 
     ConvolutionalCoder::ZeroTailEnum ZeroTail;
     int         BitSequenceLength;
+
+    int m_constraintLenK = 0;
+    int m_convoCodeRateN = 0;
+    uint32_t m_regMaskK = 0;
+    uint32_t m_polyMask[8] = {0};
+    int m_inputFrmLen = 1;
+    int m_currentState_ = 0;
+    int m_Counter_ = 0;
 
     bool DataStreamRun();
     bool TimeDrivenRun();

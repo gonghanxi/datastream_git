@@ -45,9 +45,27 @@ void Demodulator_Block::SetParameters()
 	}
 }
 
+double Demodulator_Block::deg2rad(double d)
+{
+	return d * (Demodulator::kPI / 180.0);
+}
+
+double Demodulator_Block::unwrapPhase(double rawThetaRad)
+{
+	if (!m_havePrev) return rawThetaRad;
+	double d = rawThetaRad - m_prevThetaRad;
+	const double TWO_PI = 2.0 * Demodulator::kPI;
+	while (d > Demodulator::kPI)  d -= TWO_PI;
+	while (d < -Demodulator::kPI) d += TWO_PI;
+	return m_prevThetaRad + d;
+}
+
 bool Demodulator_Block::Setup()
 {
 	Block::Setup();
+	m_havePrev = false;
+	m_prevThetaRad = 0.0;
+	m_prevTime = 0.0;
 	return true;
 }
 
@@ -67,9 +85,29 @@ bool Demodulator_Block::Run()
 	out1.reserve(inputData.size());
 	out2.reserve(inputData.size());
 
+	// 从端口 reader 获取特征频率（processEnvelopeSample 内部需要）
+	double fc_in = 0.0;
+	{
+		auto* reader = GetInputPort(inputPort);
+		if (reader && reader->hasCharacterizationFrequency()) {
+			fc_in = reader->getCharacterizationFrequency();
+		}
+	}
+
 	const SimuParameter simulator_param = getSimu();
 	const double fs = simulator_param.samplingRate;
 	const double baseCount = static_cast<double>(GetCount());
+
+	const double theta0 = deg2rad(m_initialPhase);
+	const double dFc = fc_in - m_fCarrier;
+	const double r_rot = deg2rad(m_iqRotation);
+
+	// IQ impairment 常数（仅当 ShowIQ_Impairments == YES 时使用）
+	const bool useIQImp = (m_showIQImpairments == Demodulator::IQImp_Yes);
+	const double gI = useIQImp ? std::pow(10.0, (+0.5 * m_gainImbalance / 20.0)) : 1.0;
+	const double gQ = useIQImp ? std::pow(10.0, (-0.5 * m_gainImbalance / 20.0)) : 1.0;
+	const double phiI = useIQImp ? deg2rad(-m_phaseImbalance * 0.5) : 0.0;
+	const double phiQ = useIQImp ? deg2rad(+m_phaseImbalance * 0.5) : 0.0;
 
 	for (size_t i = 0; i < inputData.size(); ++i) {
 		const auto& sNow = inputData[i];
@@ -77,12 +115,35 @@ bool Demodulator_Block::Run()
 			? (simulator_param.startTime + (baseCount + static_cast<double>(i)) / fs)
 			: 0.0;
 
-		double I_now = 0.0, Q_now = 0.0;
-		m_demodulator->processEnvelopeSample(sNow, tNow, I_now, Q_now);
+		// === 内联 processEnvelopeSample ===
+		std::complex<double> cx = sNow.complex();
 
+		// 频率下变频 + 初始相位
+		const double ang = 2.0 * Demodulator::kPI * dFc * tNow - theta0;
+		cx *= std::complex<double>(std::cos(ang), std::sin(ang));
+
+		// IQ 原点偏移
+		cx += std::complex<double>(m_iOriginOffset, m_qOriginOffset);
+
+		// IQ 旋转
+		cx *= std::complex<double>(std::cos(r_rot), std::sin(r_rot));
+
+		double I_raw = cx.real();
+		double Q_raw = cx.imag();
+
+		double I_now = I_raw, Q_now = Q_raw;
+		if (useIQImp) {
+			I_now = gI * (I_raw * std::cos(phiI) + Q_raw * std::sin(phiI));
+			Q_now = gQ * (-I_raw * std::sin(phiQ) + Q_raw * std::cos(phiQ));
+		}
+		if (m_mirrorSignal == Demodulator::Mirror_Yes) {
+			Q_now = -Q_now;
+		}
+
+		// === 内联 unwrapPhase（使用 Block 自身状态）===
 		const double amp = std::hypot(I_now, Q_now);
 		const double thetaRaw = std::atan2(Q_now, I_now);
-		const double thetaUnwr = m_demodulator->unwrapPhase(thetaRaw);
+		const double thetaUnwr = unwrapPhase(thetaRaw);
 
 		double freqRadPerSec = 0.0;
 		if (m_havePrev) {
@@ -103,7 +164,7 @@ bool Demodulator_Block::Run()
 			break;
 		case Demodulator::OT_AmpFreq:
 			y1 = m_ampSensitivity * amp;
-			y2 = m_freqSensitivity * (freqRadPerSec / (2.0*Demodulator::kPI));
+			y2 = m_freqSensitivity * (freqRadPerSec / (2.0 * Demodulator::kPI));
 			break;
 		}
 
@@ -232,6 +293,12 @@ Demodulator::IQImpEnum Demodulator_Block::ConvertStringToIQImp(const std::string
 	if (lowerValue == "iqimp_no") {
 		return Demodulator::IQImp_No;
 	} else if (lowerValue == "iqimp_yes") {
+		return Demodulator::IQImp_Yes;
+	}
+
+	if (lowerValue == "no" || lowerValue == "0") {
+		return Demodulator::IQImp_No;
+	} else if (lowerValue == "yes" || lowerValue == "1") {
 		return Demodulator::IQImp_Yes;
 	}
 	return Demodulator::IQImp_No;

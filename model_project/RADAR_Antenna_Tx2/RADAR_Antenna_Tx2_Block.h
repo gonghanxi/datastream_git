@@ -1,18 +1,18 @@
-#ifndef RADAR_ANTENNA_RX_BLOCK_H
-#define RADAR_ANTENNA_RX_BLOCK_H
+#ifndef RADAR_ANTENNA_TX2_BLOCK_H
+#define RADAR_ANTENNA_TX2_BLOCK_H
 
 #include "Block.h"
-#include "RADAR_Antenna_Rx.h"
+#include "RADAR_Antenna_Tx2.h"
 
 #include <queue>
 
 using namespace SystemVueModelBuilder;
 
-class SYSTEMVUEMODELBUILDER_API RADAR_Antenna_Rx_Block : public SystemVueModelBuilder::Block
+class SYSTEMVUEMODELBUILDER_API RADAR_Antenna_Tx2_Block : public SystemVueModelBuilder::Block
 {
 public:
-    RADAR_Antenna_Rx_Block(const std::string& name);
-    ~RADAR_Antenna_Rx_Block() = default;
+    RADAR_Antenna_Tx2_Block(const std::string& name);
+    ~RADAR_Antenna_Tx2_Block() = default;
 
     bool Setup() override;
     bool Run() override;
@@ -28,9 +28,9 @@ private:
     bool parseArrayString(const std::string& arrayStr, std::vector<double>& outArray);
 
     // enums
-    using SelectedRadarWorkMode       = RADAR_Antenna_Rx::SelectedRadarWorkMode;
-    using SelectedPattern             = RADAR_Antenna_Rx::SelectedPattern;
-    using SelectedAntennaScanPattern  = RADAR_Antenna_Rx::SelectedAntennaScanPattern;
+    using SelectedRadarWorkMode       = RADAR_Antenna_Tx2::SelectedRadarWorkMode;
+    using SelectedPattern             = RADAR_Antenna_Tx2::SelectedPattern;
+    using SelectedAntennaScanPattern  = RADAR_Antenna_Tx2::SelectedAntennaScanPattern;
 
     SelectedRadarWorkMode      ConvertStringToRadarWorkMode(const std::string& value);
     SelectedPattern            ConvertStringToPattern(const std::string& value);
@@ -39,9 +39,8 @@ private:
     // helpers
     static double deg2rad(double x);
     static double rad2deg(double x);
-    static double wrapToPi(double x);
-    static double wrapTo360(double x);
-    static double clampValue(double v, double lo, double hi);
+    static double normalizeRad(double x);
+    static double wrap360(double x);
     static double sinc(double x);
     static double besselI0(double x);
     double getArrayValue(const double* data, int size, int index, double defaultValue) const;
@@ -52,13 +51,11 @@ private:
     void   getRasterScanAngle(double timeNow, bool bidirectional, double& azDeg, double& elDeg) const;
 
     double angularSeparation(double az1, double el1, double az2, double el2) const;
-    double calcPatternGainDb(double targetAzRad, double targetElRad, double beamAzRad, double beamElRad, double fcHz) const;
-    double calcUserPatternGainDb(double dAzRad, double dElRad) const;
-    double calcAnalyticPatternGainDb(double dAzRad, double dElRad, double fcHz) const;
-    double calcDistributionWeight(double uNorm) const;
-    double calcApertureGainLinear(double fcHz) const;
+    double calcAntennaAmplitudeGain(double targetAzRad, double targetElRad, double beamAzRad, double beamElRad, double fcHz) const;
+    double calcUserPatternGain(double targetAzRad, double targetElRad, double beamAzRad, double beamElRad) const;
+    double calcAnalyticPatternFactor(double dAzRad, double dElRad, double lambda) const;
 
-    std::unique_ptr<RADAR_Antenna_Rx> m_ant;
+    std::unique_ptr<RADAR_Antenna_Tx2> m_ant;
 
     SelectedRadarWorkMode      m_RadarWorkMode;
     SelectedPattern            m_Pattern;
@@ -76,6 +73,7 @@ private:
     double                     m_SectorScanStartAngle;
     double                     m_SectorScanEndAngle;
     double                     m_FlybackTime;
+    double                     m_RetraceTime;
     int                        m_NumberOfRasterBars;
     double                     m_RasterBarWidth;
     double*                    m_TargetAzimuthAngle;
@@ -84,6 +82,7 @@ private:
     int                        m_TargetElevationAngle_Size;
     double                     m_BeamAzimuthAngle;
     double                     m_BeamElevationAngle;
+    double                     m_AntennaEfficiency;
 
     std::vector<double> primdata;
 
@@ -95,17 +94,17 @@ private:
         double beamEl;
         bool hasBeamAzPort;
         bool hasBeamElPort;
-        std::vector<EnvelopeSignal> inputSignals;
+        EnvelopeSignal inputSignal;
         double fcHz;
     };
     std::vector<InputSnapshot> m_inputBuffer;
 
     struct OutputFrame {
-        EnvelopeSignal out;
+        std::vector<EnvelopeSignal> outputSignals;
     };
     std::queue<OutputFrame> m_outputQueue;
 };
 
-RegAlgo(RADAR_Antenna_Rx_Block);
+RegAlgo(RADAR_Antenna_Tx2_Block);
 
 #endif

@@ -20,6 +20,9 @@ private:
 	void SetDefaultParamters();
 	void SetParameters();
 
+	static double deg2rad(double d);
+	double unwrapPhase(double rawThetaRad);
+
 	Demodulator::OutputTypeEnum m_outputType;
 	double m_ampSensitivity;
 	double m_phaseSensitivity;

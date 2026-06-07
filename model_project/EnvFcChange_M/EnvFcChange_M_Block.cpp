@@ -26,6 +26,23 @@ EnvFcChange_M_Block::EnvFcChange_M_Block(const std::string& name)
 bool EnvFcChange_M_Block::Setup()
 {
     Block::Setup();
+
+    // —— 从端口 reader 获取 fc_in（非 algo 内部 buffer）——
+    m_fc_in = 0.0;
+    {
+        auto* reader = GetInputPort(GetInputPortName(0));
+        if (reader && reader->hasCharacterizationFrequency())
+            m_fc_in = reader->getCharacterizationFrequency();
+    }
+    if (!std::isfinite(m_fc_in) || m_fc_in < 0.0)
+        m_fc_in = 0.0;
+
+    m_fc_out = m_OutputFc;
+    if (!std::isfinite(m_fc_out) || m_fc_out < 0.0)
+        m_fc_out = 0.0;
+
+    GetOutputPort(GetOutputPortName(0))->setCharacterizationFrequency(m_fc_out);
+
     while (!m_outputQueue.empty()) m_outputQueue.pop();
     m_lpfState.clear();
     m_lpfInitialized = false;
@@ -281,20 +298,6 @@ bool EnvFcChange_M_Block::Initialize()
     try { m_Bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) {}
     m_simulatorParam = getSimu();
     SetParameters();
-
-    // PropagateCharacterizationFrequency 逻辑
-    m_fc_in = m_EnvFcChange_M->input.GetCharacterizationFrequency();
-    m_fc_out = m_OutputFc;
-
-    if (!std::isfinite(m_fc_in) || m_fc_in < 0.0)
-        m_fc_in = 0.0;
-    if (!std::isfinite(m_fc_out) || m_fc_out < 0.0)
-        m_fc_out = 0.0;
-
-    m_EnvFcChange_M->output.SetCharacterizationFrequency(m_fc_out);
-    m_lpfState.clear();
-    m_lpfInitialized = false;
-    m_lpfNumElements = 0;
 
     AddInputPort("input",  m_EnvFcChange_M->input,  1, Block::DataType::MATRIX_ENVELOPE);
     AddOutputPort("output", m_EnvFcChange_M->output, 1, Block::DataType::MATRIX_ENVELOPE);

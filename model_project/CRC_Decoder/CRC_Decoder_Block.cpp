@@ -17,27 +17,50 @@ std::string ToLowerCopy(const std::string& value)
 }
 CRC_Decoder_Block::CRC_Decoder_Block(const std::string &name)
     :Block(name)
+    , m_InputFrmLen(0)
+    , m_CRCLength(0)
+    , m_crcMask(0)
+    , m_polyNoMsb(0)
+    , m_msgFrame(nullptr)
+    , m_msgLogical(nullptr)
+    , m_crcRx(nullptr)
+    , m_crcExp(nullptr)
+    , m_lastOutput(false)
+    , m_inputCount(0)
+    , m_outputCount(0)
 {
 
+}
+
+CRC_Decoder_Block::~CRC_Decoder_Block()
+{
+    delete[] m_msgFrame;
+    delete[] m_msgLogical;
+    delete[] m_crcRx;
+    delete[] m_crcExp;
+    m_msgFrame = nullptr;
+    m_msgLogical = nullptr;
+    m_crcRx = nullptr;
+    m_crcExp = nullptr;
 }
 bool CRC_Decoder_Block::Setup()
 {
     Block::Setup();
     while(!m_outputQueue.empty()) m_outputQueue.pop();
-    delete[] m_crc->m_msgFrame;
-    delete[] m_crc->m_msgLogical;
-    delete[] m_crc->m_crcRx;
-    delete[] m_crc->m_crcExp;
+    delete[] m_msgFrame;
+    delete[] m_msgLogical;
+    delete[] m_crcRx;
+    delete[] m_crcExp;
 
-    m_crc->m_msgFrame = new bool[MessageLength];
-    m_crc->m_msgLogical = new bool[MessageLength];
-    m_crc->m_crcRx = new bool[m_crc->m_CRCLength];
-    m_crc->m_crcExp = new bool[m_crc->m_CRCLength];
+    m_msgFrame = new bool[MessageLength];
+    m_msgLogical = new bool[MessageLength];
+    m_crcRx = new bool[m_CRCLength];
+    m_crcExp = new bool[m_CRCLength];
 
-    std::fill(m_crc->m_msgFrame, m_crc->m_msgFrame + MessageLength, false);
-    std::fill(m_crc->m_msgLogical, m_crc->m_msgLogical + MessageLength, false);
-    std::fill(m_crc->m_crcRx, m_crc->m_crcRx + m_crc->m_CRCLength, false);
-    std::fill(m_crc->m_crcExp, m_crc->m_crcExp + m_crc->m_CRCLength, false);
+    std::fill(m_msgFrame, m_msgFrame + MessageLength, false);
+    std::fill(m_msgLogical, m_msgLogical + MessageLength, false);
+    std::fill(m_crcRx, m_crcRx + m_CRCLength, false);
+    std::fill(m_crcExp, m_crcExp + m_CRCLength, false);
     return true;
 }
 
@@ -66,11 +89,23 @@ bool CRC_Decoder_Block::Initialize()
 
     SetParameters();
 
-    if(!ModelSetup()) return false;
-    size_t inputRate = m_crc->In.GetRate();
-    size_t outputRate = m_crc->Out.GetRate();
+    // ========== 内联 boundaryCheck + 速率计算（原 ModelSetup 逻辑） ==========
+    const int chk = boundaryCheckBlock('S');
+    if (chk != 0)
+    {
+        if (chk == -1) LOG_ERROR("MessageLength must be > 0.");
+        if (chk == -2) LOG_ERROR("Polynomial must be > 0.");
+        if (chk == -3) LOG_ERROR("Invalid Polynomial: cannot determine CRCLength.");
+        return false;
+    }
 
-    AddInputPort("In", m_crc->In, inputRate, DataType::CIRCULAR_BUFFER_BOOL);
+    m_InputFrmLen = MessageLength + m_CRCLength;
+
+    size_t inputRate  = static_cast<size_t>(m_InputFrmLen);
+    size_t outputRate = static_cast<size_t>(MessageLength);
+    qDebug()<<"inputRate"<<inputRate<<"outputRate"<<outputRate;
+
+    AddInputPort("In",  m_crc->In,  inputRate,  DataType::CIRCULAR_BUFFER_BOOL);
     AddOutputPort("Out", m_crc->Out, outputRate, DataType::CIRCULAR_BUFFER_BOOL);
     AddOutputPort("Parity", m_crc->Parity, 1, DataType::CIRCULAR_BUFFER_INT);
 
@@ -119,7 +154,7 @@ CRC_Decoder::YesNoEnum CRC_Decoder_Block::ConvertStringToYesNoEnum(const std::st
 
 bool CRC_Decoder_Block::DataStreamRun()
 {
-    size_t outputRate = m_crc->Out.GetRate();
+    size_t outputRate = static_cast<size_t>(MessageLength);
     auto InData = ReadInputData<bool>(GetInputPortName(0));
     std::vector<bool> OutData(outputRate);
     std::vector<int> ParityData(1);
@@ -127,41 +162,41 @@ bool CRC_Decoder_Block::DataStreamRun()
     if (ParityPosition == CRC_Decoder::Tail)
     {
         for (int i = 0; i < MessageLength; ++i)
-            m_crc->m_msgFrame[i] = (InData[i] != 0);
+            m_msgFrame[i] = (InData[i] != 0);
 
-        for (int i = 0; i < m_crc->m_CRCLength; ++i)
-            m_crc->m_crcRx[i] = (InData[MessageLength + i] != 0);
+        for (int i = 0; i < m_CRCLength; ++i)
+            m_crcRx[i] = (InData[MessageLength + i] != 0);
     }
     else // Head
     {
-        for (int i = 0; i < m_crc->m_CRCLength; ++i)
-            m_crc->m_crcRx[i] = (InData[i] != 0);
+        for (int i = 0; i < m_CRCLength; ++i)
+            m_crcRx[i] = (InData[i] != 0);
 
         for (int i = 0; i < MessageLength; ++i)
-            m_crc->m_msgFrame[i] = (InData[m_crc->m_CRCLength + i] != 0);
+            m_msgFrame[i] = (InData[m_CRCLength + i] != 0);
     }
 
     for (int i = 0; i < MessageLength; ++i)
-        m_crc->m_msgLogical[i] = m_crc->m_msgFrame[i];
+        m_msgLogical[i] = m_msgFrame[i];
 
     if (ReverseData == CRC_Decoder::YES)
-        std::reverse(m_crc->m_msgLogical, m_crc->m_msgLogical + MessageLength);
+        std::reverse(m_msgLogical, m_msgLogical + MessageLength);
 
-    m_crc->crcComputeRemainderBits(m_crc->m_msgLogical, m_crc->m_crcExp);
+    crcComputeRemainderBitsBlock(m_msgLogical, m_crcExp);
 
     if (ReverseParity == CRC_Decoder::YES)
-        std::reverse(m_crc->m_crcExp, m_crc->m_crcExp + m_crc->m_CRCLength);
+        std::reverse(m_crcExp, m_crcExp + m_CRCLength);
 
     if (ComplementParity == CRC_Decoder::YES)
     {
-        for (int i = 0; i < m_crc->m_CRCLength; ++i)
-            m_crc->m_crcExp[i] = !m_crc->m_crcExp[i];
+        for (int i = 0; i < m_CRCLength; ++i)
+            m_crcExp[i] = !m_crcExp[i];
     }
 
     bool pass = true;
-    for (int i = 0; i < m_crc->m_CRCLength; ++i)
+    for (int i = 0; i < m_CRCLength; ++i)
     {
-        if (m_crc->m_crcExp[i] != m_crc->m_crcRx[i])
+        if (m_crcExp[i] != m_crcRx[i])
         {
             pass = false;
             break;
@@ -169,7 +204,7 @@ bool CRC_Decoder_Block::DataStreamRun()
     }
 
     for (int i = 0; i < MessageLength; ++i)
-        OutData[i] = m_crc->m_msgLogical[i];
+        OutData[i] = m_msgLogical[i];
 
     ParityData[0] = pass ? 0 : 1;
 
@@ -180,53 +215,53 @@ bool CRC_Decoder_Block::DataStreamRun()
 
 bool CRC_Decoder_Block::TimeDrivenRun()
 {
-    size_t inputRate = m_crc->In.GetRate();
-    size_t outputRate = m_crc->Out.GetRate();
+    size_t inputRate = static_cast<size_t>(m_InputFrmLen);
+    size_t outputRate = static_cast<size_t>(MessageLength);
     auto InData = ReadInputData<bool>(GetInputPortName(0));
     if(InData.empty()) return true;
+    std::vector<bool> OutData(outputRate);
+    std::vector<int> ParityData(1);
     for(const auto& val : InData) m_inputBuffer.push_back(val);
     if(m_inputBuffer.size() >= inputRate) {
-        std::vector<bool> OutData(outputRate);
-        std::vector<int> ParityData(1);
 
         if (ParityPosition == CRC_Decoder::Tail)
         {
             for (int i = 0; i < MessageLength; ++i)
-                m_crc->m_msgFrame[i] = (m_inputBuffer[i] != 0);
+                m_msgFrame[i] = (m_inputBuffer[i] != 0);
 
-            for (int i = 0; i < m_crc->m_CRCLength; ++i)
-                m_crc->m_crcRx[i] = (m_inputBuffer[MessageLength + i] != 0);
+            for (int i = 0; i < m_CRCLength; ++i)
+                m_crcRx[i] = (m_inputBuffer[MessageLength + i] != 0);
         }
         else // Head
         {
-            for (int i = 0; i < m_crc->m_CRCLength; ++i)
-                m_crc->m_crcRx[i] = (m_inputBuffer[i] != 0);
+            for (int i = 0; i < m_CRCLength; ++i)
+                m_crcRx[i] = (m_inputBuffer[i] != 0);
 
             for (int i = 0; i < MessageLength; ++i)
-                m_crc->m_msgFrame[i] = (m_inputBuffer[m_crc->m_CRCLength + i] != 0);
+                m_msgFrame[i] = (m_inputBuffer[m_CRCLength + i] != 0);
         }
 
         for (int i = 0; i < MessageLength; ++i)
-            m_crc->m_msgLogical[i] = m_crc->m_msgFrame[i];
+            m_msgLogical[i] = m_msgFrame[i];
 
         if (ReverseData == CRC_Decoder::YES)
-            std::reverse(m_crc->m_msgLogical, m_crc->m_msgLogical + MessageLength);
+            std::reverse(m_msgLogical, m_msgLogical + MessageLength);
 
-        m_crc->crcComputeRemainderBits(m_crc->m_msgLogical, m_crc->m_crcExp);
+        crcComputeRemainderBitsBlock(m_msgLogical, m_crcExp);
 
         if (ReverseParity == CRC_Decoder::YES)
-            std::reverse(m_crc->m_crcExp, m_crc->m_crcExp + m_crc->m_CRCLength);
+            std::reverse(m_crcExp, m_crcExp + m_CRCLength);
 
         if (ComplementParity == CRC_Decoder::YES)
         {
-            for (int i = 0; i < m_crc->m_CRCLength; ++i)
-                m_crc->m_crcExp[i] = !m_crc->m_crcExp[i];
+            for (int i = 0; i < m_CRCLength; ++i)
+                m_crcExp[i] = !m_crcExp[i];
         }
 
         bool pass = true;
-        for (int i = 0; i < m_crc->m_CRCLength; ++i)
+        for (int i = 0; i < m_CRCLength; ++i)
         {
-            if (m_crc->m_crcExp[i] != m_crc->m_crcRx[i])
+            if (m_crcExp[i] != m_crcRx[i])
             {
                 pass = false;
                 break;
@@ -234,7 +269,7 @@ bool CRC_Decoder_Block::TimeDrivenRun()
         }
 
         for (int i = 0; i < MessageLength; ++i)
-            OutData[i] = m_crc->m_msgLogical[i];
+            OutData[i] = m_msgLogical[i];
 
         ParityData[0] = pass ? 0 : 1;
         // 将输出块中的每个样本逐个放入输出队列
@@ -242,40 +277,81 @@ bool CRC_Decoder_Block::TimeDrivenRun()
         {
             m_outputQueue.push(val);
         }
-        if (!m_outputQueue.empty())
-        {
-            bool outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
+    }
+    if (!m_outputQueue.empty())
+    {
+        bool outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
 
-            WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
-            WriteOutputData(GetInputPortName(1), ParityData);
-            m_lastOutput = outputValue;
-            m_inputBuffer.clear();
+        WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
+        WriteOutputData(GetOutputPortName(1), ParityData);
+        m_lastOutput = outputValue;
+        m_inputBuffer.clear();
 
-            qDebug() << "[CRC_Coder_Block] 分发输出:" << m_outputCount
-                     << " value:" << outputValue;
-        }
+        qDebug() << "[CRC_Decoder_Block] 分发输出:" << m_outputCount
+                 << " value:" << outputValue;
     }
     return true;
 }
 
-bool CRC_Decoder_Block::ModelSetup()
+void CRC_Decoder_Block::computePolynomialMasksBlock()
 {
-    const int chk = m_crc->boundaryCheck('S');
-    if (chk != 0)
+    m_CRCLength = computeCRCLengthBlock(Polynomial);
+
+    if (m_CRCLength <= 0 || m_CRCLength >= 31)
     {
-        if (chk == -1) LOG_ERROR("MessageLength must be > 0.");
-        if (chk == -2) LOG_ERROR("Polynomial must be > 0.");
-        if (chk == -3) LOG_ERROR("Invalid Polynomial: cannot determine CRCLength.");
-        return false;
+        m_crcMask = 0;
+        m_polyNoMsb = 0;
+        return;
     }
 
-    m_crc->m_InputFrmLen = MessageLength + m_crc->m_CRCLength;
+    m_crcMask = (1u << (uint32_t)m_CRCLength) - 1u;
+    m_polyNoMsb = ((uint32_t)Polynomial) & m_crcMask;
+}
 
-    m_crc->In.SetRate((unsigned)m_crc->m_InputFrmLen);
-    m_crc->Out.SetRate((unsigned)MessageLength);
-    m_crc->Parity.SetRate(1u);
+int CRC_Decoder_Block::computeCRCLengthBlock(int poly) const
+{
+    if (poly <= 0) return -1;
+    int r = 0;
+    int p = poly;
+    while (p >>= 1) ++r;
+    return r;
+}
 
-    return true;
+int CRC_Decoder_Block::boundaryCheckBlock(char /*functionTag*/)
+{
+    if (MessageLength <= 0) return -1;
+    if (Polynomial <= 0)    return -2;
+
+    computePolynomialMasksBlock();
+    if (m_CRCLength <= 0)   return -3;
+
+    return 0;
+}
+
+void CRC_Decoder_Block::crcComputeRemainderBitsBlock(const bool* msgLogical, bool* crcBits)
+{
+    const int r = m_CRCLength;
+    const uint32_t mask = m_crcMask;
+    const uint32_t poly = m_polyNoMsb;
+
+    uint32_t reg = ((uint32_t)InitialState) & mask;
+
+    auto update_with_bit = [&](int inBit)
+    {
+        inBit = (inBit != 0) ? 1 : 0;
+
+        const int msb = (int)((reg >> (r - 1)) & 1u);
+        const int fb = msb ^ inBit;
+
+        reg = ((reg << 1) & mask);
+        if (fb) reg ^= poly;
+    };
+
+    for (int i = 0; i < MessageLength; ++i)
+        update_with_bit(msgLogical[i] ? 1 : 0);
+
+    for (int i = 0; i < r; ++i)
+        crcBits[i] = (((reg >> (r - 1 - i)) & 1u) != 0);
 }

@@ -2,13 +2,14 @@
 #define CRC_CODER_BLOCK_H
 #include "CRC_Coder.h"
 #include "Block.h"
+#include <cstdint>
 #include <queue>
 using namespace SystemVueModelBuilder;
 class SYSTEMVUEMODELBUILDER_API CRC_Coder_Block : public Block
 {
 public:
     CRC_Coder_Block(const std::string& name);
-    ~CRC_Coder_Block() = default;
+    ~CRC_Coder_Block();
 
     bool Setup() override;
     bool Run() override;
@@ -16,9 +17,14 @@ public:
     void SetParameters();
 private:
     void SetDefaultParameters();
-    bool ModelSetup();
     CRC_Coder::ParityPositionEnum ConvertStringToParityPositionEnum(const std::string& value);
     CRC_Coder::YesNoEnum ConvertStringToYesNoEnum(const std::string& value);
+
+    // ========== 内联的原算法方法 ==========
+    int  boundaryCheckBlock(char functionTag);
+    int  computeCRCLengthBlock(int poly) const;
+    void computePolynomialMasksBlock();
+    void crcEncodeOneFrameBlock(const bool* dataBits, bool* crcBits);
 
     std::unique_ptr<CRC_Coder> m_crc;
 
@@ -30,6 +36,14 @@ private:
     int MessageLength;
     int InitialState;
     int Polynomial;
+
+    // ========== 原算法内部状态 ==========
+    int      m_OutFrmLen;
+    int      m_CRCLength;
+    uint32_t m_crcMask;
+    uint32_t m_polyNoMsb;
+    bool*    m_frameP;
+    bool*    m_CRC_P;
 
     bool DataStreamRun();
     bool TimeDrivenRun();

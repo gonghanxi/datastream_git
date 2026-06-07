@@ -1,4 +1,5 @@
 #include "GrayDecoder_Block.h"
+#include <cstring>
 namespace {
 std::string TrimCopy(const std::string& value)
 {
@@ -17,8 +18,24 @@ std::string ToLowerCopy(const std::string& value)
 }
 GrayDecoder_Block::GrayDecoder_Block(const std::string &name)
     :Block(name)
+    , inBits(nullptr)
+    , outBits(nullptr)
+    , m_lastOutput(false)
+    , m_inputCount(0)
+    , m_outputCount(0)
 {
 
+}
+
+GrayDecoder_Block::~GrayDecoder_Block()
+{
+    FreeBuffersBlock();
+}
+
+void GrayDecoder_Block::FreeBuffersBlock()
+{
+    delete[] inBits;  inBits = nullptr;
+    delete[] outBits; outBits = nullptr;
 }
 bool GrayDecoder_Block::Setup()
 {
@@ -29,7 +46,11 @@ bool GrayDecoder_Block::Setup()
         LOG_ERROR("GrayDecoder: NumBits must be > 0");
         NumBits = 1;
     }
-    m_gray->AllocBuffers(NumBits);
+    FreeBuffersBlock();
+    inBits = new bool[NumBits];
+    outBits = new bool[NumBits];
+    std::memset(inBits, 0, sizeof(bool) * NumBits);
+    std::memset(outBits, 0, sizeof(bool) * NumBits);
     return true;
 }
 
@@ -45,12 +66,10 @@ bool GrayDecoder_Block::Initialize()
     m_gray = std::make_unique<GrayDecoder>();
     SetDefaultParameters();
     try { NumBits = std::stoi(getParameter("NumBits").Value); } catch (...) {}
-    try { m_BitOrder = ConvertStringToBitOrderE(getParameter("m_BitOrder").Value); } catch (...) {}
+    try { m_BitOrder = ConvertStringToBitOrderE(getParameter("BitOrder").Value); } catch (...) {}
     SetParameters();
 
     int n = (NumBits > 0) ? NumBits : 1;
-    m_gray->input.SetRate(n);
-    m_gray->output.SetRate(n);
 
     AddInputPort("input", m_gray->input, static_cast<size_t>(n), DataType::CIRCULAR_BUFFER_BOOL);
     AddOutputPort("output", m_gray->output, static_cast<size_t>(n), DataType::CIRCULAR_BUFFER_BOOL);
@@ -81,35 +100,33 @@ GrayDecoder::BitOrderE GrayDecoder_Block::ConvertStringToBitOrderE(const std::st
 bool GrayDecoder_Block::DataStreamRun()
 {
     std::vector<bool> inputData = ReadInputData<bool>(GetInputPortName(0));
-    size_t outputRate = m_gray->output.GetRate();
-    std::vector<bool> outputData(outputRate);
-
     const int n = (NumBits > 0) ? NumBits : 1;
+    std::vector<bool> outputData(static_cast<size_t>(n));
 
     if (m_BitOrder == GrayDecoder::MSB_first)
     {
         for (int k = 0; k < n; ++k)
-            m_gray->inBits[n - 1 - k] = inputData[k];
+            inBits[n - 1 - k] = inputData[k];
     }
     else
     {
         for (int k = 0; k < n; ++k)
-            m_gray->inBits[k] = inputData[k];
+            inBits[k] = inputData[k];
     }
 
-    m_gray->outBits[n - 1] = m_gray->inBits[n - 1];
+    outBits[n - 1] = inBits[n - 1];
     for (int i = n - 2; i >= 0; --i)
-        m_gray->outBits[i] = (m_gray->outBits[i + 1] ^ m_gray->inBits[i]);
+        outBits[i] = (outBits[i + 1] ^ inBits[i]);
 
     if (m_BitOrder == GrayDecoder::MSB_first)
     {
         for (int k = 0; k < n; ++k)
-            outputData[k] = m_gray->outBits[n - 1 - k];
+            outputData[k] = outBits[n - 1 - k];
     }
     else
     {
         for (int k = 0; k < n; ++k)
-            outputData[k] = m_gray->outBits[k];
+            outputData[k] = outBits[k];
     }
 
     WriteOutputData(GetOutputPortName(0), outputData);
@@ -125,52 +142,49 @@ bool GrayDecoder_Block::TimeDrivenRun()
     size_t inputRate = GetInputPort(GetInputPortName(0))->GetReadSize();
 
     if(m_inputBuffer.size() >= inputRate) {
-        size_t outputRate = m_gray->output.GetRate();
-        std::vector<bool> outputData(outputRate);
         const int n = (NumBits > 0) ? NumBits : 1;
+        std::vector<bool> outputData(static_cast<size_t>(n));
 
         if (m_BitOrder == GrayDecoder::MSB_first)
         {
             for (int k = 0; k < n; ++k)
-                m_gray->inBits[n - 1 - k] = m_inputBuffer[k];
+                inBits[n - 1 - k] = m_inputBuffer[k];
         }
         else
         {
             for (int k = 0; k < n; ++k)
-                m_gray->inBits[k] = m_inputBuffer[k];
+                inBits[k] = m_inputBuffer[k];
         }
 
-        m_gray->outBits[n - 1] = m_gray->inBits[n - 1];
+        outBits[n - 1] = inBits[n - 1];
         for (int i = n - 2; i >= 0; --i)
-            m_gray->outBits[i] = (m_gray->outBits[i + 1] ^ m_gray->inBits[i]);
+            outBits[i] = (outBits[i + 1] ^ inBits[i]);
 
         if (m_BitOrder == GrayDecoder::MSB_first)
         {
             for (int k = 0; k < n; ++k)
-                outputData[k] = m_gray->outBits[n - 1 - k];
+                outputData[k] = outBits[n - 1 - k];
         }
         else
         {
             for (int k = 0; k < n; ++k)
-                outputData[k] = m_gray->outBits[k];
+                outputData[k] = outBits[k];
         }
         for (const auto& val : outputData)
         {
             m_outputQueue.push(val);
         }
-        if (!m_outputQueue.empty())
-        {
-            bool outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
+    }
 
-            WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
-            m_lastOutput = outputValue;
-            m_inputBuffer.clear();
+    if (!m_outputQueue.empty())
+    {
+        bool outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
 
-            qDebug() << "[GrayDecoder_Block] 分发输出:" << m_outputCount
-                     << " value:" << outputValue;
-        }
+        WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
+        m_lastOutput = outputValue;
+        m_inputBuffer.clear();
     }
     return true;
 }

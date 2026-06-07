@@ -233,6 +233,8 @@ PulseGen\
     RADAR_AntennaPolarizationTx \
     RADAR_Antenna_Rx \
     RADAR_Antenna_Tx \
+    RADAR_Antenna_Tx \
+    RADAR_Antenna_Tx2 \
     RADAR_Antenna_Tx2 \
     RADAR_ArrayCouple \
 RADAR_BarkerCode\

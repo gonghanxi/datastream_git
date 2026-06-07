@@ -147,15 +147,19 @@ void RADAR_Antenna_Rx_Block::SetParameters()
 bool RADAR_Antenna_Rx_Block::Setup()
 {
     Block::Setup();
+
+    m_inputBuffer.clear();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
+
     SetParameters();
     return true;
 }
 
 bool RADAR_Antenna_Rx_Block::Run()
 {
-//    if (IsVariableStepMode()) {
-//        return TimeDrivenRun();
-//    }
+    if (IsVariableStepMode()) {
+        return TimeDrivenRun();
+    }
     return DataStreamRun();
 }
 
@@ -264,10 +268,112 @@ bool RADAR_Antenna_Rx_Block::DataStreamRun()
          if (ch < nTarget) { xin = inputData[ch].complex(); }
 
          y += xin * apertureGain * patternGain;
-     }
 
+     }
      WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{EnvelopeSignal(y)});
      return true;
+}
+
+// ============================================================================
+// TimeDrivenRun — 变步长模式：输入存 buffer，处理后入队，队列非空则输出
+// ============================================================================
+
+bool RADAR_Antenna_Rx_Block::TimeDrivenRun()
+{
+    // ① 累积输入
+    {
+        auto inputData = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
+        if (inputData.empty()) {
+            // 无新数据，仅尝试出队输出
+            goto output_label;
+        }
+
+        double fcHz = 0.0;
+        {
+            auto* reader = GetInputPort(GetInputPortName(4));
+            if (reader && reader->hasCharacterizationFrequency()) {
+                fcHz = reader->getCharacterizationFrequency();
+            }
+        }
+
+        auto azData  = ReadInputData<double>(GetInputPortName(0));
+        auto elData  = ReadInputData<double>(GetInputPortName(1));
+        auto bAzData = ReadInputData<double>(GetInputPortName(2));
+        auto bElData = ReadInputData<double>(GetInputPortName(3));
+
+        InputSnapshot in;
+        in.targetAz.assign(azData.begin(), azData.end());
+        in.targetEl.assign(elData.begin(), elData.end());
+        in.beamAz = bAzData.empty() ? 0.0 : bAzData[0];
+        in.beamEl = bElData.empty() ? 0.0 : bElData[0];
+        in.hasBeamAzPort = !bAzData.empty();
+        in.hasBeamElPort = !bElData.empty();
+        in.inputSignals.assign(inputData.begin(), inputData.end());
+        in.fcHz = fcHz;
+        m_inputBuffer.push_back(in);
+    }
+
+    // ② 处理所有累积输入 → 入队
+    while (!m_inputBuffer.empty()) {
+        InputSnapshot in = m_inputBuffer.front();
+        m_inputBuffer.erase(m_inputBuffer.begin());
+
+        const int nTarget = static_cast<int>(in.inputSignals.size());
+
+        bool hasTargetAzPort = !in.targetAz.empty();
+        bool hasTargetElPort = !in.targetEl.empty();
+        bool hasBeamAzPort   = in.hasBeamAzPort;
+        bool hasBeamElPort   = in.hasBeamElPort;
+
+        double beamAzRad = 0.0, beamElRad = 0.0;
+        if (hasBeamAzPort) { beamAzRad = in.beamAz; }
+        if (hasBeamElPort) { beamElRad = in.beamEl; }
+
+        if (!hasBeamAzPort || !hasBeamElPort) {
+            double timeNow = 0.0;
+            double azTmp = 0.0, elTmp = 0.0;
+            getBeamAngle(timeNow, azTmp, elTmp);
+            if (!hasBeamAzPort) { beamAzRad = azTmp; }
+            if (!hasBeamElPort) { beamElRad = elTmp; }
+        }
+
+        const double apertureGain = calcApertureGainLinear(in.fcHz);
+        std::complex<double> y(0.0, 0.0);
+
+        for (int ch = 0; ch < nTarget; ++ch) {
+            double tAz = hasTargetAzPort
+                ? (ch < static_cast<int>(in.targetAz.size()) ? in.targetAz[ch] : 0.0)
+                : deg2rad(getArrayValue(m_TargetAzimuthAngle, m_TargetAzimuthAngle_Size, ch, 0.0));
+            double tEl = hasTargetElPort
+                ? (ch < static_cast<int>(in.targetEl.size()) ? in.targetEl[ch] : 0.0)
+                : deg2rad(getArrayValue(m_TargetElevationAngle, m_TargetElevationAngle_Size, ch, 0.0));
+
+            const double sep = angularSeparation(tAz, tEl, beamAzRad, beamElRad);
+            if (sep > 0.5 * M_PI) { continue; }
+
+            const double patternGainDb = calcPatternGainDb(tAz, tEl, beamAzRad, beamElRad, in.fcHz);
+            const double patternGain = std::pow(10.0, patternGainDb / 20.0);
+
+            std::complex<double> xin(0.0, 0.0);
+            if (ch < nTarget) { xin = in.inputSignals[ch].complex(); }
+
+            y += xin * apertureGain * patternGain;
+        }
+
+        OutputFrame outFrame;
+        outFrame.out = EnvelopeSignal(y);
+        m_outputQueue.push(outFrame);
+    }
+
+    // ③ 出队写入：outputQueue 不为空就输出一次
+output_label:
+    if (!m_outputQueue.empty()) {
+        OutputFrame outFrame = m_outputQueue.front();
+        m_outputQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{outFrame.out});
+    }
+
+    return true;
 }
 
 

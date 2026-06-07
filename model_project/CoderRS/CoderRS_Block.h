@@ -18,7 +18,10 @@ public:
 private:
     void SetDefaultParameters();
     bool parseArrayString(const std::string& arrayStr, std::vector<int>& outArray);
-    bool ModelSetup();
+    void buildFieldBlock();
+    void buildGeneratorBlock();
+    int  gf_add(int a, int b) const;
+    int  gf_mul(int a, int b) const;
 
     std::unique_ptr<CoderRS> m_code;
 
@@ -31,6 +34,14 @@ private:
     std::vector<int> primdata;
 
     int   Root;
+
+    int n_ = 0;
+    int k_ = 0;
+    int fieldMask_ = 0;
+    int maxExp_ = 0;
+    std::vector<int> alpha_to_;
+    std::vector<int> index_of_;
+    std::vector<int> g_;
 
     bool DataStreamRun();
     bool TimeDrivenRun();

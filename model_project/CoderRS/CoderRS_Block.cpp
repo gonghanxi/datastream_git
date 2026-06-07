@@ -37,9 +37,23 @@ bool CoderRS_Block::Initialize()
 
     SetParameters();
 
-    if(!ModelSetup()) return false;
-    size_t inputRate = m_code->in.GetRate();
-    size_t outputRate = m_code->out.GetRate();
+    n_ = CodeLength;
+    k_ = MessageLength;
+    if (n_ < 3)  n_ = 3;
+    if (k_ < 1)  k_ = 1;
+    if (k_ > n_ - 2) k_ = n_ - 2;
+    int maxN = (1 << GF) - 1;
+    if (n_ > maxN) n_ = maxN;
+    if (k_ > n_ - 2) k_ = n_ - 2;
+
+    buildFieldBlock();
+    buildGeneratorBlock();
+
+    m_code->in.SetRate(static_cast<unsigned>(k_));
+    m_code->out.SetRate(static_cast<unsigned>(n_));
+
+    size_t inputRate  = static_cast<size_t>(k_);
+    size_t outputRate = static_cast<size_t>(n_);
 
     AddInputPort("in", m_code->in, inputRate, DataType::CIRCULAR_BUFFER_INT);
     AddOutputPort("out", m_code->out, outputRate, DataType::CIRCULAR_BUFFER_INT);
@@ -136,38 +150,32 @@ bool CoderRS_Block::parseArrayString(const std::string &arrayStr, std::vector<in
     return true;
 }
 
-bool CoderRS_Block::ModelSetup()
-{
-    if(!m_code->Setup()) return false;
-    return true;
-}
-
 bool CoderRS_Block::DataStreamRun()
 {
     auto inData = ReadInputData<int>(GetInputPortName(0));
-    size_t outputRate = m_code->out.GetRate();
-    std::vector<int> outData(outputRate);
+    std::vector<int> outData(n_);
 
-    const int parity = m_code->n_ - m_code->k_;
+    const int parity = n_ - k_;
     if (parity <= 0)
     {
-        for (int i = 0; i < m_code->k_; ++i)
+        for (int i = 0; i < k_; ++i)
             outData[i] = inData[i];
+        WriteOutputData(GetOutputPortName(0), outData);
         return true;
     }
 
     std::vector<int> p(parity, 0);
 
-    for (int i = 0; i < m_code->k_; ++i)
+    for (int i = 0; i < k_; ++i)
     {
-        int sym = inData[i] & m_code->fieldMask_;
-        int feedback = m_code->gf_add(sym, p[parity - 1]);
+        int sym = inData[i] & fieldMask_;
+        int feedback = gf_add(sym, p[parity - 1]);
 
         for (int j = parity - 1; j > 0; --j)
         {
-            if (feedback != 0 && m_code->g_[j] != 0)
+            if (feedback != 0 && g_[j] != 0)
             {
-                p[j] = m_code->gf_add(p[j - 1], m_code->gf_mul(feedback, m_code->g_[j]));
+                p[j] = gf_add(p[j - 1], gf_mul(feedback, g_[j]));
             }
             else
             {
@@ -175,17 +183,17 @@ bool CoderRS_Block::DataStreamRun()
             }
         }
 
-        if (feedback != 0 && m_code->g_[0] != 0)
-            p[0] = m_code->gf_mul(feedback, m_code->g_[0]);
+        if (feedback != 0 && g_[0] != 0)
+            p[0] = gf_mul(feedback, g_[0]);
         else
             p[0] = 0;
     }
 
-    for (int i = 0; i < m_code->k_; ++i)
+    for (int i = 0; i < k_; ++i)
         outData[i] = inData[i];
 
     for (int j = 0; j < parity; ++j)
-        outData[m_code->k_ + j] = p[parity - 1 - j];
+        outData[k_ + j] = p[parity - 1 - j];
 
     WriteOutputData(GetOutputPortName(0),outData);
     return true;
@@ -198,30 +206,30 @@ bool CoderRS_Block::TimeDrivenRun()
     for(size_t i = 0; i < inData.size(); i++) {
         m_inputBuffer.push_back(inData[i]);
     }
-    if(m_inputBuffer.size() >= GetInputPort(GetInputPortName(0))->GetReadSize()) {
-        size_t outputRate = m_code->out.GetRate();
-        std::vector<int> outData(outputRate);
+    if(m_inputBuffer.size() >= static_cast<size_t>(k_)) {
+        std::vector<int> outData(n_);
 
-        const int parity = m_code->n_ - m_code->k_;
+        const int parity = n_ - k_;
         if (parity <= 0)
         {
-            for (int i = 0; i < m_code->k_; ++i)
-                outData[i] = inData[i];
+            for (int i = 0; i < k_; ++i)
+                outData[i] = m_inputBuffer[i];
+            WriteOutputData(GetOutputPortName(0), outData);
             return true;
         }
 
         std::vector<int> p(parity, 0);
 
-        for (int i = 0; i < m_code->k_; ++i)
+        for (int i = 0; i < k_; ++i)
         {
-            int sym = inData[i] & m_code->fieldMask_;
-            int feedback = m_code->gf_add(sym, p[parity - 1]);
+            int sym = m_inputBuffer[i] & fieldMask_;
+            int feedback = gf_add(sym, p[parity - 1]);
 
             for (int j = parity - 1; j > 0; --j)
             {
-                if (feedback != 0 && m_code->g_[j] != 0)
+                if (feedback != 0 && g_[j] != 0)
                 {
-                    p[j] = m_code->gf_add(p[j - 1], m_code->gf_mul(feedback, m_code->g_[j]));
+                    p[j] = gf_add(p[j - 1], gf_mul(feedback, g_[j]));
                 }
                 else
                 {
@@ -229,29 +237,184 @@ bool CoderRS_Block::TimeDrivenRun()
                 }
             }
 
-            if (feedback != 0 && m_code->g_[0] != 0)
-                p[0] = m_code->gf_mul(feedback, m_code->g_[0]);
+            if (feedback != 0 && g_[0] != 0)
+                p[0] = gf_mul(feedback, g_[0]);
             else
                 p[0] = 0;
         }
 
-        for (int i = 0; i < m_code->k_; ++i)
-            outData[i] = inData[i];
+        for (int i = 0; i < k_; ++i)
+            outData[i] = m_inputBuffer[i];
 
         for (int j = 0; j < parity; ++j)
-            outData[m_code->k_ + j] = p[parity - 1 - j];
+            outData[k_ + j] = p[parity - 1 - j];
         for (const auto& val : outData)
             m_outputQueue.push(val);
         m_inputBuffer.clear();
-        if (!m_outputQueue.empty())
-        {
-            int outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
+    }
+    if (!m_outputQueue.empty())
+    {
+        int outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
 
-            WriteOutputData(GetOutputPortName(0), std::vector<int>{outputValue});
-            m_lastOutput = outputValue;
-        }
+        WriteOutputData(GetOutputPortName(0), std::vector<int>{outputValue});
+        m_lastOutput = outputValue;
     }
     return true;
+}
+
+int CoderRS_Block::gf_add(int a, int b) const
+{
+    return a ^ b;
+}
+
+int CoderRS_Block::gf_mul(int a, int b) const
+{
+    if (a == 0 || b == 0)
+        return 0;
+    int ia = index_of_[a];
+    int ib = index_of_[b];
+    if (ia < 0 || ib < 0)
+        return 0;
+    int ie = ia + ib;
+    if (ie >= maxExp_)
+        ie -= maxExp_;
+    return alpha_to_[ie];
+}
+
+void CoderRS_Block::buildFieldBlock()
+{
+    int m = GF;
+    if (m < 2)  m = 2;
+    if (m > 16) m = 16;
+
+    int fieldSize = 1 << m;
+    fieldMask_ = fieldSize - 1;
+    maxExp_ = fieldSize - 1;
+
+    bool useUserPoly = false;
+    int  primPolyMask = 0;
+    bool highestOk = false;
+    bool constantOk = false;
+
+    if (PrimPoly != nullptr && PrimPolySize > 0)
+    {
+        int highestIdx = -1;
+        for (int i = 0; i < PrimPolySize; ++i)
+        {
+            if (PrimPoly[i] != 0)
+                highestIdx = i;
+        }
+
+        if (highestIdx == m)
+        {
+            highestOk = true;
+
+            if ((PrimPoly[0] & 1) != 0)
+                constantOk = true;
+
+            int cm = (m < PrimPolySize) ? PrimPoly[m] : 0;
+            if ((cm & 1) == 0)
+                highestOk = false;
+
+            if (highestOk && constantOk)
+            {
+                primPolyMask = 0;
+                for (int i = 0; i < m; ++i)
+                {
+                    if (i < PrimPolySize && (PrimPoly[i] & 1))
+                        primPolyMask |= (1 << i);
+                }
+                primPolyMask &= fieldMask_;
+                useUserPoly = true;
+            }
+        }
+    }
+
+    if (!useUserPoly)
+    {
+        switch (m)
+        {
+        case 2:  primPolyMask = 0x7;    break;
+        case 3:  primPolyMask = 0xB;    break;
+        case 4:  primPolyMask = 0x13;   break;
+        case 5:  primPolyMask = 0x25;   break;
+        case 6:  primPolyMask = 0x43;   break;
+        case 7:  primPolyMask = 0x89;   break;
+        case 8:  primPolyMask = 0x11D;  break;
+        default:
+            primPolyMask = (1 << m) | (1 << 1) | 1;
+            break;
+        }
+        primPolyMask &= fieldMask_;
+    }
+
+    alpha_to_.assign(maxExp_ + 1, 0);
+    index_of_.assign(fieldSize, -1);
+
+    int alpha = 1;
+    for (int i = 0; i < maxExp_; ++i)
+    {
+        alpha_to_[i] = alpha;
+        index_of_[alpha] = i;
+
+        alpha <<= 1;
+        if (alpha & fieldSize)
+            alpha ^= primPolyMask;
+        alpha &= fieldMask_;
+    }
+
+    alpha_to_[maxExp_] = 1;
+    index_of_[0] = -1;
+}
+
+void CoderRS_Block::buildGeneratorBlock()
+{
+    int parity = n_ - k_;
+    if (parity <= 0)
+    {
+        g_.assign(1, 1);
+        return;
+    }
+
+    int root = Root;
+    if (root < 0)
+        root = 0;
+    if (maxExp_ > 0)
+        root %= maxExp_;
+
+    g_.clear();
+    g_.push_back(1);
+
+    for (int i = 0; i < parity; ++i)
+    {
+        int exp_i = root + i;
+        while (exp_i >= maxExp_)
+            exp_i -= maxExp_;
+
+        int alpha_i = alpha_to_[exp_i];
+
+        int deg = static_cast<int>(g_.size()) - 1;
+        std::vector<int> new_g(deg + 2, 0);
+
+        for (int j = 0; j <= deg; ++j)
+        {
+            new_g[j + 1] ^= g_[j];
+        }
+
+        for (int j = 0; j <= deg; ++j)
+        {
+            if (g_[j] != 0)
+            {
+                int prod = gf_mul(g_[j], alpha_i);
+                new_g[j] ^= prod;
+            }
+        }
+
+        g_.swap(new_g);
+    }
+
+    if (static_cast<int>(g_.size()) > parity + 1)
+        g_.resize(parity + 1);
 }

@@ -8,7 +8,7 @@ class SYSTEMVUEMODELBUILDER_API GrayEncoder_Block : public Block
 {
 public:
     GrayEncoder_Block(const std::string& name);
-    ~GrayEncoder_Block() = default;
+    ~GrayEncoder_Block();
     bool Setup() override;
     bool Run() override;
     bool Initialize() override;
@@ -16,11 +16,17 @@ public:
     void SetParameters();
 private:
     void SetDefaultParameters();
+    void FreeBuffersBlock();
+    void GrayEncodeBitsLSB0Block(const bool* binLSB0, bool* grayLSB0, int nbits);
     GrayEncoder::BitOrder ConvertStringToBitOrderE(const std::string& value);
 
     std::unique_ptr<GrayEncoder> m_gray;
     int NumBits;
     GrayEncoder::BitOrder m_BitOrder;
+
+    // ========== 原算法内部缓冲区 ==========
+    bool* m_inBits;
+    bool* m_outBits;
 
     bool DataStreamRun();
     bool TimeDrivenRun();

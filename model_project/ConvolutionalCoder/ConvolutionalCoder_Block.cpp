@@ -25,17 +25,17 @@ bool ConvolutionalCoder_Block::Setup()
 {
     Block::Setup();
     while(!m_outputQueue.empty()) m_outputQueue.pop();
-    m_con->m_Counter = 0;
-    m_con->m_currentState = 0;
+    m_Counter_ = 0;
+    m_currentState_ = 0;
 
-    const int n = m_con->m_convoCodeRateN;
-    for (int i = 0; i < 8; ++i) m_con->m_polyMask[i] = 0;
+    const int n = m_convoCodeRateN;
+    for (int i = 0; i < 8; ++i) m_polyMask[i] = 0;
 
     for (int i = 0; i < n; ++i)
     {
             const int p = Polynomial[i];
-            const int pr = m_con->BitReverse(p, m_con->m_constraintLenK);
-            m_con->m_polyMask[i] = (uint32_t)pr & m_con->m_regMaskK;
+            const int pr = bitReverseBlock(p, m_constraintLenK);
+            m_polyMask[i] = (uint32_t)pr & m_regMaskK;
     }
     return true;
 }
@@ -52,7 +52,7 @@ bool ConvolutionalCoder_Block::Initialize()
     m_con = std::make_unique<ConvolutionalCoder>();
     SetDefaultParameters();
     try {
-    std::string PrimString = getParameter("PrimPoly").Value;
+    std::string PrimString = getParameter("Polynomial").Value;
     parseArrayString(PrimString, primdata);
 
     CodingRate = ConvertStringToCodingRateEnum(getParameter("CodingRate").Value);
@@ -64,12 +64,37 @@ bool ConvolutionalCoder_Block::Initialize()
 
     SetParameters();
 
-    if(!ModelSetup()) return false;
-    size_t inputRate = m_con->m_cbInput.GetRate();
-    size_t outputRate = m_con->m_cbOutput.GetRate();
+    {
+        const int chk = boundaryCheckBlock();
+        if (chk != 0) {
+            if (chk == -1) LOG_ERROR("Polynomial is empty.");
+            if (chk == -2) LOG_ERROR("Polynomial size < n (CodingRate=1/n).");
+            if (chk == -3) LOG_ERROR("Polynomial has no MSB tap for given ConstraintLength.");
+            if (chk == -4) LOG_ERROR("Polynomial contains bits beyond ConstraintLength.");
+            return false;
+        }
 
-    AddInputPort("m_cbInput", m_con->m_cbInput, inputRate, DataType::CIRCULAR_BUFFER_BOOL);
-    AddOutputPort("m_cbOutput", m_con->m_cbOutput, outputRate, DataType::CIRCULAR_BUFFER_BOOL);
+        m_constraintLenK = ConstraintLength;
+        m_convoCodeRateN = rateToNBlock(CodingRate);
+        m_regMaskK = ((uint32_t)1u << (uint32_t)m_constraintLenK) - 1u;
+
+        if (ZeroTail == ConvolutionalCoder::YES)
+        {
+            const int tailLen = (m_constraintLenK - 1);
+            m_inputFrmLen = BitSequenceLength + tailLen;
+        }
+        else
+        {
+            m_inputFrmLen = 1;
+        }
+    }
+    size_t inputRate  = static_cast<size_t>(m_inputFrmLen);
+    size_t outputRate = (ZeroTail == ConvolutionalCoder::YES)
+        ? static_cast<size_t>(m_convoCodeRateN * m_inputFrmLen)
+        : static_cast<size_t>(m_convoCodeRateN);
+
+    AddInputPort("In",  m_con->m_cbInput,  inputRate,  DataType::CIRCULAR_BUFFER_BOOL);
+    AddOutputPort("Out", m_con->m_cbOutput, outputRate, DataType::CIRCULAR_BUFFER_BOOL);
 
     return true;
 }
@@ -180,26 +205,28 @@ ConvolutionalCoder::ZeroTailEnum ConvolutionalCoder_Block::ConvertStringToZeroTa
 
 bool ConvolutionalCoder_Block::DataStreamRun()
 {
-    size_t outputRate = m_con->m_cbOutput.GetRate();
+    size_t outputRate = (ZeroTail == ConvolutionalCoder::YES)
+        ? static_cast<size_t>(m_convoCodeRateN * m_inputFrmLen)
+        : static_cast<size_t>(m_convoCodeRateN);
     auto cbInput = ReadInputData<bool>(GetInputPortName(0));
     std::vector<bool> cbOutput(outputRate);
-    const int K = m_con->m_constraintLenK;
-    const int n = m_con->m_convoCodeRateN;
+    const int K = m_constraintLenK;
+    const int n = m_convoCodeRateN;
 
     const int tailLen = (K - 1);
     const uint32_t memMask = (tailLen > 0) ? ((1u << (uint32_t)tailLen) - 1u) : 0u;
 
-    uint32_t state = (uint32_t)m_con->m_currentState & memMask;
+    uint32_t state = (uint32_t)m_currentState_ & memMask;
 
     auto encode_one = [&](int u, int outBase)
     {
             u = (u != 0) ? 1 : 0;
 
-            const uint32_t fullReg = ((state << 1) | (uint32_t)u) & m_con->m_regMaskK;
+            const uint32_t fullReg = ((state << 1) | (uint32_t)u) & m_regMaskK;
 
             for (int j = 0; j < n; ++j)
             {
-                    const int y = m_con->parity_u32(fullReg & m_con->m_polyMask[j]);
+                    const int y = parityU32Block(fullReg & m_polyMask[j]);
                     cbOutput[outBase + j] = (y != 0);
             }
 
@@ -210,7 +237,7 @@ bool ConvolutionalCoder_Block::DataStreamRun()
     {
             const int Ninfo = BitSequenceLength;
 
-            if (m_con->m_inputFrmLen != (Ninfo + tailLen))
+            if (m_inputFrmLen != (Ninfo + tailLen))
             {
                     LOG_ERROR("ZeroTail=YES: internal frame length mismatch.");
                     return false;
@@ -244,14 +271,14 @@ bool ConvolutionalCoder_Block::DataStreamRun()
                     return false;
             }
 
-            m_con->m_currentState = 0;
-            m_con->m_Counter++;
+            m_currentState_ = 0;
+            m_Counter_++;
     }
     else
     {
             const int u = cbInput[0] ? 1 : 0;
             encode_one(u, 0);
-            m_con->m_currentState = (int)(state & memMask);
+            m_currentState_ = (int)(state & memMask);
     }
     WriteOutputData(GetOutputPortName(0), cbOutput);
     return true;
@@ -265,28 +292,29 @@ bool ConvolutionalCoder_Block::TimeDrivenRun()
     for(size_t i = 0; i < cbInput.size(); i++) {
         m_inputBuffer.push_back(cbInput[i]);
     }
-    size_t inputRate = m_con->m_cbInput.GetRate();
+    size_t inputRate = static_cast<size_t>(m_inputFrmLen);
     if(m_inputBuffer.size() >= inputRate) {
-        //数据处理
-        size_t outputRate = m_con->m_cbOutput.GetRate();
+        size_t outputRate = (ZeroTail == ConvolutionalCoder::YES)
+            ? static_cast<size_t>(m_convoCodeRateN * m_inputFrmLen)
+            : static_cast<size_t>(m_convoCodeRateN);
         std::vector<bool> cbOutput(outputRate);
-        const int K = m_con->m_constraintLenK;
-        const int n = m_con->m_convoCodeRateN;
+        const int K = m_constraintLenK;
+        const int n = m_convoCodeRateN;
 
         const int tailLen = (K - 1);
         const uint32_t memMask = (tailLen > 0) ? ((1u << (uint32_t)tailLen) - 1u) : 0u;
 
-        uint32_t state = (uint32_t)m_con->m_currentState & memMask;
+        uint32_t state = (uint32_t)m_currentState_ & memMask;
 
         auto encode_one = [&](int u, int outBase)
         {
                 u = (u != 0) ? 1 : 0;
 
-                const uint32_t fullReg = ((state << 1) | (uint32_t)u) & m_con->m_regMaskK;
+                const uint32_t fullReg = ((state << 1) | (uint32_t)u) & m_regMaskK;
 
                 for (int j = 0; j < n; ++j)
                 {
-                        const int y = m_con->parity_u32(fullReg & m_con->m_polyMask[j]);
+                        const int y = parityU32Block(fullReg & m_polyMask[j]);
                         cbOutput[outBase + j] = (y != 0);
                 }
 
@@ -297,7 +325,7 @@ bool ConvolutionalCoder_Block::TimeDrivenRun()
         {
                 const int Ninfo = BitSequenceLength;
 
-                if (m_con->m_inputFrmLen != (Ninfo + tailLen))
+                if (m_inputFrmLen != (Ninfo + tailLen))
                 {
                         LOG_ERROR("ZeroTail=YES: internal frame length mismatch.");
                         return false;
@@ -331,70 +359,99 @@ bool ConvolutionalCoder_Block::TimeDrivenRun()
                         return false;
                 }
 
-                m_con->m_currentState = 0;
-                m_con->m_Counter++;
+                m_currentState_ = 0;
+                m_Counter_++;
         }
         else
         {
                 const int u = m_inputBuffer[0] ? 1 : 0;
                 encode_one(u, 0);
-                m_con->m_currentState = (int)(state & memMask);
+                m_currentState_ = (int)(state & memMask);
         }
         // 将输出块中的每个样本逐个放入输出队列
         for (const auto& val : cbOutput)
         {
             m_outputQueue.push(val);
         }
-        if (!m_outputQueue.empty())
-        {
-            bool outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
+        m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + static_cast<int>(inputRate));
+    }
+    if (!m_outputQueue.empty())
+    {
+        bool outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
 
-            WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
-            m_lastOutput = outputValue;
-            m_inputBuffer.clear();
+        WriteOutputData(GetOutputPortName(0), std::vector<bool>{outputValue});
+        m_lastOutput = outputValue;
 
-            qDebug() << "[ConvolutionalCoder_Block] 分发输出:" << m_outputCount
-                     << " value:" << outputValue;
-        }
+        qDebug() << "[ConvolutionalCoder_Block] 分发输出:" << m_outputCount
+                 << " value:" << outputValue;
     }
 
     return true;
 }
 
-bool ConvolutionalCoder_Block::ModelSetup()
+int ConvolutionalCoder_Block::boundaryCheckBlock()
 {
-    const int chk = m_con->BoundaryCheck('S');
-    if (chk != 0)
+    if (ConstraintLength < 3)  ConstraintLength = 3;
+    if (ConstraintLength > 14) ConstraintLength = 14;
+
+    const int n = rateToNBlock(CodingRate);
+
+    if (Polynomial == nullptr || PolynomialSize <= 0)
+        return -1;
+    if (PolynomialSize < n)
+        return -2;
+
+    if (ZeroTail == ConvolutionalCoder::YES && BitSequenceLength < 1)
+        BitSequenceLength = 1;
+
+    const uint32_t K = (uint32_t)ConstraintLength;
+    const uint32_t maxMask = ((1u << K) - 1u);
+    const uint32_t msb = 1u << (K - 1);
+
+    for (int i = 0; i < n; ++i)
     {
-            if (chk == -1) LOG_ERROR("Polynomial is empty.");
-            if (chk == -2) LOG_ERROR("Polynomial size < n (CodingRate=1/n).");
-            if (chk == -3) LOG_ERROR("Polynomial has no MSB tap for given ConstraintLength.");
-            if (chk == -4) LOG_ERROR("Polynomial contains bits beyond ConstraintLength.");
-            return false;
+        const uint32_t p = (uint32_t)Polynomial[i];
+        if ((p & msb) == 0u)      return -3;
+        if ((p & ~maxMask) != 0u) return -4;
     }
 
-    m_con->m_constraintLenK = ConstraintLength;
-    m_con->m_convoCodeRateN = m_con->rateToN(CodingRate);
-    m_con->m_regMaskK = ((uint32_t)1u << (uint32_t)m_con->m_constraintLenK) - 1u;
+    return 0;
+}
 
-    if (ZeroTail == ConvolutionalCoder::YES)
+int ConvolutionalCoder_Block::bitReverseBlock(int mask, int constraintLen) const
+{
+    uint32_t x = (uint32_t)mask;
+    uint32_t r = 0;
+    for (int i = 0; i < constraintLen; ++i)
     {
-            const int tailLen = (m_con->m_constraintLenK - 1);
-           m_con->m_inputFrmLen = BitSequenceLength + tailLen;
-
-            const int outBits = m_con->m_convoCodeRateN * m_con->m_inputFrmLen;
-
-            m_con->m_cbInput.SetRate((unsigned)m_con->m_inputFrmLen);
-            m_con->m_cbOutput.SetRate((unsigned)outBits);
+        r = (r << 1) | (x & 1u);
+        x >>= 1;
     }
-    else
+    return (int)r;
+}
+
+int ConvolutionalCoder_Block::rateToNBlock(ConvolutionalCoder::CodingRateEnum r)
+{
+    switch (r)
     {
-            m_con->m_inputFrmLen = 1;
-            m_con->m_cbInput.SetRate(1u);
-            m_con->m_cbOutput.SetRate((unsigned)m_con->m_convoCodeRateN);
+    case ConvolutionalCoder::rate_1_2: return 2;
+    case ConvolutionalCoder::rate_1_3: return 3;
+    case ConvolutionalCoder::rate_1_4: return 4;
+    case ConvolutionalCoder::rate_1_5: return 5;
+    case ConvolutionalCoder::rate_1_6: return 6;
+    case ConvolutionalCoder::rate_1_7: return 7;
+    case ConvolutionalCoder::rate_1_8: return 8;
+    default:                           return 2;
     }
+}
 
-    return true;
+int ConvolutionalCoder_Block::parityU32Block(uint32_t v)
+{
+    v ^= v >> 16;
+    v ^= v >> 8;
+    v ^= v >> 4;
+    v &= 0xF;
+    return (0x6996u >> v) & 1u;
 }

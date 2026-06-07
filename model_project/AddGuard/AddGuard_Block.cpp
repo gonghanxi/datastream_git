@@ -165,6 +165,7 @@ bool AddGuard_Block::DataStreamRun()
     {
         for (int n = 0; n < L; ++n)
             m_cbOutputData[n] = compute_u(n);
+        WriteOutputData(GetOutputPortName(0), m_cbOutputData);
         return true;
     }
 
@@ -288,18 +289,18 @@ bool AddGuard_Block::TimeDrivenRun()
         // 清空累积缓冲区
         m_InBuffer.clear();
         m_WindowBuffer.clear();
-        if (!m_outputQueue.empty())
-        {
-            std::complex<double> outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
+    }
+    if (!m_outputQueue.empty())
+    {
+        std::complex<double> outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
 
-            WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
-            m_lastOutput = outputValue;
+        WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{outputValue});
+        m_lastOutput = outputValue;
 
-            qDebug() << "[AddGuard_Block] 分发输出: " << m_outputCount << "/" << m_iNout
-                     << " value: (" << outputValue.real() << "," << outputValue.imag() << ")";
-        }
+        qDebug() << "[AddGuard_Block] 分发输出: " << m_outputCount << "/" << m_iNout
+                 << " value: (" << outputValue.real() << "," << outputValue.imag() << ")";
     }
     qDebug() << "[AddGuard_Block]";
     return true;
