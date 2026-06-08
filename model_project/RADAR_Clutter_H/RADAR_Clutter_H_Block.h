@@ -64,6 +64,8 @@ private:
     // ===== TimeDrivenRun 逐点累积 =====
     std::vector<EnvelopeSignal> m_inputBuffer;
     std::queue<EnvelopeSignal>  m_outputQueue;
+    std::queue<EnvelopeSignal>  m_clutterSampleQueue;
+    std::queue<std::complex<double>> m_coeffQueue;
 
     // ===== 仿真参数 =====
     SimuParameter simulator_param;

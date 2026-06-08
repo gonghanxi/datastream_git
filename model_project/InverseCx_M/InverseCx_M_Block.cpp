@@ -19,7 +19,7 @@ bool InverseCx_M_Block::Run()
 
     inputData = ReadInputData<SystemVueModelBuilder::DComplexMatrix>(GetInputPortName(0));
     if(inputData.empty()) {
-        LOG_INFO("Hermitian_M_Block: inPort no data available");
+        LOG_INFO("Inverse_M: inPort no data available");
         return false;
     }
     outputData.resize(inputData.size());
@@ -40,7 +40,7 @@ bool InverseCx_M_Block::Run()
         LOG_ERROR("Inverse_M: input matrix must be square and non-empty. Received (",numRows,", ",numCols,").");
         return false;
     }
-    outputData.resize(0);
+
     outputData[0].Resize(numRows,numCols);
     Matrix<std::complex<double>>& outMat = outputData[0];
     const bool ok = Matrix_Inverse<std::complex<double>>(inMat, outMat);
@@ -57,7 +57,7 @@ bool InverseCx_M_Block::Run()
 
 bool InverseCx_M_Block::Initialize()
 {
-    SetBlockType(Block::BlockType::SOURCE);
+    SetBlockType(Block::BlockType::PROCESSOR);
 
     m_InverseCx_M = std::make_unique<InverseCx_M>();
 

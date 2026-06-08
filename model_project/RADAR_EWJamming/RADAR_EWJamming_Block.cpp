@@ -51,11 +51,13 @@ void RADAR_EWJamming_Block::SetParameters()
 bool RADAR_EWJamming_Block::Setup()
 {
     Block::Setup();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
     return true;
 }
 
 bool RADAR_EWJamming_Block::Run()
 {
+    if (IsVariableStepMode() || m_SampleNum > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
@@ -87,8 +89,6 @@ bool RADAR_EWJamming_Block::Initialize()
 
 bool RADAR_EWJamming_Block::DataStreamRun()
 {
-    SetParameters();
-
     // 生成高斯噪声
     std::normal_distribution<double> distRe(m_Mean, m_Stdev);
     std::normal_distribution<double> distIm(m_Mean, m_Stdev);
@@ -104,6 +104,32 @@ bool RADAR_EWJamming_Block::DataStreamRun()
     }
 
     WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长逐点输出 — SOURCE 无输入，队列空时批量生成
+// ============================================================================
+
+bool RADAR_EWJamming_Block::TimeDrivenRun()
+{
+    // ① 队列为空时生成一批噪声
+    if (m_outputQueue.empty()) {
+        std::normal_distribution<double> distRe(m_Mean, m_Stdev);
+        std::normal_distribution<double> distIm(m_Mean, m_Stdev);
+        const double lossFactor = std::pow(10.0, -m_System_Loss / 20.0);
+
+        for (int i = 0; i < m_SampleNum; ++i) {
+            std::complex<double> noise(distRe(m_rng), distIm(m_rng));
+            m_outputQueue.push(noise * lossFactor);
+        }
+    }
+
+    // ② 出队写入一个样本
+    std::complex<double> out = m_outputQueue.front();
+    m_outputQueue.pop();
+    WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{out});
 
     return true;
 }

@@ -56,6 +56,10 @@ bool SwitchSPST_Block::Setup()
 {
     Block::Setup();
 
+    m_inputQueue   = std::queue<EnvelopeSignal>();
+    m_controlQueue = std::queue<EnvelopeSignal>();
+    m_outputQueue  = std::queue<EnvelopeSignal>();
+
     bool bStatus = true;
 
     if (m_VThreshold <= 0)
@@ -79,6 +83,7 @@ bool SwitchSPST_Block::Setup()
 
 bool SwitchSPST_Block::Run()
 {
+    if (IsVariableStepMode()) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
@@ -174,6 +179,77 @@ bool SwitchSPST_Block::DataStreamRun()
 
     // 更新采样计数
     m_sampleCount += static_cast<int>(inputData.size());
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长逐点处理 — input + control 配对触发，单输出
+// ============================================================================
+
+bool SwitchSPST_Block::TimeDrivenRun()
+{
+    // ① 累积输入和 control
+    {
+        auto inputData   = ReadInputData<EnvelopeSignal>(GetInputPortName(0));
+        auto controlData = ReadInputData<EnvelopeSignal>(GetInputPortName(1));
+        for (auto& v : inputData)   m_inputQueue.push(v);
+        for (auto& v : controlData) m_controlQueue.push(v);
+    }
+
+    // ② input 和 control 同时非空 → 配对处理
+    if (!m_inputQueue.empty() && !m_controlQueue.empty())
+    {
+        EnvelopeSignal in  = m_inputQueue.front();   m_inputQueue.pop();
+        EnvelopeSignal ctrl = m_controlQueue.front(); m_controlQueue.pop();
+
+        const double t = m_simuParam.startTime
+                         + static_cast<double>(m_sampleCount) / m_sampleRate;
+        const double controlVoltage = ctrl.real();
+        const std::complex<double> x = in.complex();
+
+        std::complex<double> y;
+
+        if (controlVoltage > m_VThreshold) {
+            if (!m_SwitchState) {
+                m_SwitchState = true;
+                m_Ts          = t;
+            }
+
+            if (t >= m_Ts + m_TOn) {
+                y = std::pow(10.0, -(m_Loss / 20.0)) * x;
+            } else {
+                const double gainOn  = std::pow(10.0, -(m_Loss / 20.0));
+                const double gainOff = std::pow(10.0, -(m_Isolation / 20.0));
+                y = (gainOn - gainOff) * (t - m_Ts) / m_TOn * x + gainOff * x;
+            }
+        } else {
+            if (m_SwitchState) {
+                m_SwitchState = false;
+                m_Ts          = t;
+            }
+
+            if (t >= m_Ts + m_TOff) {
+                y = std::pow(10.0, -(m_Isolation / 20.0)) * x;
+            } else {
+                const double gainOn  = std::pow(10.0, -(m_Loss / 20.0));
+                const double gainOff = std::pow(10.0, -(m_Isolation / 20.0));
+                y = (gainOn - gainOff) * (1.0 - (t - m_Ts) / m_TOff) * x + gainOff * x;
+            }
+        }
+
+        m_outputQueue.push(EnvelopeSignal(y));
+        m_sampleCount += 1;
+    }
+
+    // ③ 出队写入，输出后清空输入队列
+    if (!m_outputQueue.empty()) {
+        EnvelopeSignal out = m_outputQueue.front(); m_outputQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{out});
+
+        m_inputQueue   = std::queue<EnvelopeSignal>();
+        m_controlQueue = std::queue<EnvelopeSignal>();
+    }
 
     return true;
 }

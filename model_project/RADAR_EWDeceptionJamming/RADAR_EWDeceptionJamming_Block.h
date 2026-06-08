@@ -6,6 +6,7 @@
 
 #include <complex>
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     // ---- algorithm instance ----
     std::unique_ptr<RADAR_EWDeceptionJamming> m_algo;
@@ -43,6 +45,10 @@ private:
     SystemVueModelBuilder::Matrix<std::complex<double>> m_FalseTargetDelayBuffer;
     int m_MaxSampleNum;
     int m_SampleIndex;
+
+    // ===== TimeDrivenRun 输入缓冲 + 输出队列 =====
+    std::vector<std::complex<double>> m_inputBuffer;
+    std::queue<std::complex<double>>  m_outputQueue;
 };
 
 RegAlgo(RADAR_EWDeceptionJamming_Block);

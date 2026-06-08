@@ -6,6 +6,7 @@
 
 #include <complex>
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     bool parseArrayString(const std::string& arrayStr, std::vector<double>& outArray);
 
@@ -99,6 +101,18 @@ private:
     };
     std::vector<PatternPoint> m_patternTable;
     bool                      m_patternLoaded;
+
+    // ===== TimeDrivenRun 6路输入队列 + 2路输出队列 =====
+    std::queue<double>                          m_azQueue;
+    std::queue<double>                          m_elQueue;
+    std::queue<double>                          m_beamAzQueue;
+    std::queue<double>                          m_beamElQueue;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_inputVQueue;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_inputHQueue;
+
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_outputVQueue;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_outputHQueue;
+
 };
 
 RegAlgo(RADAR_AntennaPolarizationRx_Block);

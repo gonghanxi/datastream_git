@@ -34,6 +34,8 @@ void Ramp_Block::SetDefaultParamters()
     m_sampleRateOption = Ramp::TimedFromSchematic;
     m_sampleRate = getSimu().samplingRate;
     m_initialDelay = 0;
+    m_currentValue = 0.0;
+    m_rampCount = 0;
 }
 
 void Ramp_Block::SetParameters()
@@ -58,23 +60,28 @@ bool Ramp_Block::Setup()
 
 bool Ramp_Block::Run()
 {
-    if (!m_ramp) {
-        return false;
+    double y;
+    if (m_rampCount < m_initialDelay)
+    {
+        y = 0.0;
     }
-
-    if (!m_ramp->Run()) {
-        return false;
+    else if (m_rampCount == m_initialDelay)
+    {
+        y = m_initialValue;
+        m_currentValue = m_initialValue;
+    }
+    else
+    {
+        m_currentValue += m_stepPerSample;
+        y = m_currentValue;
     }
 
     std::vector<double> outputData;
-    outputData.push_back(m_ramp->output[0U]);
+    outputData.push_back(y);
 
     WriteOutputData(GetOutputPortName(0), outputData);
 
-    if (m_ramp) {
-        m_ramp->Advance();
-    }
-    m_producedCount++;
+    m_rampCount++;
 
     return true;
 }
@@ -109,74 +116,6 @@ bool Ramp_Block::Initialize()
     }
 
     return true;
-}
-
-
-int Ramp_Block::GetBatchSize() const
-{
-//    // 获取下游Buffer使用率
-//    float u = GetDownstreamBufferUsage();
-
-//    if(u > 80.0f) return 1;
-//    else if (u > 60.0f) return std::max(1, m_batchSize / 4);
-//    else if (u > 40.0f) return std::max(1, m_batchSize / 2);
-//    else if (u < 20.0f && m_batchSize < 50) return std::min(50, m_batchSize * 2);
-    return m_batchSize;
-}
-
-int Ramp_Block::RunBatch(int maxCount)
-{
-    if (!m_ramp) return 0;
-
-    // 计算本次可生产的数量
-    size_t totalSamples = getSimu().num_Samples;
-    size_t remaining = (m_producedCount >= totalSamples) ? 0 : (totalSamples - m_producedCount);
-    int batchSize = std::min(maxCount, (int)remaining);
-    batchSize = std::min(batchSize, GetBatchSize());
-
-    if (batchSize <= 0) {
-        if (m_producedCount >= totalSamples) {
-            SetDone(true);
-            Stop();
-        }
-        return 0;
-    }
-
-    Buffer* outBuffer = GetOutputPort(GetOutputPortName(0));
-    if (outBuffer && outBuffer->GetReaderCount() > 0) {
-        size_t freeSpace = outBuffer->GetBufferFreeSpace();
-        if (freeSpace < static_cast<size_t>(batchSize)) {
-            batchSize = static_cast<int>(freeSpace);
-            if (batchSize <= 0) return 0;
-        }
-    }
-
-    std::vector<double> outputData;
-    outputData.reserve(batchSize);
-
-    for (int i = 0; i < batchSize; i++) {
-        if (!m_ramp->Run()) {
-            break;
-        }
-        outputData.push_back(m_ramp->output[0U]);
-        m_ramp->Advance();
-    }
-
-    if (outputData.empty()) return 0;
-
-    if (!WriteOutputData(GetOutputPortName(0), outputData)) {
-        return 0;
-    }
-
-    m_producedCount += outputData.size();
-
-    if (m_producedCount >= totalSamples) {
-        SetDone(true);
-        Stop();
-    }
-//    qDebug() << "Ramp_Block --" << QString::fromStdString(GetName()) << " 单次成功产生" << outputData.size() << "个 数据";
-
-    return (int)outputData.size();
 }
 
 Ramp::SelectedShowAdvancedParams Ramp_Block::ConvertStringToShowAdvancedParams(const std::string& value)

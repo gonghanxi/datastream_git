@@ -71,10 +71,18 @@ void RADAR_SAR_Echo_Block::SetParameters()
 bool RADAR_SAR_Echo_Block::Setup()
 {
     Block::Setup();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
+    m_dataGenerated = false;
     return true;
 }
 
 bool RADAR_SAR_Echo_Block::Run()
+{
+    if (IsVariableStepMode()) return TimeDrivenRun();
+    return DataStreamRun();
+}
+
+bool RADAR_SAR_Echo_Block::DataStreamRun()
 {
     qDebug()<<"RADAR_SAR_Echo - Run begin";
     if (!m_RADAR_SAR_Echo->Run()) {
@@ -95,6 +103,42 @@ bool RADAR_SAR_Echo_Block::Run()
     }
 
     WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}
+
+bool RADAR_SAR_Echo_Block::TimeDrivenRun()
+{
+    // 首次调用：生成全部数据并入队
+    if (!m_dataGenerated)
+    {
+        if (!m_RADAR_SAR_Echo->Run()) {
+            return false;
+        }
+
+        int totalSize = static_cast<int>(m_RADAR_SAR_Echo->m_Nslow * m_RADAR_SAR_Echo->m_Nfast);
+        for (int i = 0; i < totalSize; i++) {
+            m_outputQueue.push(std::complex<double>(
+                m_RADAR_SAR_Echo->outputData[i].real(),
+                m_RADAR_SAR_Echo->outputData[i].imag()
+            ));
+        }
+        m_dataGenerated = true;
+    }
+
+    // 每次输出一个点
+    if (!m_outputQueue.empty())
+    {
+        std::complex<double> val = m_outputQueue.front();
+        m_outputQueue.pop();
+        std::vector<std::complex<double>> outputData;
+        outputData.push_back(val);
+        WriteOutputData(GetOutputPortName(0), outputData);
+
+        if (m_outputQueue.empty()) {
+            m_dataGenerated = false;
+        }
+    }
 
     return true;
 }

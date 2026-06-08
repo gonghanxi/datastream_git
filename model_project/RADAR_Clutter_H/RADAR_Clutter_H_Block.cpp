@@ -54,6 +54,10 @@ RADAR_Clutter_H_Block::RADAR_Clutter_H_Block(const std::string& name)
 bool RADAR_Clutter_H_Block::Setup()
 {
     Block::Setup();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
+    while (!m_clutterSampleQueue.empty()) m_clutterSampleQueue.pop();
+    while (!m_coeffQueue.empty()) m_coeffQueue.pop();
+    m_inputBuffer.clear();
     return true;
 }
 
@@ -142,39 +146,48 @@ bool RADAR_Clutter_H_Block::TimeDrivenRun()
     {
         generateClutter(numSample);
 
+        // 填充 3 个输出队列
         for (int i = 0; i < numSample; ++i)
         {
             const Cx x = m_inputBuffer[i].complex();
             const Cx y = x * m_clutter[i];
             m_outputQueue.push(EnvelopeSignal(y));
+            m_clutterSampleQueue.push(EnvelopeSignal(m_clutter[i]));
         }
 
-        // 写滤波器系数
-        std::vector<Cx> coeffData;
-        coeffData.reserve(m_filterCoeff.size());
+        // 滤波器系数逐点入队
         for (size_t i = 0; i < m_filterCoeff.size(); ++i)
-            coeffData.push_back(Cx(m_filterCoeff[i], 0.0));
-        WriteOutputData(coeffPort, coeffData);
-
-        // 写杂波样本
-        for (int i = 0; i < numSample && i < static_cast<int>(m_inputBuffer.size()); ++i)
-        {
-            std::vector<EnvelopeSignal> cd;
-            cd.push_back(EnvelopeSignal(m_clutter[i]));
-            WriteOutputData(clutterSamplePort, cd);
-        }
+            m_coeffQueue.push(Cx(m_filterCoeff[i], 0.0));
 
         m_inputBuffer.clear();
     }
 
+    // ---- 3 个输出端口各 pop 一个 ----
     if (!m_outputQueue.empty())
     {
         EnvelopeSignal val = m_outputQueue.front();
         m_outputQueue.pop();
-
         std::vector<EnvelopeSignal> outputData;
         outputData.push_back(val);
         WriteOutputData(outputPort, outputData);
+    }
+
+    if (!m_clutterSampleQueue.empty())
+    {
+        EnvelopeSignal val = m_clutterSampleQueue.front();
+        m_clutterSampleQueue.pop();
+        std::vector<EnvelopeSignal> cd;
+        cd.push_back(val);
+        WriteOutputData(clutterSamplePort, cd);
+    }
+
+    if (!m_coeffQueue.empty())
+    {
+        Cx val = m_coeffQueue.front();
+        m_coeffQueue.pop();
+        std::vector<Cx> coeffData;
+        coeffData.push_back(val);
+        WriteOutputData(coeffPort, coeffData);
     }
 
     return true;
@@ -224,10 +237,12 @@ bool RADAR_Clutter_H_Block::Initialize()
     m_cachedNumSample = -1;
     m_rng = std::mt19937(std::random_device{}());
 
-    AddInputPort("input",          m_algo->input,         1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("output",        m_algo->output,        1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("ClutterSample", m_algo->ClutterSample, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("Coeff",         m_algo->Coeff,         1, Block::DataType::DCOMPLEX_BUS);
+    int num_sample = m_DurationTime / m_TStep;
+
+    AddInputPort("input",          m_algo->input,         num_sample, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("output",        m_algo->output,        num_sample, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("ClutterSample", m_algo->ClutterSample, num_sample, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("Coeff",         m_algo->Coeff,         m_FilterLen, Block::DataType::DCOMPLEX_BUS);
 
     return true;
 }

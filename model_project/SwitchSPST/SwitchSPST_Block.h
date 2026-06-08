@@ -5,6 +5,7 @@
 #include "SwitchSPST.h"
 
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,7 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     // ---- algorithm instance ----
     std::unique_ptr<SwitchSPST> m_algo;
@@ -43,6 +45,11 @@ private:
     SimuParameter m_simuParam;
     int           m_sampleCount;
     double        m_sampleRate;
+
+    // ===== TimeDrivenRun 输入+输出队列 =====
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_inputQueue;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_controlQueue;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_outputQueue;
 };
 
 RegAlgo(SwitchSPST_Block);

@@ -53,8 +53,6 @@ bool IntToReal_Block::Initialize()
 
 bool IntToReal_Block::DataStreamRun()
 {
-    SetParameters();
-
     auto inputData = ReadInputData<int>(GetInputPortName(0));
     if (inputData.empty()) { return false; }
 

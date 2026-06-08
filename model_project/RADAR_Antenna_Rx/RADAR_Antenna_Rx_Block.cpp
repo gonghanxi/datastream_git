@@ -314,7 +314,7 @@ bool RADAR_Antenna_Rx_Block::TimeDrivenRun()
     }
 
     // ② 处理所有累积输入 → 入队
-    while (!m_inputBuffer.empty()) {
+    if (!m_inputBuffer.empty()) {
         InputSnapshot in = m_inputBuffer.front();
         m_inputBuffer.erase(m_inputBuffer.begin());
 
@@ -370,6 +370,7 @@ output_label:
     if (!m_outputQueue.empty()) {
         OutputFrame outFrame = m_outputQueue.front();
         m_outputQueue.pop();
+        m_inputBuffer.clear();
         WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{outFrame.out});
     }
 

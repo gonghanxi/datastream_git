@@ -72,6 +72,8 @@ bool Pack_M_Block::DataStreamRun()
             }
         }
     }
+    qDebug()<<inputData[0]<<inputData[1]<<inputData[2]<<inputData[3];
+    qDebug()<<"outputMatrix"<<outputMatrix(0,0)<<outputMatrix(0,1)<<outputMatrix(1,0)<<outputMatrix(1,1);
 
     // 将矩阵添加到输出容器
     outputData.push_back(outputMatrix);

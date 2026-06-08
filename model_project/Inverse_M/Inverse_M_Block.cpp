@@ -31,8 +31,8 @@ bool Inverse_M_Block::Run()
         LOG_ERROR("Inverse_M: input is not a matrix.");
         return false;
     }
-    const size_t numRows = inMat.NumRows();
-    const size_t numCols = inMat.NumColumns();
+    const size_t numRows = inputData[0].NumRows();
+    const size_t numCols = inputData[0].NumColumns();
 
     if (numRows == 0 || numCols == 0 || numRows != numCols)
     {
@@ -40,7 +40,7 @@ bool Inverse_M_Block::Run()
         LOG_ERROR("Inverse_M: input matrix must be square and non-empty. Received (",numRows,", ",numCols,").");
         return false;
     }
-    outputData.resize(0);
+
     outputData[0].Resize(numRows,numCols);
     Matrix<double>& outMat = outputData[0];
     const bool ok = Matrix_Inverse<double>(inMat, outMat);
@@ -49,6 +49,7 @@ bool Inverse_M_Block::Run()
         LOG_ERROR("Inverse_M: the input matrix is singular and does not have an inverse.");
         return false;
     }
+
     WriteOutputData(GetOutputPortName(0), outputData);
 
     return true;
@@ -57,7 +58,7 @@ bool Inverse_M_Block::Run()
 
 bool Inverse_M_Block::Initialize()
 {
-    SetBlockType(Block::BlockType::SOURCE);
+    SetBlockType(Block::BlockType::PROCESSOR);
 
     m_Inverse_M = std::make_unique<Inverse_M>();
 

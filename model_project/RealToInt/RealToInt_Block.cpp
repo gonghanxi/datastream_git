@@ -90,8 +90,6 @@ bool RealToInt_Block::Initialize()
 
 bool RealToInt_Block::DataStreamRun()
 {
-    SetParameters();
-
     auto inputData = ReadInputData<double>(GetInputPortName(0));
     if (inputData.empty()) { return false; }
 

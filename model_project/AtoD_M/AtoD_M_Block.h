@@ -197,6 +197,7 @@ private:
 	std::vector<DistortionState> m_distortionStates;
 
 	SimuParameter m_simulator_param;
+    int system_rate = 1;
 };
 
 RegAlgo(AtoD_M_Block);

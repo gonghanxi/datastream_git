@@ -26,6 +26,17 @@ DEFINE_MODEL_INTERFACE(InverseCx_M)
 }
 #endif  
 
+InverseCx_M::InverseCx_M()
+{
+}
+
+bool InverseCx_M::Setup()
+{
+    input.SetRate(1U);
+    output.SetRate(1U);
+    return true;
+}
+
 bool InverseCx_M::Run()
 {
 	DComplexMatrix& inMat = input[0];

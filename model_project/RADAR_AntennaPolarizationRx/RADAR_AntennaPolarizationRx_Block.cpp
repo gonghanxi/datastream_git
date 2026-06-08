@@ -139,11 +139,20 @@ void RADAR_AntennaPolarizationRx_Block::SetParameters()
 bool RADAR_AntennaPolarizationRx_Block::Setup()
 {
     Block::Setup();
+    while (!m_azQueue.empty())      m_azQueue.pop();
+    while (!m_elQueue.empty())      m_elQueue.pop();
+    while (!m_beamAzQueue.empty())  m_beamAzQueue.pop();
+    while (!m_beamElQueue.empty())  m_beamElQueue.pop();
+    while (!m_inputVQueue.empty())  m_inputVQueue.pop();
+    while (!m_inputHQueue.empty())  m_inputHQueue.pop();
+    while (!m_outputVQueue.empty()) m_outputVQueue.pop();
+    while (!m_outputHQueue.empty()) m_outputHQueue.pop();
     return true;
 }
 
 bool RADAR_AntennaPolarizationRx_Block::Run()
 {
+    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -314,6 +323,87 @@ bool RADAR_AntennaPolarizationRx_Block::DataStreamRun()
     if(m_algo){
         m_algo->Advance();
     }
+    return true;
+}
+
+bool RADAR_AntennaPolarizationRx_Block::TimeDrivenRun()
+{
+
+        auto azData  = ReadInputData<double>(GetInputPortName(0));
+        auto elData  = ReadInputData<double>(GetInputPortName(1));
+        auto bAzData = ReadInputData<double>(GetInputPortName(2));
+        auto bElData = ReadInputData<double>(GetInputPortName(3));
+        auto inputV  = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
+        auto inputH  = ReadInputData<EnvelopeSignal>(GetInputPortName(5));
+
+        for (auto& v : azData)  m_azQueue.push(v);
+        for (auto& v : elData)  m_elQueue.push(v);
+        for (auto& v : bAzData) m_beamAzQueue.push(v);
+        for (auto& v : bElData) m_beamElQueue.push(v);
+        for (auto& v : inputV)  m_inputVQueue.push(v);
+        for (auto& v : inputH)  m_inputHQueue.push(v);
+
+    // ② inputV 和 inputH 同时非空 → 逐对 pop 处理
+    if (!m_inputVQueue.empty() && !m_inputHQueue.empty())
+    {
+        EnvelopeSignal sigV = m_inputVQueue.front(); m_inputVQueue.pop();
+        EnvelopeSignal sigH = m_inputHQueue.front(); m_inputHQueue.pop();
+        std::complex<double> xV = sigV.complex();
+        std::complex<double> xH = sigH.complex();
+
+        double targetAzRad = 0.0;
+        if (!m_azQueue.empty()) { targetAzRad = m_azQueue.front(); m_azQueue.pop(); }
+
+        double targetElRad = 0.0;
+        if (!m_elQueue.empty()) { targetElRad = m_elQueue.front(); m_elQueue.pop(); }
+
+        double beamAzRad = 0.0;
+        double beamElRad = 0.0;
+        bool hasBeamAz = !m_beamAzQueue.empty();
+        bool hasBeamEl = !m_beamElQueue.empty();
+        if (hasBeamAz) { beamAzRad = m_beamAzQueue.front(); m_beamAzQueue.pop(); }
+        if (hasBeamEl) { beamElRad = m_beamElQueue.front(); m_beamElQueue.pop(); }
+        if (!hasBeamAz || !hasBeamEl) {
+            double azTmp = 0.0, elTmp = 0.0;
+            getBeamAngle(0.0, azTmp, elTmp);
+            if (!hasBeamAz) { beamAzRad = azTmp; }
+            if (!hasBeamEl) { beamElRad = elTmp; }
+        }
+
+        const double relAzDeg = rad2deg(normalizeRad(targetAzRad - beamAzRad));
+        const double relElDeg = rad2deg(normalizeRad(targetElRad - beamElRad));
+
+        std::complex<double> GHH, GHV, GVH, GVV;
+        lookupPolarizationMatrix(relAzDeg, relElDeg, GHH, GHV, GVH, GVV);
+
+        std::complex<double> yH = GHH * xH + GHV * xV;
+        std::complex<double> yV = GVH * xH + GVV * xV;
+
+        m_outputVQueue.push(EnvelopeSignal(yV));
+        m_outputHQueue.push(EnvelopeSignal(yH));
+    }
+
+    // ③ 出队写入，输出后清空全部 6 路输入队列
+    bool wroteOutput = false;
+    if (!m_outputVQueue.empty()) {
+        EnvelopeSignal outV = m_outputVQueue.front(); m_outputVQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{outV});
+        wroteOutput = true;
+    }
+    if (!m_outputHQueue.empty()) {
+        EnvelopeSignal outH = m_outputHQueue.front(); m_outputHQueue.pop();
+        WriteOutputData(GetOutputPortName(1), std::vector<EnvelopeSignal>{outH});
+        wroteOutput = true;
+    }
+    if (wroteOutput) {
+        m_azQueue      = std::queue<double>();
+        m_elQueue      = std::queue<double>();
+        m_beamAzQueue  = std::queue<double>();
+        m_beamElQueue  = std::queue<double>();
+        m_inputVQueue  = std::queue<EnvelopeSignal>();
+        m_inputHQueue  = std::queue<EnvelopeSignal>();
+    }
+
     return true;
 }
 

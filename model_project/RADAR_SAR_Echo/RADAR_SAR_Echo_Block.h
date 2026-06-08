@@ -4,6 +4,8 @@
 #include "Block.h"
 #include "RADAR_SAR_Echo.h"
 
+#include <queue>
+
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API RADAR_SAR_Echo_Block : public SystemVueModelBuilder::Block
@@ -17,6 +19,8 @@ public:
     bool Initialize() override;
 
 private:
+    bool DataStreamRun();
+    bool TimeDrivenRun();
     void SetDefaultParamters();
     void SetParameters();
 
@@ -40,6 +44,10 @@ private:
     double m_SampleRate;
     RADAR_SAR_Echo::SelectedEchoGenerate_Mode m_EchoGenerate_Mode;
     SystemVueModelBuilder::Matrix<double> m_TargetInfo;
+
+    // ===== TimeDrivenRun 逐点输出 =====
+    std::queue<std::complex<double>> m_outputQueue;
+    bool m_dataGenerated = false;
 
     SimuParameter simulator_param;
 };

@@ -44,6 +44,8 @@ bool Quantizer_M_Block::Run()
 
     const size_t rows = inMat.NumRows();
     const size_t cols = inMat.NumColumns();
+    qDebug()<<"rows"<<rows<<"cols"<<cols;
+    qDebug()<<inMat(0,0)<<inMat(0,1)<<inMat(1,0)<<inMat(1,1);
 
     const int N = static_cast<int>(m_thresholds.size());
 
@@ -58,9 +60,9 @@ bool Quantizer_M_Block::Run()
     outMat.Resize(static_cast<int>(rows), static_cast<int>(cols));
     idxMat.Resize(static_cast<int>(rows), static_cast<int>(cols));
 
-    for (size_t r = 0; r < rows; ++r)
+    for (size_t c = 0; c < cols; ++c)
     {
-        for (size_t c = 0; c < cols; ++c)
+        for (size_t r = 0; r < rows; ++r)
         {
             const int k = QuantizeIndex(inMat(r, c));
             outMat(r, c) = m_levels[static_cast<size_t>(k)];

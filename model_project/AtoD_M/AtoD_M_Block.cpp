@@ -211,10 +211,12 @@ bool AtoD_M_Block::Initialize()
 	reset_states_();
 
 	// 端口注册 — 使用 m_atod_m 的 CircularBuffer
-	int system_rate = 1;
+    system_rate = 1;
 	if (m_ConversionType == AtoD_M::Downsampled)
 		system_rate = m_DownsampleFactor;
-
+    if (m_DownsampleFactor <= 0) {
+        system_rate = 1;
+    }
 	m_atod_m->A_in.SetStartTime(m_simulator_param.startTime);
 	m_atod_m->A_out.SetStartTime(m_simulator_param.startTime);
 
@@ -248,7 +250,7 @@ bool AtoD_M_Block::Setup()
 // ===== Run 分发 =====
 bool AtoD_M_Block::Run()
 {
-	if (IsVariableStepMode())
+    if (IsVariableStepMode() && system_rate > 1)
 		return TimeDrivenRun();
 	else
 		return DataStreamRun();
@@ -339,13 +341,12 @@ bool AtoD_M_Block::TimeDrivenRun()
 		: 1;
 
 	// ==== Stage 2：处理所有可就绪的帧 ====
-	while (static_cast<int>(m_inputBuffer.size()) >= neededFrames)
+    if (static_cast<int>(m_inputBuffer.size()) >= neededFrames)
 	{
 		std::vector<EnvelopeMatrix> processVec;
 		for (int k = 0; k < neededFrames; ++k)
 		{
 			processVec.push_back(m_inputBuffer.front().matrix);
-			m_inputBuffer.erase(m_inputBuffer.begin());
 		}
 
 		const EnvelopeMatrix& in0 = processVec[0];
@@ -398,7 +399,7 @@ bool AtoD_M_Block::TimeDrivenRun()
 		}
 
 		m_outputQueue.push(OutputFrame{ outA, outI, outQ });
-		++m_sampleIndex;
+		++m_sampleIndex; 
 	}
 
 	// ==== Stage 3：出队输出 ====
@@ -409,6 +410,7 @@ bool AtoD_M_Block::TimeDrivenRun()
 		WriteOutputData(GetOutputPortName(1), std::vector<IntMatrix>{ frame.D_I });
 		WriteOutputData(GetOutputPortName(2), std::vector<IntMatrix>{ frame.D_Q });
 		m_outputQueue.pop();
+        m_inputBuffer.clear();
 		m_atod_m->Advance();
 	}
 

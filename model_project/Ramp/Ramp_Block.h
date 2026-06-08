@@ -16,9 +16,6 @@ public:
     bool Run() override;
     bool Initialize() override;
 
-    int GetBatchSize() const override;
-    int RunBatch(int maxCount) override;
-
 private:
     void SetDefaultParamters();
     void SetParameters();
@@ -38,7 +35,10 @@ private:
     SimuParameter simulator_param;
 
     int m_batchSize = 10;
-    size_t m_producedCount = 0;
+
+    // 内联算法状态
+    double m_currentValue = 0.0;
+    int m_rampCount = 0;
 };
 
 RegAlgo(Ramp_Block);

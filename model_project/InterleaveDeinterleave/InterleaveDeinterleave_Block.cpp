@@ -69,19 +69,18 @@ bool InterleaveDeinterleave_Block::TimeDrivenRun()
         for(const auto& val : outputData) {
             m_outputQueue.push(val);
         }
-        if (!m_outputQueue.empty())
-        {
-            float outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
-            WriteOutputData(GetOutputPortName(0), std::vector<float>{outputValue});
-            m_lastOutput = outputValue;
-            m_inputBuffer.clear();
+    }
+    if (!m_outputQueue.empty())
+    {
+        float outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
+        WriteOutputData(GetOutputPortName(0), std::vector<float>{outputValue});
+        m_lastOutput = outputValue;
+        m_inputBuffer.clear();
 
-            qDebug() << "[InterleaveDeinterleave_Block] 分发输出:" << m_outputCount
-                     << " value:" << outputValue;
-        }
-
+        qDebug() << "[InterleaveDeinterleave_Block] 分发输出:" << m_outputCount
+                 << " value:" << outputValue;
     }
     return true;
 }

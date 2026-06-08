@@ -72,11 +72,14 @@ void RADAR_EWDeceptionJamming_Block::SetParameters()
 bool RADAR_EWDeceptionJamming_Block::Setup()
 {
     Block::Setup();
+    m_inputBuffer.clear();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
     return true;
 }
 
 bool RADAR_EWDeceptionJamming_Block::Run()
 {
+    if (IsVariableStepMode() || m_SampleNum > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
@@ -167,6 +170,66 @@ bool RADAR_EWDeceptionJamming_Block::DataStreamRun()
     if (m_SampleIndex > m_MaxSampleNum) {
         m_FalseTargetDelayBuffer.Zero();
         m_SampleIndex = 0;
+    }
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长逐点处理 — 累积满 SampleNum 后批次处理
+// ============================================================================
+
+bool RADAR_EWDeceptionJamming_Block::TimeDrivenRun()
+{
+    SetParameters();
+
+    // ① 累积输入
+    {
+        auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
+        for (auto& v : inputData) m_inputBuffer.push_back(v);
+    }
+
+    // ② 缓冲区满 SampleNum → 批次处理入队
+    if (static_cast<int>(m_inputBuffer.size()) >= m_SampleNum)
+    {
+        const double c  = 3e8;
+        const double PI = std::acos(-1.0);
+        const std::complex<double> imag_I(0.0, 1.0);
+
+        // 将假目标信号写入延迟缓冲区
+        for (int n = 0; n < m_FalseTargetNum; ++n) {
+            const int NDelay = static_cast<int>(
+                2.0 * m_FalseTargetRangeDelay(n) / c * m_SampleRate);
+
+            for (int i = 0; i < m_SampleNum; ++i) {
+                const int idx = m_SampleIndex + i + NDelay;
+                if (idx < m_MaxSampleNum) {
+                    m_FalseTargetDelayBuffer(idx) +=
+                        m_inputBuffer[static_cast<size_t>(i)]
+                        * std::exp(-imag_I * 2.0 * PI * m_FalseTargetDopplerOffset(n))
+                        * m_FalseTargetGain(n);
+                }
+            }
+        }
+
+        // 从延迟缓冲区读出欺骗信号 → 输出队列
+        for (int i = 0; i < m_SampleNum; ++i) {
+            m_outputQueue.push(m_FalseTargetDelayBuffer(m_SampleIndex + i));
+        }
+    }
+
+    // ③ 出队写入一个样本，输出后清空输入缓冲区
+    if (!m_outputQueue.empty()) {
+        std::complex<double> out = m_outputQueue.front();
+        m_outputQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<std::complex<double>>{out});
+
+        m_inputBuffer.clear();
+        m_SampleIndex += 1;
+        if (m_SampleIndex > m_MaxSampleNum) {
+            m_FalseTargetDelayBuffer.Zero();
+            m_SampleIndex = 0;
+        }
     }
 
     return true;

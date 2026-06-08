@@ -93,6 +93,10 @@ bool Demapper_Block::Setup()
 {
     Block::Setup();
 
+    m_inputQueue = std::queue<std::complex<double>>();
+    m_bitsQueue  = std::queue<bool>();
+    m_nodeQueue  = std::queue<std::complex<double>>();
+
     bool bStatus = true;
 
     if (m_symbolLength <= 0)
@@ -111,6 +115,7 @@ bool Demapper_Block::Setup()
 
 bool Demapper_Block::Run()
 {
+    if (IsVariableStepMode() || m_symbolLength > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
@@ -233,6 +238,84 @@ bool Demapper_Block::DataStreamRun()
     }
     if (!outputNodeData.empty()) {
         WriteOutputData(GetOutputPortName(1), outputNodeData);
+    }
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长逐点处理 — 输入符号解调为 bits + node，双输出独立出队
+// ============================================================================
+
+bool Demapper_Block::TimeDrivenRun()
+{
+    // ① 累积输入符号
+    {
+        auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
+        for (auto& v : inputData) m_inputQueue.push(v);
+    }
+
+    // ② 有输入时 → 解调一个符号
+    if (!m_inputQueue.empty())
+    {
+        const std::complex<double> x = m_inputQueue.front(); m_inputQueue.pop();
+        const int symbolLength = m_symbolLength;
+        const int M            = m_M;
+
+        // 查找最近星座点
+        int bestIdx = -1;
+        double bestDist = std::numeric_limits<double>::infinity();
+        for (int j = 0; j < M; ++j) {
+            const double d = std::norm(x - m_constellationTable[static_cast<size_t>(j)]);
+            if (d < bestDist) {
+                bestDist = d;
+                bestIdx = j;
+            }
+        }
+
+        if (bestIdx < 0 || bestIdx >= M) {
+            LOG_ERROR("Demapper internal error: invalid nearest constellation index.");
+            return false;
+        }
+
+        // 输出 node 符号
+        m_nodeQueue.push(m_constellationTable[static_cast<size_t>(bestIdx)]);
+
+        // 获取状态
+        int state = bestIdx;
+        if (m_ModType == SystemVueModelBuilder::Demapper::CustomAPSK &&
+            m_DefaultState == SystemVueModelBuilder::Demapper::FALSE_) {
+            if (static_cast<int>(m_indexToState.size()) == M) {
+                state = m_indexToState[static_cast<size_t>(bestIdx)];
+            }
+        }
+
+        // 根据 BitOrder 输出 bits
+        if (m_BitOrder == SystemVueModelBuilder::Demapper::LSB_first) {
+            for (int k = 0; k < symbolLength; ++k) {
+                m_bitsQueue.push(((state >> k) & 0x1) != 0);
+            }
+        } else {
+            for (int k = 0; k < symbolLength; ++k) {
+                m_bitsQueue.push(((state >> (symbolLength - 1 - k)) & 0x1) != 0);
+            }
+        }
+    }
+
+    // ③ 出队写入，两个输出分开判断
+    bool wroteOutput = false;
+    if (!m_bitsQueue.empty()) {
+        bool b = m_bitsQueue.front(); m_bitsQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<bool>{b});
+        wroteOutput = true;
+    }
+    if (!m_nodeQueue.empty()) {
+        std::complex<double> n = m_nodeQueue.front(); m_nodeQueue.pop();
+        WriteOutputData(GetOutputPortName(1), std::vector<std::complex<double>>{n});
+        wroteOutput = true;
+    }
+    if (wroteOutput) {
+        m_inputQueue = std::queue<std::complex<double>>();
     }
 
     return true;

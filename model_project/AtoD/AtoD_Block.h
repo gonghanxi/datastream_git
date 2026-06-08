@@ -4,6 +4,8 @@
 #include "Block.h"
 #include "AtoD.h"
 
+#include <queue>
+
 using namespace SystemVueModelBuilder;
 
 class SYSTEMVUEMODELBUILDER_API AtoD_Block : public SystemVueModelBuilder::Block
@@ -17,6 +19,8 @@ public:
     bool Initialize() override;
 
 private:
+    bool DataStreamRun();
+    bool TimeDrivenRun();
     void SetDefaultParamters();
     void SetParameters();
     bool parseArrayString(const std::string& arrayStr, std::vector<double>& outArray);
@@ -75,7 +79,16 @@ private:
     double m_ExcessBW;
 
     std::vector<double> primdata;
-    double m_sampleRate;SimuParameter simulator_param;
+    double m_sampleRate;
+
+    // ===== TimeDrivenRun 缓存与队列 =====
+    std::vector<SystemVueModelBuilder::EnvelopeSignal> m_inputBuffer;
+    std::queue<SystemVueModelBuilder::EnvelopeSignal> m_aoutQueue;
+    std::queue<double> m_diQueue;
+    std::queue<double> m_dqQueue;
+    int m_inputRate = 1;
+
+    SimuParameter simulator_param;
 };
 
 RegAlgo(AtoD_Block);

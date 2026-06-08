@@ -36,4 +36,5 @@ private:
     int m_outputCount;                   // 当前已分发输出数
 };
 
+RegAlgo(M_PSK_Block)
 #endif // M_PSK_BLOCK_H

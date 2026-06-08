@@ -174,13 +174,8 @@ bool RADAR_SAR_Echo::Setup()
     output.SetRate(Nslow*Nfast);
     outputData.resize(Nslow*Nfast);
 
-     qDebug()<<"RADAR_SAR_Echo: Nslow*Nfast"<<Nslow*Nfast;
-
     m_Nslow = Nslow;
     m_Nfast = Nfast;
-
-    qDebug()<<"RADAR_SAR_Echo: m_Nslow"<<m_Nslow;
-    qDebug()<<"RADAR_SAR_Echo: m_Nfast"<<m_Nfast;
 
 	return bStatus;
 }

@@ -168,10 +168,20 @@ void AtoD_Block::SetParameters()
 bool AtoD_Block::Setup()
 {
     Block::Setup();
+    m_inputBuffer.clear();
+    while (!m_aoutQueue.empty()) m_aoutQueue.pop();
+    while (!m_diQueue.empty()) m_diQueue.pop();
+    while (!m_dqQueue.empty()) m_dqQueue.pop();
     return true;
 }
 
 bool AtoD_Block::Run()
+{
+    if (IsVariableStepMode() || m_inputRate > 1) return TimeDrivenRun();
+    return DataStreamRun();
+}
+
+bool AtoD_Block::DataStreamRun()
 {
     // 获取输入输出端口名称
     std::string A_INPortName = GetInputPortName(0);
@@ -217,16 +227,75 @@ bool AtoD_Block::Run()
      return true;
 }
 
+bool AtoD_Block::TimeDrivenRun()
+{
+    // ---- 1. 累积输入 ----
+    std::string A_INPortName = GetInputPortName(0);
+    auto inputData = ReadInputData<SystemVueModelBuilder::EnvelopeSignal>(A_INPortName);
+    if (inputData.empty()) {
+        if (IsVariableStepMode()) {
+            return true;
+        }
+        return false;
+    }
+    for (size_t i = 0; i < inputData.size(); ++i) {
+        m_inputBuffer.push_back(inputData[i]);
+    }
+
+    // ---- 2. 处理：每累计 m_inputRate 个输入 → 运行一次算法 → 3路输出入队 ----
+    if (static_cast<int>(m_inputBuffer.size()) >= m_inputRate)
+    {
+        std::vector<SystemVueModelBuilder::EnvelopeSignal> batch(
+            m_inputBuffer.begin(), m_inputBuffer.begin() + m_inputRate);
+        m_atod->A_Input = batch;
+
+        if (!m_atod->Run()) {
+            return false;
+        }
+
+        m_aoutQueue.push(m_atod->A_out[0]);
+        m_diQueue.push(static_cast<double>(m_atod->D_I[0]));
+        m_dqQueue.push(static_cast<double>(m_atod->D_Q[0]));
+
+        if (m_atod) {
+            m_atod->Advance();
+        }
+
+        m_inputBuffer.clear();
+    }
+
+    // ---- 3. 逐点输出 ----
+    std::string A_outPortName = GetOutputPortName(0);
+    std::string D_IPortName  = GetOutputPortName(1);
+    std::string D_QPortName  = GetOutputPortName(2);
+
+    if (!m_aoutQueue.empty())
+    {
+        std::vector<SystemVueModelBuilder::EnvelopeSignal> outA{ m_aoutQueue.front() };
+        m_aoutQueue.pop();
+        WriteOutputData(A_outPortName, outA);
+    }
+    if (!m_diQueue.empty())
+    {
+        std::vector<double> outI{ m_diQueue.front() };
+        m_diQueue.pop();
+        WriteOutputData(D_IPortName, outI);
+    }
+    if (!m_dqQueue.empty())
+    {
+        std::vector<double> outQ{ m_dqQueue.front() };
+        m_dqQueue.pop();
+        WriteOutputData(D_QPortName, outQ);
+    }
+
+    return true;
+}
+
 bool AtoD_Block::Initialize()
 {
     SetBlockType(Block::BlockType::PROCESSOR);
 
     m_atod = std::make_unique<AtoD>();
-
-    AddInputPort("A_in", m_atod->A_in, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("A_out", m_atod->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("D_I" , m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
-    AddOutputPort("D_Q",  m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
 
     SetDefaultParamters();
     simulator_param = getSimu();
@@ -277,8 +346,21 @@ bool AtoD_Block::Initialize()
         return false;
     }
 
+    // ---- 与 AtoD::Setup() 相同的速率判断 ----
+    if (m_ConversionType == AtoD::Downsampled) {
+        m_inputRate = m_DownsampleFactor;
+    } else {
+        m_inputRate = 1;
+    }
+
     m_atod->A_in.SetStartTime(simulator_param.startTime);
     m_atod->A_out.SetStartTime(simulator_param.startTime);
+
+    // ---- 端口注册移到末尾 ----
+    AddInputPort("A_in", m_atod->A_in, m_inputRate, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("A_out", m_atod->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
+    AddOutputPort("D_I" , m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
+    AddOutputPort("D_Q",  m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
 
     return true;
 }
@@ -286,10 +368,10 @@ bool AtoD_Block::Initialize()
 AtoD::OutputDigitalFormatEnum AtoD_Block::ConvertStringToOutputDigitalFormatEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Offset_binary") {
+    if (lower == "offset_binary") {
         return AtoD::Offset_binary;
     }
-    if (lower == "Twos_complement" || lower == "1") {
+    if (lower == "twos_complement" || lower == "1") {
         return AtoD::Twos_complement;
     }
     return AtoD::Offset_binary;
@@ -298,19 +380,19 @@ AtoD::OutputDigitalFormatEnum AtoD_Block::ConvertStringToOutputDigitalFormatEnum
 AtoD::DistortionModelEnum AtoD_Block::ConvertStringToDistortionModelEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Distortion_None") {
+    if (lower == "distortion_none") {
         return AtoD::Distortion_None;
     }
-    if (lower == "Jitter_INL_DNL" || lower == "1") {
+    if (lower == "jitter_inl_dnl" || lower == "1") {
         return AtoD::Jitter_INL_DNL;
     }
-    if (lower == "ENOB_value" || lower == "2") {
+    if (lower == "enob_value" || lower == "2") {
         return AtoD::ENOB_value;
     }
-    if (lower == "SNR_and_Harmonics" || lower == "3") {
+    if (lower == "snr_and_harmonics" || lower == "3") {
         return AtoD::SNR_and_Harmonics;
     }
-    if (lower == "SINAD_and_SFDR" || lower == "4") {
+    if (lower == "sinad_and_sfdr" || lower == "4") {
         return AtoD::SINAD_and_SFDR;
     }
     return AtoD::Distortion_None;
@@ -319,13 +401,13 @@ AtoD::DistortionModelEnum AtoD_Block::ConvertStringToDistortionModelEnum(const s
 AtoD::EnableJitterEnum AtoD_Block::ConvertStringToEnableJitterEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Jitter_No") {
+    if (lower == "jitter_no") {
         return AtoD::Jitter_No;
     }
-    if (lower == "Time_Domain" || lower == "1") {
+    if (lower == "time_domain" || lower == "1") {
         return AtoD::Time_Domain;
     }
-    if (lower == "Frequency_Domain" || lower == "2") {
+    if (lower == "frequency_domain" || lower == "2") {
         return AtoD::Frequency_Domain;
     }
     return AtoD::Jitter_No;
@@ -334,13 +416,13 @@ AtoD::EnableJitterEnum AtoD_Block::ConvertStringToEnableJitterEnum(const std::st
 AtoD::PN_TypeEnum AtoD_Block::ConvertStringToPN_TypeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Random_PN") {
+    if (lower == "random_pn") {
         return AtoD::Random_PN;
     }
-    if (lower == "Fixed_freq_offset" || lower == "1") {
+    if (lower == "fixed_freq_offset" || lower == "1") {
         return AtoD::Fixed_freq_offset;
     }
-    if (lower == "Fixed_freq_offset_and_amplitude" || lower == "2") {
+    if (lower == "fixed_freq_offset_and_amplitude" || lower == "2") {
         return AtoD::Fixed_freq_offset_and_amplitude;
     }
     return AtoD::Random_PN;
@@ -349,19 +431,19 @@ AtoD::PN_TypeEnum AtoD_Block::ConvertStringToPN_TypeEnum(const std::string& valu
 AtoD::FFT_SizeEnum AtoD_Block::ConvertStringToFFT_SizeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "FFT_2_12") {
+    if (lower == "fft_2_12") {
         return AtoD::FFT_2_12;
     }
-    if (lower == "FFT_2_13" || lower == "1") {
+    if (lower == "fft_2_13" || lower == "1") {
         return AtoD::FFT_2_13;
     }
-    if (lower == "FFT_2_14" || lower == "2") {
+    if (lower == "fft_2_14" || lower == "2") {
         return AtoD::FFT_2_14;
     }
-    if (lower == "FFT_2_15" || lower == "3") {
+    if (lower == "fft_2_15" || lower == "3") {
         return AtoD::FFT_2_15;
     }
-    if (lower == "FFT_2_16" || lower == "4") {
+    if (lower == "fft_2_16" || lower == "4") {
         return AtoD::FFT_2_16;
     }
     return AtoD::FFT_2_12;
@@ -370,16 +452,16 @@ AtoD::FFT_SizeEnum AtoD_Block::ConvertStringToFFT_SizeEnum(const std::string& va
 AtoD::SNR_ModelEnum AtoD_Block::ConvertStringToSNR_ModelEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Quantization_and_Jitter") {
+    if (lower == "quantization_and_jitter") {
         return AtoD::Quantization_and_Jitter;
     }
-    if (lower == "Quantization_and_INL_DNL" || lower == "1") {
+    if (lower == "quantization_and_inl_dnl" || lower == "1") {
         return AtoD::Quantization_and_INL_DNL;
     }
-    if (lower == "Quantization_and_Jitter_or_INL_DNL" || lower == "2") {
+    if (lower == "quantization_and_jitter_or_inl_dnl" || lower == "2") {
         return AtoD::Quantization_and_Jitter_or_INL_DNL;
     }
-    if (lower == "Quantization_Jitter_and_Thermal_Noise" || lower == "3") {
+    if (lower == "quantization_jitter_and_thermal_noise" || lower == "3") {
         return AtoD::Quantization_Jitter_and_Thermal_Noise;
     }
     return AtoD::Quantization_and_Jitter;
@@ -388,10 +470,10 @@ AtoD::SNR_ModelEnum AtoD_Block::ConvertStringToSNR_ModelEnum(const std::string& 
 AtoD::ConversionTypeEnum AtoD_Block::ConvertStringToConversionTypeEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "Clocked") {
+    if (lower == "clocked") {
         return AtoD::Clocked;
     }
-    if (lower == "Downsampled" || lower == "1") {
+    if (lower == "downsampled" || lower == "1") {
         return AtoD::Downsampled;
     }
     return AtoD::Clocked;
@@ -399,10 +481,10 @@ AtoD::ConversionTypeEnum AtoD_Block::ConvertStringToConversionTypeEnum(const std
 AtoD::AntiAliasingFilterEnum AtoD_Block::ConvertStringToAntiAliasingFilterEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
-    if (lower == "AA_OFF") {
+    if (lower == "aa_off") {
         return AtoD::AA_OFF;
     }
-    if (lower == "AA_ON" || lower == "1") {
+    if (lower == "aa_on" || lower == "1") {
         return AtoD::AA_ON;
     }
     return AtoD::AA_OFF;

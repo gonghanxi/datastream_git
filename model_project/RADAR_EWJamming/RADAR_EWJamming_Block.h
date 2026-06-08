@@ -6,6 +6,7 @@
 
 #include <complex>
 #include <memory>
+#include <queue>
 #include <random>
 #include <string>
 #include <vector>
@@ -26,6 +27,7 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     // ---- algorithm instance ----
     std::unique_ptr<RADAR_EWJamming> m_algo;
@@ -39,6 +41,9 @@ private:
 
     // ---- random generator (Block 层维护) ----
     std::mt19937 m_rng;
+
+    // ===== TimeDrivenRun 输出队列 =====
+    std::queue<std::complex<double>> m_outputQueue;
 };
 
 RegAlgo(RADAR_EWJamming_Block);

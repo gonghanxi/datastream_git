@@ -6,6 +6,7 @@
 
 #include <complex>
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -25,6 +26,7 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     // ---- enum aliases ----
     using ModTypeEnum    = SystemVueModelBuilder::Demapper::ModTypeEnum;
@@ -61,6 +63,11 @@ private:
     int                      m_M;
     std::vector<std::complex<double>> m_constellationTable;
     std::vector<int>         m_indexToState;
+
+    // ===== TimeDrivenRun 输入+输出队列 =====
+    std::queue<std::complex<double>> m_inputQueue;
+    std::queue<bool>                 m_bitsQueue;
+    std::queue<std::complex<double>> m_nodeQueue;
 };
 
 RegAlgo(Demapper_Block);
