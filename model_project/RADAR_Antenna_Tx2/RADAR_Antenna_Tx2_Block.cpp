@@ -218,8 +218,6 @@ bool RADAR_Antenna_Tx2_Block::Initialize()
 
 bool RADAR_Antenna_Tx2_Block::DataStreamRun()
 {
-    SetParameters();
-
     auto inputData = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
     if (inputData.empty()) { return false; }
 

@@ -65,7 +65,6 @@ bool LookUpTable_Block::Setup()
 
 bool LookUpTable_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -93,48 +92,6 @@ bool LookUpTable_Block::DataStreamRun()
     std::vector<double> outputData;
     outputData.push_back(m_values[static_cast<size_t>(idx)]);
     WriteOutputData(outputPort, outputData);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 逐点累积模式
-// ============================================================================
-
-bool LookUpTable_Block::TimeDrivenRun()
-{
-    std::string inputPort  = GetInputPortName(0);
-    std::string outputPort = GetOutputPortName(0);
-
-    auto inputData = ReadInputData<int>(inputPort);
-
-    for (size_t i = 0; i < inputData.size(); ++i)
-        m_inputBuffer.push_back(inputData[i]);
-
-    if (static_cast<int>(m_inputBuffer.size()) >= 1)
-    {
-        const int idx = m_inputBuffer[0];
-
-        if (idx < 0 || static_cast<size_t>(idx) >= m_values.size())
-        {
-            LOG_ERROR("The \"input\" value (i.e. index for the Look Up Table) "
-                "must be >= 0 and < the number of data in the \"Values\" table.");
-            return false;
-        }
-
-        m_outputQueue.push(m_values[static_cast<size_t>(idx)]);
-        m_inputBuffer.clear();
-    }
-
-    if (!m_outputQueue.empty())
-    {
-        double val = m_outputQueue.front();
-        m_outputQueue.pop();
-
-        std::vector<double> outputData;
-        outputData.push_back(val);
-        WriteOutputData(outputPort, outputData);
-    }
 
     return true;
 }

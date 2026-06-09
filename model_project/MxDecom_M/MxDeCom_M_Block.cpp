@@ -66,6 +66,11 @@ bool MxDeCom_M_Block::Setup()
     }
 
     Block::Setup();
+
+    m_numSubMatrices = (m_InputNumRows / m_OutputNumRows) * (m_InputNumCols / m_OutputNumCols);
+    m_inputBuffer.clear();
+    m_outputQueue = std::queue<SystemVueModelBuilder::DoubleMatrix>();
+
     return true;
 }
 
@@ -74,6 +79,16 @@ bool MxDeCom_M_Block::Setup()
 // ============================================================================
 
 bool MxDeCom_M_Block::Run()
+{
+    if (IsVariableStepMode() || m_numSubMatrices > 1) { return TimeDrivenRun(); }
+    return DataStreamRun();
+}
+
+// ============================================================================
+// DataStreamRun：定步长单速率核心逻辑
+// ============================================================================
+
+bool MxDeCom_M_Block::DataStreamRun()
 {
     auto inputData = ReadInputData<SystemVueModelBuilder::DoubleMatrix>(GetInputPortName(0));
     if (inputData.empty()) {
@@ -94,9 +109,7 @@ bool MxDeCom_M_Block::Run()
         return false;
     }
 
-    const int numSubMatrices = (m_InputNumRows / m_OutputNumRows) * (m_InputNumCols / m_OutputNumCols);
-
-    std::vector<SystemVueModelBuilder::DoubleMatrix> outputData(numSubMatrices);
+    std::vector<SystemVueModelBuilder::DoubleMatrix> outputData(m_numSubMatrices);
 
     for (int m = 0; m < m_InputNumRows; ++m)
     {
@@ -115,6 +128,70 @@ bool MxDeCom_M_Block::Run()
     }
 
     WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长/多速率逐点处理 — 大矩阵拆分子矩阵
+// ============================================================================
+
+bool MxDeCom_M_Block::TimeDrivenRun()
+{
+    // ① 累积输入矩阵到 vector
+    {
+        auto inputData = ReadInputData<SystemVueModelBuilder::DoubleMatrix>(GetInputPortName(0));
+        for (auto& v : inputData) m_inputBuffer.push_back(v);
+    }
+
+    // ② 有输入 → 分解为子矩阵入队
+    if (!m_inputBuffer.empty())
+    {
+        const SystemVueModelBuilder::DoubleMatrix& inMx = m_inputBuffer[0];
+
+        // 原算法校验输入矩阵尺寸
+        if (inMx.NumRows() < m_StartRow + m_InputNumRows - 1)
+        {
+            LOG_ERROR("Input matrix is too small. Rows of input matrix must >= StartRow + InputNumRows - 1.");
+            return false;
+        }
+        if (inMx.NumColumns() < m_StartCol + m_InputNumCols - 1)
+        {
+            LOG_ERROR("Input matrix is too small. Columns of input matrix must >= StartCol + InputNumCols - 1.");
+            return false;
+        }
+
+        std::vector<SystemVueModelBuilder::DoubleMatrix> tempOutput(m_numSubMatrices);
+
+        for (int m = 0; m < m_InputNumRows; ++m)
+        {
+            for (int n = 0; n < m_InputNumCols; ++n)
+            {
+                int MxRowIndex = m / m_OutputNumRows;
+                int MxColIndex = n / m_OutputNumCols;
+                int MxOutputIndex = MxRowIndex * (m_InputNumCols / m_OutputNumCols) + MxColIndex;
+                int SubMxRowIndex = m % m_OutputNumRows;
+                int SubMxColIndex = n % m_OutputNumCols;
+
+                tempOutput[MxOutputIndex].Resize(m_OutputNumRows, m_OutputNumCols);
+                tempOutput[MxOutputIndex](SubMxRowIndex, SubMxColIndex) =
+                    inMx(m + m_StartRow - 1, n + m_StartCol - 1);
+            }
+        }
+
+        for (auto& sub : tempOutput) m_outputQueue.push(sub);
+        m_inputBuffer.clear();
+    }
+
+    // ③ 出队写入一个子矩阵
+    if (!m_outputQueue.empty())
+    {
+        SystemVueModelBuilder::DoubleMatrix out = m_outputQueue.front();
+        m_outputQueue.pop();
+        std::vector<SystemVueModelBuilder::DoubleMatrix> outputVec;
+        outputVec.push_back(out);
+        WriteOutputData(GetOutputPortName(0), outputVec);
+    }
 
     return true;
 }

@@ -36,24 +36,41 @@ RectToCx_M::RectToCx_M()
 //-----------------------------------------------------------------------------------
 bool RectToCx_M::Run()
 {
-	int NRow = real.IsConnected() ? real[0].NumRows() : 1;
-	int NCol = real.IsConnected() ? real[0].NumColumns() : 1;
+	// 分别获取两个输入端口的矩阵大小，若端口未连接则视作1x1
+	int NRowReal = real.IsConnected() ? real[0].NumRows() : 1;
+	int NColReal = real.IsConnected() ? real[0].NumColumns() : 1;
+	int NRowImag = imag.IsConnected() ? imag[0].NumRows() : 1;
+	int NColImag = imag.IsConnected() ? imag[0].NumColumns() : 1;
+
+	// 行列取两者最大值作为输出矩阵大小
+	int NRow = NRowReal > NRowImag ? NRowReal : NRowImag;
+	int NCol = NColReal > NColImag ? NColReal : NColImag;
+
 	output[0].Resize(NRow, NCol);
 
 	for (int row = 0; row < NRow; row++)
 	{
 		for (int col = 0; col < NCol; col++)
 		{
+			// 输出默认值补0
 			output[0](row, col) = 0.0;
 
+			// 若实部输入端口已连接，则将实部数据填入输出矩阵实部的前 NRowReal 行 NColReal 列
 			if (real.IsConnected())
 			{
-				output[0](row, col).real(real[0](row, col));
+				if (row < NRowReal && col < NColReal)
+				{
+					output[0](row, col).real(real[0](row, col));
+				}
 			}
 
+			// 若虚部输入端口已连接，则将虚部数据填入输出矩阵虚部的前 NRowImag 行 NColImag 列
 			if (imag.IsConnected())
 			{
-				output[0](row, col).imag(imag[0](row, col));
+				if (row < NRowImag && col < NColImag)
+				{
+					output[0](row, col).imag(imag[0](row, col));
+				}
 			}
 		}
 	}

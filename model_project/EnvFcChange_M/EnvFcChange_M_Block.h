@@ -24,7 +24,6 @@ private:
     void SetDefaultParameters();
 
     bool DataStreamRun();
-    bool TimeDrivenRun();
 
     void resetLpfStateIfNeeded(size_t numElements);
     double getEffectiveBandwidth() const;

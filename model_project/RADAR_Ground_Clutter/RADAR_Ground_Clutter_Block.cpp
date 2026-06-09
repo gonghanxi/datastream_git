@@ -198,7 +198,10 @@ bool RADAR_Ground_Clutter_Block::TimeDrivenRun()
         outData.push_back(m_outputQueue.front());
         m_outputQueue.pop();
         WriteOutputData(outputPort, outData);
+    }
 
+    if (!m_clutterQueue.empty())
+    {
         std::vector<EnvelopeSignal> clutterData;
         clutterData.push_back(m_clutterQueue.front());
         m_clutterQueue.pop();

@@ -193,21 +193,21 @@ bool PhaseComparator_Block::TimeDrivenRun()
 
         outputData[0] = std::complex<double>(outVal, 0.0);
         m_outputQueue.push(outputData[0]);
-        //执行写入
-        if (!m_outputQueue.empty()) {
-            EnvelopeSignal outputValue = m_outputQueue.front();
-            m_outputQueue.pop();
-            m_outputCount++;
-
-            WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{outputValue});
-            m_lastOutput = outputValue;
-
-            qDebug() << "[PhaseComparator_Block] 分发输出:" << m_outputCount
-                     << " value:" << outputValue.real() << "," << outputValue.imag();
-            m_s1Buffer.clear();
-            m_s2Buffer.clear();
-        }
         m_phase->Advance();
+    }
+    //执行写入
+    if (!m_outputQueue.empty()) {
+        EnvelopeSignal outputValue = m_outputQueue.front();
+        m_outputQueue.pop();
+        m_outputCount++;
+
+        WriteOutputData(GetOutputPortName(0), std::vector<EnvelopeSignal>{outputValue});
+        m_lastOutput = outputValue;
+
+        qDebug() << "[PhaseComparator_Block] 分发输出:" << m_outputCount
+                 << " value:" << outputValue.real() << "," << outputValue.imag();
+        m_s1Buffer.clear();
+        m_s2Buffer.clear();
     }
     return true;
 }

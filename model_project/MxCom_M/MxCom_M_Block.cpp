@@ -55,47 +55,98 @@ bool MxCom_M_Block::Setup()
 
     Block::Setup();
 
+    m_numSubMatrices = (m_OutputNumRows / m_InputNumRows) * (m_OutputNumCols / m_InputNumCols);
+    m_inputBuffer.clear();
+    while (!m_outputQueue.empty()) m_outputQueue.pop();
+
     return true;
 }
 
 // ============================================================================
-// Run
+// Run — 双模式分发
 // ============================================================================
 
 bool MxCom_M_Block::Run()
 {
+    if (IsVariableStepMode() || m_numSubMatrices > 1) { return TimeDrivenRun(); }
+    return DataStreamRun();
+}
+
+// ============================================================================
+// DataStreamRun：全量读取 → 一次合成输出
+// ============================================================================
+
+bool MxCom_M_Block::DataStreamRun()
+{
     auto inputData = ReadInputData<SystemVueModelBuilder::DoubleMatrix>(GetInputPortName(0));
-    if (inputData.empty()) {
-        return true;
-    }
+    if (inputData.empty()) { return true; }
 
-    const int numSubMatrices = (m_OutputNumRows / m_InputNumRows) * (m_OutputNumCols / m_InputNumCols);
-    if (static_cast<int>(inputData.size()) < numSubMatrices) {
-        return true;
-    }
+    if (static_cast<int>(inputData.size()) < m_numSubMatrices) { return true; }
 
-    // 合成输出矩阵
     SystemVueModelBuilder::DoubleMatrix outMx;
     outMx.Resize(m_OutputNumRows, m_OutputNumCols);
 
-    for (int m = 0; m < m_OutputNumRows; ++m)
-    {
-        for (int n = 0; n < m_OutputNumCols; ++n)
-        {
-            int MxRowIndex = m / m_InputNumRows;
-            int MxColIndex = n / m_InputNumCols;
-            int MxInputIndex = MxRowIndex * (m_OutputNumCols / m_InputNumCols) + MxColIndex;
-            int SubMxRowIndex = m % m_InputNumRows;
-            int SubMxColIndex = n % m_InputNumCols;
+    for (int m = 0; m < m_OutputNumRows; ++m) {
+        for (int n = 0; n < m_OutputNumCols; ++n) {
+            const int MxRowIndex    = m / m_InputNumRows;
+            const int MxColIndex    = n / m_InputNumCols;
+            const int MxInputIndex  = MxRowIndex * (m_OutputNumCols / m_InputNumCols) + MxColIndex;
+            const int SubMxRowIndex = m % m_InputNumRows;
+            const int SubMxColIndex = n % m_InputNumCols;
 
-            inputData[MxInputIndex].Resize(m_InputNumRows, m_InputNumCols);
-            outMx(m, n) = inputData[MxInputIndex](SubMxRowIndex, SubMxColIndex);
+            inputData[static_cast<size_t>(MxInputIndex)].Resize(m_InputNumRows, m_InputNumCols);
+            outMx(m, n) = inputData[static_cast<size_t>(MxInputIndex)](SubMxRowIndex, SubMxColIndex);
         }
     }
 
     std::vector<SystemVueModelBuilder::DoubleMatrix> outputData;
     outputData.push_back(outMx);
     WriteOutputData(GetOutputPortName(0), outputData);
+
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun：变步长逐点处理 — 累积子矩阵 → 满 numSubMatrices 后批次合成
+// ============================================================================
+
+bool MxCom_M_Block::TimeDrivenRun()
+{
+    // ① 累积子矩阵
+    {
+        auto inputData = ReadInputData<SystemVueModelBuilder::DoubleMatrix>(GetInputPortName(0));
+        for (auto& v : inputData) m_inputBuffer.push_back(v);
+    }
+
+    // ② 缓冲区满 numSubMatrices → 批次合成入队
+    if (static_cast<int>(m_inputBuffer.size()) >= m_numSubMatrices)
+    {
+        SystemVueModelBuilder::DoubleMatrix outMx;
+        outMx.Resize(m_OutputNumRows, m_OutputNumCols);
+
+        for (int m = 0; m < m_OutputNumRows; ++m) {
+            for (int n = 0; n < m_OutputNumCols; ++n) {
+                const int MxRowIndex    = m / m_InputNumRows;
+                const int MxColIndex    = n / m_InputNumCols;
+                const int MxInputIndex  = MxRowIndex * (m_OutputNumCols / m_InputNumCols) + MxColIndex;
+                const int SubMxRowIndex = m % m_InputNumRows;
+                const int SubMxColIndex = n % m_InputNumCols;
+
+                m_inputBuffer[static_cast<size_t>(MxInputIndex)].Resize(m_InputNumRows, m_InputNumCols);
+                outMx(m, n) = m_inputBuffer[static_cast<size_t>(MxInputIndex)](SubMxRowIndex, SubMxColIndex);
+            }
+        }
+
+        m_outputQueue.push(outMx);
+    }
+
+    // ③ 出队写入一个输出矩阵，输出后清空输入缓冲区
+    if (!m_outputQueue.empty()) {
+        SystemVueModelBuilder::DoubleMatrix out = m_outputQueue.front(); m_outputQueue.pop();
+        WriteOutputData(GetOutputPortName(0), std::vector<SystemVueModelBuilder::DoubleMatrix>{out});
+
+        m_inputBuffer.clear();
+    }
 
     return true;
 }

@@ -148,16 +148,14 @@ bool RADAR_NonCoIntgr_Block::TimeDrivenRun()
         for (auto& s : outputData)
             m_outputQueue.push(s);
 
-        m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + m_inputRate);
+        m_inputBuffer.clear();
     }
 
-    // ③ 出队写入（输出速率 = m_outputRate 个点）
-    while (static_cast<int>(m_outputQueue.size()) >= m_outputRate && m_outputRate > 0) {
-        std::vector<double> outVec(m_outputRate);
-        for (int i = 0; i < m_outputRate; ++i) {
-            outVec[i] = m_outputQueue.front();
-            m_outputQueue.pop();
-        }
+    // ③ 出队写入（逐点输出）
+    if (!m_outputQueue.empty()) {
+        std::vector<double> outVec;
+        outVec.push_back(m_outputQueue.front());
+        m_outputQueue.pop();
         WriteOutputData(GetOutputPortName(0), outVec);
     }
 

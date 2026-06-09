@@ -5,6 +5,7 @@
 #include "RectToCx_M.h"
 
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -22,8 +23,14 @@ public:
 
 private:
     bool DataStreamRun();
+    bool TimeDrivenRun();
 
     std::unique_ptr<RectToCx_M> m_RectToCx_M;
+
+    // ===== TimeDrivenRun 输入缓冲(vector) + 输出队列 =====
+    std::vector<SystemVueModelBuilder::Matrix<double>>               m_realBuffer;
+    std::vector<SystemVueModelBuilder::Matrix<double>>               m_imagBuffer;
+    std::queue<SystemVueModelBuilder::Matrix<std::complex<double>>>  m_outputQueue;
 };
 
 RegAlgo(RectToCx_M_Block);

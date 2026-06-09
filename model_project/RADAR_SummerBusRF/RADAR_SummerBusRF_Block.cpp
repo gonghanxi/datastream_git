@@ -171,6 +171,20 @@ bool RADAR_SummerBusRF_Block::DataStreamRun()
 
     WriteOutputData(GetOutputPortName(0), outputData);
 
+    // 逐通道设置输出 fc（原算法：PropagateCharacterizationFrequency → output[i].SetCharacterizationFrequency(fcOut)）
+    auto& outConns = GetOutputPort(GetOutputPortName(0))->GetBusConnections();
+    for (int i = 0; i < nChannels; ++i) {
+        double fc1 = conn1.at(i).bridgeReader->getCharacterizationFrequency();
+        double fc2 = conn2.at(i).bridgeReader->getCharacterizationFrequency();
+        double fcOut;
+        switch (m_FcOut) {
+        case 0:  fcOut = std::min(fc1, fc2);   break;
+        case 1:  fcOut = (fc1 + fc2) / 2.0;     break;
+        default: fcOut = std::max(fc1, fc2);   break;
+        }
+        outConns.at(i).bridgeWriter->setCharacterizationFrequency(fcOut);
+    }
+
     m_algo->Advance();
 
     return true;
@@ -254,15 +268,30 @@ bool RADAR_SummerBusRF_Block::TimeDrivenRun()
         }
 
         m_outputQueue.push(outputData);
-        m_input1Accumulator.erase(m_input1Accumulator.begin(), m_input1Accumulator.begin() + nChannels);
-        m_input2Accumulator.erase(m_input2Accumulator.begin(), m_input2Accumulator.begin() + nChannels);
+        m_input1Accumulator.clear();
+        m_input2Accumulator.clear();
 
         m_algo->Advance();
     }
 
     // ④ 出队写入
-    while (!m_outputQueue.empty())
-    {
+    if (!m_outputQueue.empty()) {
+        // 逐通道设置输出 fc（原算法：PropagateCharacterizationFrequency → output[i].SetCharacterizationFrequency(fcOut)）
+        auto& outConns = GetOutputPort(GetOutputPortName(0))->GetBusConnections();
+        auto& conn1  = GetInputPort(input1Name)->GetBusConnections();
+        auto& conn2  = GetInputPort(input2Name)->GetBusConnections();
+        for (int i = 0; i < nChannels; ++i) {
+            double fc1 = conn1.at(i).bridgeReader->getCharacterizationFrequency();
+            double fc2 = conn2.at(i).bridgeReader->getCharacterizationFrequency();
+            double fcOut;
+            switch (m_FcOut) {
+            case 0:  fcOut = std::min(fc1, fc2);   break;
+            case 1:  fcOut = (fc1 + fc2) / 2.0;     break;
+            default: fcOut = std::max(fc1, fc2);   break;
+            }
+            outConns.at(i).bridgeWriter->setCharacterizationFrequency(fcOut);
+        }
+
         WriteOutputData(GetOutputPortName(0), m_outputQueue.front());
         m_outputQueue.pop();
     }

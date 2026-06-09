@@ -46,7 +46,7 @@ bool FFT_Shift_Block::Setup()
 
 bool FFT_Shift_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
+    if (IsVariableStepMode() && m_FFTSize > 1) return TimeDrivenRun();
     return DataStreamRun();
 }
 

@@ -101,7 +101,6 @@ bool RADAR_Detector_M_Block::Setup()
 
 bool RADAR_Detector_M_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -151,70 +150,6 @@ bool RADAR_Detector_M_Block::DataStreamRun()
     std::vector<SystemVueModelBuilder::DoubleMatrix> outVec;
     outVec.push_back(outMat);
     WriteOutputData(GetOutputPortName(0), outVec);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 变步长模式
-// ============================================================================
-
-bool RADAR_Detector_M_Block::TimeDrivenRun()
-{
-    // ① 累积输入矩阵
-    {
-        auto inputData = ReadInputData<SystemVueModelBuilder::DComplexMatrix>(GetInputPortName(0));
-        if (inputData.empty()) {
-            return true;
-        }
-        m_inputBuffer.push_back(inputData[0]);
-    }
-
-    // ② 判断阈值：收齐一帧（rate=1 一次一个完整矩阵）
-    if (!m_inputBuffer.empty()) {
-        const SystemVueModelBuilder::DComplexMatrix& inMat = m_inputBuffer.front();
-        const size_t nRows = inMat.NumRows();
-        const size_t nCols = inMat.NumColumns();
-
-        SystemVueModelBuilder::DoubleMatrix outMat;
-        outMat.Resize(nRows, nCols);
-
-        for (size_t r = 0; r < nRows; ++r) {
-            for (size_t c = 0; c < nCols; ++c) {
-                const std::complex<double>& x = inMat(r, c);
-
-                switch (m_Type) {
-                case RADAR_Detector_M::Envelop:
-                    outMat(r, c) = std::abs(x);
-                    break;
-                case RADAR_Detector_M::Square:
-                    outMat(r, c) = std::abs(x) * std::abs(x);
-                    break;
-                case RADAR_Detector_M::LogSquare:
-                    outMat(r, c) = m_Log_Coefa * std::log(
-                        std::abs(m_Log_Coefb * x) * std::abs(m_Log_Coefb * x));
-                    break;
-                case RADAR_Detector_M::Log:
-                    outMat(r, c) = m_Log_Coefa * std::log(std::abs(m_Log_Coefb * x));
-                    break;
-                default:
-                    outMat(r, c) = 0.0;
-                    break;
-                }
-            }
-        }
-
-        m_outputQueue.push(outMat);
-        m_inputBuffer.erase(m_inputBuffer.begin());
-    }
-
-    // ③ 出队写入
-    if (!m_outputQueue.empty()) {
-        std::vector<SystemVueModelBuilder::DoubleMatrix> outVec;
-        outVec.push_back(m_outputQueue.front());
-        WriteOutputData(GetOutputPortName(0), outVec);
-        m_outputQueue.pop();
-    }
 
     return true;
 }

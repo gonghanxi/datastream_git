@@ -57,7 +57,6 @@ bool RADAR_CoIntgr_M_Block::Setup()
 
 bool RADAR_CoIntgr_M_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -127,42 +126,6 @@ bool RADAR_CoIntgr_M_Block::DataStreamRun()
     std::vector<SystemVueModelBuilder::DComplexMatrix> outVec;
     outVec.push_back(outMat);
     WriteOutputData(GetOutputPortName(0), outVec);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 变步长模式
-// ============================================================================
-
-bool RADAR_CoIntgr_M_Block::TimeDrivenRun()
-{
-    auto inputData = ReadInputData<SystemVueModelBuilder::DComplexMatrix>(GetInputPortName(0));
-    if (inputData.empty()) {
-        return true;
-    }
-
-    // ① 累积输入矩阵
-    m_inputBuffer.push_back(inputData[0]);
-
-    // ② 每个矩阵独立处理（rate=1 每次一个完整矩阵）
-    if (!m_inputBuffer.empty()) {
-        SystemVueModelBuilder::DComplexMatrix outMat;
-        if (!processOneMatrix(m_inputBuffer.back(), outMat, m_NumOfPulse)) {
-            m_inputBuffer.pop_back();
-            return false;
-        }
-        m_outputQueue.push(outMat);
-        m_inputBuffer.pop_back();
-    }
-
-    // ③ 出队写入
-    if (!m_outputQueue.empty()) {
-        std::vector<SystemVueModelBuilder::DComplexMatrix> outVec;
-        outVec.push_back(m_outputQueue.front());
-        WriteOutputData(GetOutputPortName(0), outVec);
-        m_outputQueue.pop();
-    }
 
     return true;
 }

@@ -206,8 +206,6 @@ bool RADAR_Antenna_Rx_Block::Initialize()
 
 bool RADAR_Antenna_Rx_Block::DataStreamRun()
 {
-    SetParameters();
-
      auto inputData = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
      if (inputData.empty()) { return false; }
 

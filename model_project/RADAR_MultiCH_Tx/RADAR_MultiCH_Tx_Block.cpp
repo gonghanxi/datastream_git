@@ -66,6 +66,12 @@ bool RADAR_MultiCH_Tx_Block::DataStreamRun()
 
     WriteOutputData(outputPort, outputData);
 
+    // 逐通道设置输出 fc（原算法：applyOutputFc_ → output[k].SetCharacterizationFrequency(FCarrier)）
+    auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
+    for (size_t k = 0; k < outConns.size(); ++k) {
+        outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+    }
+
     return true;
 }
 
@@ -110,6 +116,12 @@ bool RADAR_MultiCH_Tx_Block::TimeDrivenRun()
         std::vector<EnvelopeSignal> outputData;
         outputData.push_back(val);
         WriteOutputData(outputPort, outputData);
+
+        // 逐通道设置输出 fc（原算法：applyOutputFc_ → output[k].SetCharacterizationFrequency(FCarrier)）
+        auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
+        for (size_t k = 0; k < outConns.size(); ++k) {
+            outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+        }
     }
 
     return true;

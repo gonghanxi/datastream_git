@@ -19,9 +19,9 @@ AdaptLinQuant_Block::AdaptLinQuant_Block(const std::string& name)
 bool AdaptLinQuant_Block::Setup()
 {
     Block::Setup();
-    while (!m_amplitudeQueue.empty()) m_amplitudeQueue.pop();
-    while (!m_outStepQueue.empty())   m_outStepQueue.pop();
-    while (!m_stepLevelQueue.empty()) m_stepLevelQueue.pop();
+    m_amplitudeQueue = std::queue<double>();
+    m_outStepQueue   = std::queue<double>();
+    m_stepLevelQueue = std::queue<int>();
     return true;
 }
 
@@ -152,26 +152,25 @@ bool AdaptLinQuant_Block::TimeDrivenRun()
         m_inStepBuffer.clear();
     }
 
-    if (!m_amplitudeQueue.empty() && !m_outStepQueue.empty() && !m_stepLevelQueue.empty())
+    if (!m_amplitudeQueue.empty())
     {
-        double amplitudeVal = m_amplitudeQueue.front();
-        double outStepVal   = m_outStepQueue.front();
-        int    stepLevelVal = m_stepLevelQueue.front();
-
-        m_amplitudeQueue.pop();
-        m_outStepQueue.pop();
-        m_stepLevelQueue.pop();
-
         std::vector<double> amplitudeData;
-        std::vector<double> outStepData;
-        std::vector<int>    stepLevelData;
-
-        amplitudeData.push_back(amplitudeVal);
-        outStepData.push_back(outStepVal);
-        stepLevelData.push_back(stepLevelVal);
-
+        amplitudeData.push_back(m_amplitudeQueue.front());
+        m_amplitudeQueue.pop();
         WriteOutputData(amplitudePort, amplitudeData);
-        WriteOutputData(outStepPort,   outStepData);
+    }
+    if (!m_outStepQueue.empty())
+    {
+        std::vector<double> outStepData;
+        outStepData.push_back(m_outStepQueue.front());
+        m_outStepQueue.pop();
+        WriteOutputData(outStepPort, outStepData);
+    }
+    if (!m_stepLevelQueue.empty())
+    {
+        std::vector<int> stepLevelData;
+        stepLevelData.push_back(m_stepLevelQueue.front());
+        m_stepLevelQueue.pop();
         WriteOutputData(stepLevelPort, stepLevelData);
     }
 

@@ -5,6 +5,7 @@
 #include "MxCom_M.h"
 
 #include <memory>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -23,13 +24,20 @@ public:
 private:
     void SetDefaultParameters();
     void SetParameters();
+    bool DataStreamRun();
+    bool TimeDrivenRun();
 
     int m_OutputNumRows;
     int m_OutputNumCols;
     int m_InputNumRows;
     int m_InputNumCols;
+    int m_numSubMatrices;
 
     std::unique_ptr<MxCom_M> m_MxCom_M;
+
+    // ===== TimeDrivenRun 输入缓冲 + 输出队列 =====
+    std::vector<SystemVueModelBuilder::DoubleMatrix> m_inputBuffer;
+    std::queue<SystemVueModelBuilder::DoubleMatrix>  m_outputQueue;
 };
 
 RegAlgo(MxCom_M_Block);

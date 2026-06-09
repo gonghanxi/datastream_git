@@ -409,17 +409,20 @@ bool RADAR_Kalman_Block::TimeDrivenRun()
         m_outputQueueX.push(xEst);
         m_outputQueueY.push(yEst);
 
-        m_inputBufferX.erase(m_inputBufferX.begin());
-        m_inputBufferY.erase(m_inputBufferY.begin());
+        m_inputBufferX.clear();
+        m_inputBufferY.clear();
     }
 
     // ③ 出队写入
-    if (!m_outputQueueX.empty() && !m_outputQueueY.empty()) {
+    if (!m_outputQueueX.empty()) {
         std::vector<double> xVec; xVec.push_back(m_outputQueueX.front());
-        std::vector<double> yVec; yVec.push_back(m_outputQueueY.front());
         WriteOutputData(GetOutputPortName(0), xVec);
-        WriteOutputData(GetOutputPortName(1), yVec);
         m_outputQueueX.pop();
+    }
+
+    if (!m_outputQueueY.empty()) {
+        std::vector<double> yVec; yVec.push_back(m_outputQueueY.front());
+        WriteOutputData(GetOutputPortName(1), yVec);
         m_outputQueueY.pop();
     }
 

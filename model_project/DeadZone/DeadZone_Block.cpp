@@ -26,7 +26,6 @@ bool DeadZone_Block::Setup()
 
 bool DeadZone_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -61,53 +60,6 @@ bool DeadZone_Block::DataStreamRun()
     }
 
     WriteOutputData(outputPort, outputData);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 逐点累积模式
-// ============================================================================
-
-bool DeadZone_Block::TimeDrivenRun()
-{
-    std::string inputPort  = GetInputPortName(0);
-    std::string outputPort = GetOutputPortName(0);
-
-    auto inputData = ReadInputData<double>(inputPort);
-
-    for (size_t i = 0; i < inputData.size(); ++i)
-        m_inputBuffer.push_back(inputData[i]);
-
-    if (static_cast<int>(m_inputBuffer.size()) >= 1)
-    {
-        const double x = m_inputBuffer[0];
-
-        if (x > m_High)
-        {
-            m_outputQueue.push(m_K * (x - m_High));
-        }
-        else if (x < m_Low)
-        {
-            m_outputQueue.push(m_K * (x - m_Low));
-        }
-        else
-        {
-            m_outputQueue.push(0.0);
-        }
-
-        m_inputBuffer.clear();
-    }
-
-    if (!m_outputQueue.empty())
-    {
-        double val = m_outputQueue.front();
-        m_outputQueue.pop();
-
-        std::vector<double> outputData;
-        outputData.push_back(val);
-        WriteOutputData(outputPort, outputData);
-    }
 
     return true;
 }

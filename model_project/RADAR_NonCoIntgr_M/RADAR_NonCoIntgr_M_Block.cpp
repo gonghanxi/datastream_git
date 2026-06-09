@@ -49,7 +49,6 @@ bool RADAR_NonCoIntgr_M_Block::Setup()
 
 bool RADAR_NonCoIntgr_M_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -142,101 +141,6 @@ bool RADAR_NonCoIntgr_M_Block::DataStreamRun()
     std::vector<SystemVueModelBuilder::Matrix<double>> outVec;
     outVec.push_back(outMat);
     WriteOutputData(GetOutputPortName(0), outVec);
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 变步长模式
-// ============================================================================
-
-bool RADAR_NonCoIntgr_M_Block::TimeDrivenRun()
-{
-    // ① 累积输入
-    {
-        auto inputData = ReadInputData<SystemVueModelBuilder::DComplexMatrix>(GetInputPortName(0));
-        if (inputData.empty()) return true;
-        m_inputBuffer.push_back(inputData[0]);
-    }
-
-    // ② 处理（rate=1，每来一个矩阵就处理）
-    if (!m_inputBuffer.empty())
-    {
-        const auto& inMat = m_inputBuffer.front();
-        const int nRows = static_cast<int>(inMat.NumRows());
-        const int nCols = static_cast<int>(inMat.NumColumns());
-
-        SystemVueModelBuilder::Matrix<double> outMat;
-
-        bool valid = (nRows > 0 && nCols > 0 && m_Number > 0);
-        if (valid)
-        {
-            if (nRows == m_Number)
-            {
-                outMat.Resize(1, nCols);
-                for (int col = 0; col < nCols; ++col)
-                {
-                    double sumAbs = 0.0;
-                    for (int row = 0; row < nRows; ++row)
-                        sumAbs += std::abs(inMat(row, col));
-                    outMat(0, col) = sumAbs;
-                }
-            }
-            else if (nCols == m_Number)
-            {
-                outMat.Resize(nRows, 1);
-                for (int row = 0; row < nRows; ++row)
-                {
-                    double sumAbs = 0.0;
-                    for (int col = 0; col < nCols; ++col)
-                        sumAbs += std::abs(inMat(row, col));
-                    outMat(row, 0) = sumAbs;
-                }
-            }
-            else if ((nRows % m_Number) == 0)
-            {
-                const int outRows = nRows / m_Number;
-                outMat.Resize(outRows, nCols);
-                for (int row = 0; row < outRows; ++row)
-                {
-                    for (int col = 0; col < nCols; ++col)
-                    {
-                        double sumAbs = 0.0;
-                        for (int pulse = 0; pulse < m_Number; ++pulse)
-                            sumAbs += std::abs(inMat(pulse * outRows + row, col));
-                        outMat(row, col) = sumAbs;
-                    }
-                }
-            }
-            else if ((nCols % m_Number) == 0)
-            {
-                const int outCols = nCols / m_Number;
-                outMat.Resize(nRows, outCols);
-                for (int row = 0; row < nRows; ++row)
-                {
-                    for (int col = 0; col < outCols; ++col)
-                    {
-                        double sumAbs = 0.0;
-                        for (int pulse = 0; pulse < m_Number; ++pulse)
-                            sumAbs += std::abs(inMat(row, pulse * outCols + col));
-                        outMat(row, col) = sumAbs;
-                    }
-                }
-            }
-        }
-
-        m_outputQueue.push(outMat);
-        m_inputBuffer.erase(m_inputBuffer.begin());
-    }
-
-    // ③ 出队写入
-    if (!m_outputQueue.empty())
-    {
-        std::vector<SystemVueModelBuilder::Matrix<double>> outVec;
-        outVec.push_back(m_outputQueue.front());
-        WriteOutputData(GetOutputPortName(0), outVec);
-        m_outputQueue.pop();
-    }
-
     return true;
 }
 

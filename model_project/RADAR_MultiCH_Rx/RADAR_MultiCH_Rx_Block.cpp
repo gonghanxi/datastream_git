@@ -57,8 +57,8 @@ bool RADAR_MultiCH_Rx_Block::DataStreamRun()
     const int nInputCh = static_cast<int>(inputData.size());
     const int nUse = std::min(nChExpected, nInputCh);
 
-    // ---- 获取 Fc、采样率、时间 ----
-    double fc_in = GetInputPort(inputPort)->getCharacterizationFrequency();
+    // ---- 获取 bus connections 用于逐通道 fc ----
+    auto& conn = GetInputPort(inputPort)->GetBusConnections();
 
     const double fs = simulator_param.samplingRate;
     const double ts = (fs > 0.0) ? (1.0 / fs) : 0.0;
@@ -83,6 +83,10 @@ bool RADAR_MultiCH_Rx_Block::DataStreamRun()
 
     for (int k = 0; k < nUse; ++k)
     {
+        // 逐通道获取 fc（原算法：input[k].GetCharacterizationFrequency()）
+        double fc_in = conn.at(k).bridgeReader->getCharacterizationFrequency();
+        if (fc_in < 0.0) fc_in = conn.at(0).bridgeReader->getCharacterizationFrequency();
+
         Cx x = inputData[k].complex();
 
         // ---- 频率旋转：Fc → Ref ----
@@ -150,8 +154,8 @@ bool RADAR_MultiCH_Rx_Block::TimeDrivenRun()
     {
         const int nUse = std::min(m_nChExpected, static_cast<int>(m_inputBuffer.size()));
 
-        // ---- 获取 Fc、采样率、时间 ----
-        double fc_in = GetInputPort(inputPort)->getCharacterizationFrequency();
+        // ---- 获取 bus connections 用于逐通道 fc ----
+        auto& conn = GetInputPort(inputPort)->GetBusConnections();
 
         const double fs = simulator_param.samplingRate;
         const double ts = (fs > 0.0) ? (1.0 / fs) : 0.0;
@@ -170,6 +174,10 @@ bool RADAR_MultiCH_Rx_Block::TimeDrivenRun()
 
         for (int k = 0; k < nUse; ++k)
         {
+            // 逐通道获取 fc（原算法：input[k].GetCharacterizationFrequency()）
+            double fc_in = conn.at(k).bridgeReader->getCharacterizationFrequency();
+            if (fc_in < 0.0) fc_in = conn.at(0).bridgeReader->getCharacterizationFrequency();
+
             Cx x = m_inputBuffer[k].complex();
 
             if (fc_in >= 0.0 && fs > 0.0)

@@ -215,8 +215,6 @@ bool RADAR_Antenna_Tx_Block::Initialize()
 
 bool RADAR_Antenna_Tx_Block::DataStreamRun()
 {
-    SetParameters();
-
     // 读取 input 端口（单 EnvelopeSignal，驱动时间轴）
     auto inputData = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
     if (inputData.empty()) { return false; }

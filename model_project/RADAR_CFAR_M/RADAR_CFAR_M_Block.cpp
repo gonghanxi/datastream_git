@@ -156,7 +156,6 @@ bool RADAR_CFAR_M_Block::Setup()
 
 bool RADAR_CFAR_M_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -199,61 +198,6 @@ bool RADAR_CFAR_M_Block::DataStreamRun()
     std::vector<SystemVueModelBuilder::DoubleMatrix> thVec;
     thVec.push_back(thMat);
     WriteOutputData(GetOutputPortName(1), thVec);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun —— 时间驱动模式：逐帧矩阵处理
-// ============================================================================
-
-bool RADAR_CFAR_M_Block::TimeDrivenRun()
-{
-    auto inputData = ReadInputData<SystemVueModelBuilder::DoubleMatrix>(GetInputPortName(0));
-    if (inputData.empty()) {
-        return true;
-    }
-
-    const SystemVueModelBuilder::DoubleMatrix& inMat = inputData[0];
-    const int nRows = static_cast<int>(inMat.NumRows());
-    const int nCols = static_cast<int>(inMat.NumColumns());
-
-    SystemVueModelBuilder::DoubleMatrix outMat;
-    SystemVueModelBuilder::DoubleMatrix thMat;
-    outMat.Resize(nRows, nCols);
-    thMat.Resize(nRows, nCols);
-
-    if (nRows <= 0 || nCols <= 0) {
-        std::vector<SystemVueModelBuilder::DoubleMatrix> outVec;
-        outVec.push_back(outMat);
-        WriteOutputData(GetOutputPortName(0), outVec);
-        std::vector<SystemVueModelBuilder::DoubleMatrix> thVec;
-        thVec.push_back(thMat);
-        WriteOutputData(GetOutputPortName(1), thVec);
-        return true;
-    }
-
-    processMatrix(inMat, outMat, thMat, nRows, nCols);
-
-    m_outputQueue.push(outMat);
-    m_thresholdQueue.push(thMat);
-    m_inputCount++;
-
-    if (!m_outputQueue.empty() && !m_thresholdQueue.empty()) {
-        SystemVueModelBuilder::DoubleMatrix outVal = m_outputQueue.front();
-        SystemVueModelBuilder::DoubleMatrix thVal = m_thresholdQueue.front();
-        m_outputQueue.pop();
-        m_thresholdQueue.pop();
-        m_outputCount++;
-
-        std::vector<SystemVueModelBuilder::DoubleMatrix> outVec;
-        outVec.push_back(outVal);
-        WriteOutputData(GetOutputPortName(0), outVec);
-
-        std::vector<SystemVueModelBuilder::DoubleMatrix> thVec;
-        thVec.push_back(thVal);
-        WriteOutputData(GetOutputPortName(1), thVec);
-    }
 
     return true;
 }

@@ -27,7 +27,6 @@ bool SchmittTrig_Block::Setup()
 
 bool SchmittTrig_Block::Run()
 {
-    if (IsVariableStepMode()) return TimeDrivenRun();
     return DataStreamRun();
 }
 
@@ -53,46 +52,6 @@ bool SchmittTrig_Block::DataStreamRun()
     std::vector<double> outputData;
     outputData.push_back(m_TrigStatus ? m_OHigh : m_OLow);
     WriteOutputData(outputPort, outputData);
-
-    return true;
-}
-
-// ============================================================================
-// TimeDrivenRun — 逐点累积模式
-// ============================================================================
-
-bool SchmittTrig_Block::TimeDrivenRun()
-{
-    std::string inputPort  = GetInputPortName(0);
-    std::string outputPort = GetOutputPortName(0);
-
-    auto inputData = ReadInputData<double>(inputPort);
-
-    for (size_t i = 0; i < inputData.size(); ++i)
-        m_inputBuffer.push_back(inputData[i]);
-
-    if (static_cast<int>(m_inputBuffer.size()) >= 1)
-    {
-        const double x = m_inputBuffer[0];
-
-        if (x > m_IHigh)
-            m_TrigStatus = true;
-        if (x < m_ILow)
-            m_TrigStatus = false;
-
-        m_outputQueue.push(m_TrigStatus ? m_OHigh : m_OLow);
-        m_inputBuffer.clear();
-    }
-
-    if (!m_outputQueue.empty())
-    {
-        double val = m_outputQueue.front();
-        m_outputQueue.pop();
-
-        std::vector<double> outputData;
-        outputData.push_back(val);
-        WriteOutputData(outputPort, outputData);
-    }
 
     return true;
 }

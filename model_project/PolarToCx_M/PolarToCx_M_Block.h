@@ -6,7 +6,9 @@
 
 #include <complex>
 #include <memory>
+#include <queue>
 #include <string>
+#include <vector>
 
 using namespace SystemVueModelBuilder;
 
@@ -21,7 +23,15 @@ public:
     bool Initialize() override;
 
 private:
+    bool DataStreamRun();
+    bool TimeDrivenRun();
+
     std::unique_ptr<PolarToCx_M> m_PolarToCx_M;
+
+    // ===== TimeDrivenRun 输入缓冲(vector) + 输出队列 =====
+    std::vector<SystemVueModelBuilder::DoubleMatrix>                 m_magBuffer;
+    std::vector<SystemVueModelBuilder::DoubleMatrix>                 m_phaseBuffer;
+    std::queue<SystemVueModelBuilder::Matrix<std::complex<double>>>  m_outputQueue;
 };
 
 RegAlgo(PolarToCx_M_Block);
