@@ -93,14 +93,17 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
                 )
 
             //FixPoint 类型作为起点
-            //不允许连接Int Complex Envelope Multiple_Int Multiple_Complex Multiple_Envelope
-            || dataTypeStart==PortMsg::FIXEDPOINT&&(
-                dataTypeEnd==PortMsg::INT||
-                dataTypeEnd==PortMsg::COMPLEX||
-                dataTypeEnd==PortMsg::ENVELOPE||
-                dataTypeEnd==PortMsg::MULTIPLE_INT||
-                dataTypeEnd==PortMsg::MULTIPLE_COMPLEX||
-                dataTypeEnd==PortMsg::MULTIPLE_ENVELOPE)
+            //允许连接FixPoint Real Anytype Variant Multiple_FixPoint Multiple_Real Multiple_Anytype Multiple_Variant
+            || dataTypeStart==PortMsg::FIXEDPOINT&& !(
+                dataTypeEnd==PortMsg::FIXEDPOINT||
+                dataTypeEnd==PortMsg::REAL||
+                dataTypeEnd==PortMsg::ANYTYPE||
+                dataTypeEnd==PortMsg::VARIANT||
+                dataTypeEnd==PortMsg::MULTIPLE_FIXEDPOINT||
+                dataTypeEnd==PortMsg::MULTIPLE_REAL||
+                dataTypeEnd==PortMsg::MULTIPLE_ANYTYPE||
+                dataTypeEnd==PortMsg::MULTIPLE_VARIANT
+                )
             )
     {
         qDebug() << "3.单-单 单-多" << endl;
@@ -134,11 +137,12 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT
             //Multiple_FixPoint 类型作为起点
-            //不允许连接Multiple_Int Multiple_Complex Multiple_Envelope
-            || dataTypeStart==PortMsg::MULTIPLE_FIXEDPOINT&&(
-                dataTypeEnd==PortMsg::MULTIPLE_INT||
-                dataTypeEnd==PortMsg::MULTIPLE_COMPLEX||
-                dataTypeEnd==PortMsg::MULTIPLE_ENVELOPE))
+            //允许连接Multiple_FixPoint Multiple_Real Multiple_Anytype Multiple_Variant
+            || dataTypeStart==PortMsg::MULTIPLE_FIXEDPOINT&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT&&
+            dataTypeEnd!=PortMsg::MULTIPLE_REAL&&
+            dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE&&
+            dataTypeEnd!=PortMsg::MULTIPLE_VARIANT)
     {
         qDebug() << "4.多到多" << endl;
         return false;
@@ -194,15 +198,17 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_FixPoint 类型作为起点
-            //允许连接Matrix_Int Matrix_Complex Matrix_Envelope
-            //       Matrix_Multiple_Int Matrix_Multiple_Complex Matrix_Multiple_Envelope
-            || dataTypeStart==PortMsg::FIXEDPOINT_MATRIX&&(
-                dataTypeEnd==PortMsg::INT_MATRIX||
-                dataTypeEnd==PortMsg::COMPLEX_MATRIX||
-                dataTypeEnd==PortMsg::ENVELOPE_MATRIX||
-                dataTypeEnd==PortMsg::MULTIPLE_INT_MATRIX||
-                dataTypeEnd==PortMsg::MULTIPLE_COMPLEX_MATRIX||
-                dataTypeEnd==PortMsg::MULTIPLE_ENVELOPE_MATRIX))
+            //允许连接Matrix_FixPoint Matrix_Real Matrix_Anytype Matrix_Variant
+            //       Matrix_Multiple_FixPoint Matrix_Multiple_Real Matrix_Multiple_Anytype Matrix_Multiple_Variant
+            || dataTypeStart==PortMsg::FIXEDPOINT_MATRIX&&
+            dataTypeEnd!=PortMsg::FIXEDPOINT_MATRIX&&
+            dataTypeEnd!=PortMsg::REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::ANYTYPE_MATRIX&&
+            dataTypeEnd!=PortMsg::VARIANT_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX)
     {
         qDebug() << "6.单matrix到单matrix" << endl;
         return false;
@@ -235,12 +241,12 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_Multiple_FixPoint 类型作为起点
-            //允许连接Matrix_Multiple_Int Matrix_Multiple_Complex Matrix_Multiple_Envelope
-            || dataTypeStart==PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&(
-                dataTypeEnd==PortMsg::MULTIPLE_INT_MATRIX||
-                dataTypeEnd==PortMsg::MULTIPLE_COMPLEX_MATRIX||
-                dataTypeEnd==PortMsg::MULTIPLE_ENVELOPE_MATRIX
-                )
+            //允许连接Matrix_Multiple_FixPoint Matrix_Multiple_Real Matrix_Multiple_Anytype Matrix_Multiple_Variant
+            || dataTypeStart==PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             )
     {
         qDebug() << "7.多matrix到多martrix" << endl;

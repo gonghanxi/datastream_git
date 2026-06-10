@@ -83,6 +83,11 @@ struct circular_buffer_value_type<SystemVueModelBuilder::TimedCircularBuffer<std
     using type = std::complex<double>;
 };
 
+template<>
+struct circular_buffer_value_type<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::FixedPoint>> {
+    using type = SystemVueModelBuilder::FixedPoint;
+};
+
 // 检查是否为总线类型的 trait
 template<typename T>
 struct is_circular_buffer_bus : std::false_type {};
@@ -151,6 +156,11 @@ inline DataTypes::Type DataTypesAndParsers::GetDataTypeFromTemplate() {
     else if constexpr (std::is_same_v<T, SystemVueModelBuilder::TimedCircularBuffer<bool>>) return DataType::TIMED_BOOL;
     else if constexpr (std::is_same_v<T, SystemVueModelBuilder::TimedCircularBuffer<std::complex<float>>>) return DataType::TIMED_FCOMPLEX;
     else if constexpr (std::is_same_v<T, SystemVueModelBuilder::TimedCircularBuffer<std::complex<double>>>) return DataType::TIMED_DCOMPLEX;
+
+    else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPoint>) return DataType::FIXED_POINT;
+    else if constexpr (std::is_same_v<T, SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::FixedPoint>>) return DataType::CIRCULAR_BUFFER_FIXED_POINT;
+    else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPointMatrixCircularBuffer>) return DataType::MATRIX_FIXED_POINT;
+
     else return DataType::ANY;
 }
 
@@ -212,6 +222,14 @@ inline bool DataTypesAndParsers::IsCompatibleType(DataTypes::Type dataType) {
             return dataType == DataType::MATRIX_FCOMPLEX;
         } else if constexpr (std::is_same_v<T, SystemVueModelBuilder::DComplexMatrixCircularBuffer>) {
             return dataType == DataType::MATRIX_DCOMPLEX;
+        }
+
+    else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPoint>) {
+            return dataType == DataType::FIXED_POINT;
+        } else if constexpr (std::is_same_v<T, SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::FixedPoint>>) {
+            return dataType == DataType::CIRCULAR_BUFFER_FIXED_POINT;
+        } else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPointMatrixCircularBuffer>) {
+            return dataType == DataType::MATRIX_FIXED_POINT;
         }
     return false;
 }

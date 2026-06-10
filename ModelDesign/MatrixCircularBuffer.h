@@ -3,6 +3,7 @@
 
 #include "CircularBuffer.h"
 #include "Matrix.h"
+#include "Fixpoint/FixedPoint.h"
 
 namespace SystemVueModelBuilder
 {
@@ -65,4 +66,24 @@ namespace SystemVueModelBuilder
 	typedef CircularBuffer<FComplexMatrix> FComplexMatrixCircularBuffer;
 	/// Circular buffer bus for FComplexMatrix data type
 	typedef CircularBufferBusT<FComplexMatrixCircularBuffer> FComplexMatrixCircularBufferBus;
+
+
+	/* ********************************************************************** */
+	// FixedPoint
+	/* ********************************************************************** */
+	/// Include FixedPoint header for complete type definition
+
+
+	/// Matrix type for FixedPoint data type
+	typedef Matrix<FixedPoint> FixedPointMatrix;
+
+	/// Circular buffer specialization for FixedPointMatrix
+	template <> class CircularBuffer<FixedPointMatrix> : public CircularBufferE<FixedPointMatrix>
+	{
+	};
+
+	/// Circular buffer for FixedPointMatrix data type
+	typedef CircularBuffer<FixedPointMatrix> FixedPointMatrixCircularBuffer;
+	/// Circular buffer bus for FixedPointMatrix data type
+	typedef CircularBufferBusT<FixedPointMatrixCircularBuffer> FixedPointMatrixCircularBufferBus;
 }

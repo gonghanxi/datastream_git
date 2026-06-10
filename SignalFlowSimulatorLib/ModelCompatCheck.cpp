@@ -54,6 +54,9 @@ CompatibilityResult ModelCompatCheck::checkCompatibility(const QJsonObject &json
         checkComponentType(cmpType, currentContext, result);
     }
 
+    // 检查数值范围合理性
+    checkValueRanges(jsonObj, objType, currentContext, result);
+
     return result;
 }
 
@@ -101,6 +104,7 @@ CompatibilityResult ModelCompatCheck::checkLinkFile(const QJsonDocument &jsonDoc
                     QJsonObject simuParams = obj["simuParams"].toObject();
                     checkObjectFields(simuParams, objContext + ".simuParams", result);
                     checkRequiredFields(simuParams, "simu_params", objContext + ".simuParams", result);
+                    checkValueRanges(simuParams, "simu_params", objContext + ".simuParams", result);
                 }
             }
         }
@@ -540,6 +544,9 @@ void ModelCompatCheck::checkArrayFields(const QJsonArray &array, const QString &
             QString objType = getObjectType(obj);
             checkRequiredFields(obj, objType, elementPath, result);
 
+            // 检查数值范围合理性
+            checkValueRanges(obj, objType, elementPath, result);
+
             // 特殊检查：端口和属性数组中的数据类型
             if (objType == "port_item" || objType == "attribute_item") {
                 // 检查必填字段已经在上面处理了
@@ -642,5 +649,76 @@ void ModelCompatCheck::checkComponentType(const QString &cmpType, const QString 
         QString warning = QString("%1: 未知的组件类型 '%2'，可能是新版本的组件")
                          .arg(context).arg(cmpType);
         result.addWarning(warning);
+    }
+}
+
+void ModelCompatCheck::checkValueRanges(const QJsonObject &obj, const QString &objType,
+                                        const QString &context, CompatibilityResult &result)
+{
+    // 仿真参数范围校验
+    if (objType == "simu_params") {
+        if (obj.contains("SamplingRate")) {
+            double sr = obj["SamplingRate"].toDouble();
+            if (sr <= 0) {
+                result.addError(QString("%1: SamplingRate 必须 > 0，当前值: %2").arg(context).arg(sr));
+            } else if (sr > 1e12) {
+                result.addWarning(QString("%1: SamplingRate 异常大: %2，可能为误填").arg(context).arg(sr));
+            }
+        }
+        if (obj.contains("Num_Samples")) {
+            double ns = obj["Num_Samples"].toDouble();
+            if (ns <= 0) {
+                result.addError(QString("%1: Num_Samples 必须 > 0，当前值: %2").arg(context).arg(ns));
+            } else if (ns > 1e12) {
+                result.addWarning(QString("%1: Num_Samples 异常大: %2，可能导致内存溢出").arg(context).arg(ns));
+            }
+        }
+        if (obj.contains("StartTime") && obj.contains("StopTime")) {
+            double start = obj["StartTime"].toDouble();
+            double stop  = obj["StopTime"].toDouble();
+            if (stop <= start) {
+                result.addError(QString("%1: StopTime (%2) 必须 > StartTime (%3)")
+                               .arg(context).arg(stop).arg(start));
+            }
+            if (stop - start > 1e6) {
+                result.addWarning(QString("%1: 仿真时间跨度异常大: %2s，可能为误填")
+                                 .arg(context).arg(stop - start));
+            }
+        }
+        if (obj.contains("Time_Interval")) {
+            double ti = obj["Time_Interval"].toDouble();
+            if (ti <= 0) {
+                result.addError(QString("%1: Time_Interval 必须 > 0，当前值: %2").arg(context).arg(ti));
+            }
+        }
+    }
+
+    // 连接ID范围校验（防止整数溢出）
+    if (objType == "connection_item") {
+        auto checkId = [&](const QString& field) {
+            if (obj.contains(field)) {
+                qint64 id = static_cast<qint64>(obj[field].toDouble());
+                if (id < 0 || id > 1000000) {
+                    result.addWarning(QString("%1: %2 值异常: %3，可能为误填")
+                                     .arg(context).arg(field).arg(id));
+                }
+            }
+        };
+        checkId(CONN_ID);
+        checkId(CONN_CMP_ID_START);
+        checkId(CONN_CMP_ID_END);
+        checkId(CONN_PORT_ID_START);
+        checkId(CONN_PORT_ID_END);
+    }
+
+    // 组件ID范围校验
+    if (objType == "cmp_item") {
+        if (obj.contains(CMP_ID)) {
+            qint64 id = static_cast<qint64>(obj[CMP_ID].toDouble());
+            if (id < 0 || id > 1000000) {
+                result.addWarning(QString("%1: %2 值异常: %3，可能为误填")
+                                 .arg(context).arg(CMP_ID).arg(id));
+            }
+        }
     }
 }

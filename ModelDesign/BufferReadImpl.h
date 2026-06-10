@@ -70,9 +70,10 @@ private:
             readerPosition = 0;
             return false;
         }
+
         //获取可用数据量
         size_t available = m_buffer->m_totalWritten - readerPosition;
-
+//        qDebug() << "ReadDataForReaderImpl - read before available: " << available;
         //时间驱动与数据流驱动 区别
         //1.时间驱动每次读取1个数据
         //2.数据流驱动每次读取读指针数据量
@@ -88,7 +89,10 @@ private:
 
             //更新这个读指针位置和当前数据量
             readerPosition += available;
+//            qDebug() << "TimeDriven ReadDataForReaderImpl - read after available: " << available;
             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+//            qDebug() << "TimeDriven ReadDataForReaderImpl - read after m_totalWritten: " << m_buffer->m_totalWritten;
+//            qDebug() << "TimeDriven ReadDataForReaderImpl - read after m_dataCount: " << m_buffer->m_dataCount;
             return true;
         }
         //2.数据流驱动
@@ -102,7 +106,9 @@ private:
 
             //更新这个读指针位置和当前数据量
             readerPosition += readSize;
+//            qDebug() << "DataStream ReadDataForReaderImpl - read after available: " << available;
             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+//            qDebug() << "DataStream ReadDataForReaderImpl - read after m_dataCount: " << m_buffer->m_dataCount;
             return true;
         }
     }

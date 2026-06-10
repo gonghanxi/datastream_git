@@ -2,12 +2,14 @@
 #define FMU_H
 
 #include <QString>
+#include <QStringList>
 #include <vector>
 #include <unordered_map>
 #include <QLibrary>
 #include <variant>
 #include <QHash>
 #include <optional>
+#include <memory>
 
 #include "fmi2Functions.h"
 
@@ -75,6 +77,7 @@ struct fmuConfig
     QString path;
     QString guid;
     fmiType type;
+    QStringList depPaths;  // 依赖库路径列表
 
 };
 
@@ -153,6 +156,7 @@ private:
     fmuConfig config;
     QHash<QString, FmuVar> varmap;
     QLibrary lib;
+    std::vector<std::shared_ptr<QLibrary>> depLibs;  // 保持依赖库加载状态
     fmi2Component instance;
 
 

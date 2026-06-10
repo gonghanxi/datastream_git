@@ -315,7 +315,7 @@ bool SimRunner::AnalysisFiles()
                 config.guid = blockInfo.guid;
                 config.type = fmiType::CS;  // 默认使用CS模式
 
-                // 选择合适平台的库路径
+                // 选择合适平台的库路径，其余作为依赖库路径
                 for (const QString& path : blockInfo.dllOrSoPaths) {
 #ifdef _WIN32
                     if (path.contains("win64") || path.contains("windows") || path.contains(".dll")) {
@@ -337,8 +337,16 @@ bool SimRunner::AnalysisFiles()
                     config.libname = QFileInfo(config.path).baseName();
                 }
 
+                // 收集依赖库路径（排除主库路径本身）
+                for (const QString& path : blockInfo.dllOrSoPaths) {
+                    if (path != config.path) {
+                        config.depPaths.append(path);
+                    }
+                }
+
                 qDebug() << "FMU库路径:" << config.path
-                         << "库名称:" << config.libname;
+                         << "库名称:" << config.libname
+                         << "依赖库数:" << config.depPaths.size();
 
                 // 构建FmuVar列表
                 std::vector<FmuVar> fmuVars;
@@ -504,38 +512,15 @@ bool SimRunner::InitializeBlocks()
             }
         }
 
-        //
+        //时间驱动
 //        AlgorithmManager::createInstance()->setSchedulerType(AlgorithmManager::SchedulerType::TIME_DRIVEN);
 //        AlgorithmManager::SchedulerType type = AlgorithmManager::createInstance()->getSchedulerType();
 //        if(type == AlgorithmManager::SchedulerType::TIME_DRIVEN) {
-//            size_t InputRate = 1;
-//            size_t OutputRate = 1;
-//            for (const auto block:blocks)
+//            for (const auto& block:blocks)
 //            {
-//                //时间驱动变步长模式判断
-//                for(size_t i = 0; i < block->GetOutputPortCount();i++) {
-//                    Buffer* buffer = block->GetOutputPort(block->GetOutputPortName(i));
-//                    size_t blockOutputrate = buffer->GetWriteSize();
-//                    if(blockOutputrate > 1) OutputRate = blockOutputrate;
-//                }
-//                for(size_t i = 0; i < block->GetInputPortCount();i++) {
-//                    BufferReader* reader = block->GetInputPort(block->GetInputPortName(i));
-//                    size_t blockInputrate = reader->GetReadSize();
-//                    if(blockInputrate > 1) InputRate = blockInputrate;
-//                }
-//            }
-//            if(InputRate > 1 || OutputRate > 1) {
-//                qDebug() <<  "链路：" << linkKey << "时间驱动从固定步长模式转换为变步长模式.";
-//                for(const auto block : blocks) {
-//                    block->SetVariableStepMode(true);
-//                    for(size_t i = 0; i < block->GetOutputPortCount();i++) {
-//                        Buffer* buffer = block->GetOutputPort(block->GetOutputPortName(i));
-//                        buffer->SetVariableMode(true);
-//                    }
-//                    for(size_t i = 0; i < block->GetInputPortCount();i++) {
-//                        BufferReader* reader = block->GetInputPort(block->GetInputPortName(i));
-//                        reader->SetVariableMode(true);
-//                    }
+//                block->SetVariableStepMode(true);
+//                for(const auto& output : block->GetOutputPorts() ) {
+//                    output.second->SetVariableMode(true);
 //                }
 //            }
 //        }

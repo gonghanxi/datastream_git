@@ -686,7 +686,9 @@ bool FMUBlock::Run()
 {
     qDebug() << "FMUBlock::Run - 实例:" << m_instanceName
              << "当前步数:" << m_currentStep << "/" << m_numSamples
-             << "当前时间:" << m_currentTime;
+             << "当前时间:" << m_currentTime
+             << "guid:" << m_guid
+             << "fmuManager:" << m_fmuManager;
 
     if (!m_isSetup) {
         LOG_ERROR("FMUBlock未Setup:", m_instanceName.toStdString());

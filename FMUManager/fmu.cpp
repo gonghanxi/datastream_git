@@ -1,6 +1,8 @@
 #include "fmu.h"
 
 #include <QDebug>
+#include <QDir>
+#include <QFileInfo>
 
 #define RESOLVE_FUNC(name) \
     this->name##Ptr = reinterpret_cast<name##TYPE*>(lib.resolve(#name)); \
@@ -39,6 +41,8 @@ FMU::FMU(const fmuCreateInfo& info)
     this->fmi2GetStringPtr = nullptr;
     this->fmi2SetIntegerPtr = nullptr;
     this->fmi2GetIntegerPtr = nullptr;
+
+    qDebug() << "[FMU] Constructor - libname:" << config.libname << "path:" << config.path << "guid:" << config.guid;
 }
 
 
@@ -46,6 +50,8 @@ FMU::~FMU()
 {
     this->terminate();
     this->free();
+    // 依赖库在主库卸载后才释放（shared_ptr 自动管理）
+    depLibs.clear();
 }
 
 
@@ -55,6 +61,18 @@ bool FMU::load()
     {
         qDebug() <<"FMU is already loaded" << config.libname;
         return false;
+    }
+
+    // 先加载所有依赖库，确保主库的符号依赖可以被解析
+    for (const QString& depPath : config.depPaths) {
+        auto depLib = std::make_shared<QLibrary>(depPath);
+        if (!depLib->load()) {
+            qDebug() << "[load] Warning: failed to load dependency:" << depPath
+                     << "error:" << depLib->errorString();
+        } else {
+            qDebug() << "[load] Dependency loaded:" << depPath;
+            depLibs.push_back(depLib);  // 保持加载状态
+        }
     }
 
     lib.setFileName(config.path);
@@ -85,6 +103,10 @@ bool FMU::load()
     RESOLVE_FUNC(fmi2GetString);
     RESOLVE_FUNC(fmi2SetInteger);
     RESOLVE_FUNC(fmi2GetInteger);
+
+    qDebug() << "[load] All fmi2 functions resolved - fmi2DoStepPtr:" << (void*)this->fmi2DoStepPtr
+             << "fmi2SetRealPtr:" << (void*)this->fmi2SetRealPtr
+             << "fmi2InstantiatePtr:" << (void*)this->fmi2InstantiatePtr;
 
 //    this->fmi2InstantiatePtr = (fmi2InstantiateTYPE*) lib.resolve("fmi2Instantiate");
 //    this->fmi2SetupExperimentPtr = (fmi2SetupExperimentTYPE*) lib.resolve("fmi2SetupExperiment");
@@ -227,14 +249,25 @@ bool FMU::instantiate()
     cbf.stepFinished = NULL;
     cbf.componentEnvironment = NULL;
 
+    // 从 DLL 路径推导 resourceURI
+    // DLL 路径: .../binaries/linux64/xxx.so 或 .../binaries/win64/xxx.dll
+    // resources 路径: .../resources/
+    QFileInfo dllInfo(config.path);
+    QDir binariesDir = dllInfo.absoluteDir(); // binaries/linux64 或 binaries/win64
+    binariesDir.cdUp();                        // binaries
+    binariesDir.cdUp();                        // FMU 根目录
+    QString resourcePath = binariesDir.absolutePath() + "/resources";
+    QByteArray resourceUri = ("file:///" + resourcePath).toUtf8();
+
+    qDebug() << "FMU resourceURI:" << resourceUri;
 
     this->instance = fmi2InstantiatePtr(config.libname.toStdString().c_str(),
                                         (fmi2Type)config.type,
                                         config.guid.toStdString().c_str(),
-                                        "file://",
+                                        resourceUri.constData(),
                                         &cbf,
                                         0,
-                                        0);
+                                        1);  // loggingOn=1，启用FMU内部日志
 
    if (!this->instance)
    {
@@ -261,6 +294,10 @@ bool FMU::instantiate()
    }
 
    fmi2ExitInitializationModePtr(this->instance);
+
+   qDebug() << "[instantiate] FMU instantiated successfully, instance:" << this->instance;
+
+   return true;
 }
 
 bool FMU::terminate()
@@ -577,7 +614,7 @@ std::vector<double> FMU::getReals(const std::vector<QString>& names)
     }
 
     std::vector<fmiValueReference> vrs;
-    std::vector<fmi2Real> values;
+    std::vector<fmi2Real> values(names.size(), 0.0);
 
     for (int i = 0; i < names.size(); i++)
     {
@@ -593,8 +630,13 @@ std::vector<double> FMU::getReals(const std::vector<QString>& names)
         }
         vrs.push_back(var.vr);
     }
+    qDebug() << "FMU::getReals - vrs data: " << vrs.data();
+    qDebug() << "FMU::getReals - vrs size: " << vrs.size();
+
 
     fmi2Status s = fmi2GetRealPtr(this->instance, vrs.data(), vrs.size(), values.data());
+
+    qDebug() << "FMU::getReals - values size: " << values.size();
 
     if(s != fmi2OK)
     {
@@ -649,7 +691,7 @@ std::vector<bool> FMU::getBooleans(const std::vector<QString>& names)
     }
 
     std::vector<fmiValueReference> vrs;
-    std::vector<fmi2Boolean> values;
+    std::vector<fmi2Boolean> values(names.size(), 0);
 
     for (int i = 0; i < names.size(); i++)
     {
@@ -722,7 +764,7 @@ std::vector<int> FMU::getIntegers(const std::vector<QString>& names)
     }
 
     std::vector<fmiValueReference> vrs;
-    std::vector<fmi2Integer> values;
+    std::vector<fmi2Integer> values(names.size(), 0);
 
     for (int i = 0; i < names.size(); i++)
     {
@@ -754,12 +796,24 @@ std::vector<int> FMU::getIntegers(const std::vector<QString>& names)
 
 bool FMU::doStep(double currentTime, double stepSize)
 {
+    qDebug() << "[doStep] fmi2DoStepPtr:" << (void*)this->fmi2DoStepPtr
+             << "instance:" << this->instance
+             << "fmi2SetRealPtr:" << (void*)this->fmi2SetRealPtr;
+
     if(!this->fmi2DoStepPtr || !this->instance)
     {
+        qDebug() << "[doStep] FAILED - cannot execute";
         return false;
     }
 
+    qDebug() << "[doStep] calling fmi2DoStep - currentTime:" << currentTime
+             << "stepSize:" << stepSize;
+
     fmi2Status s = this->fmi2DoStepPtr(this->instance, currentTime, stepSize, 1);
+
+    qDebug() << "[doStep] fmi2DoStep returned status:" << (int)s
+             << "(0=OK,1=Warning,2=Discard,3=Error,4=Fatal,5=Pending)";
+
     return (s==fmi2OK);
 }
 

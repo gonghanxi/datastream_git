@@ -2,7 +2,8 @@
 #define BUFFERBUSDATAIMPL_H
 
 #include "Buffer.h"
-#include "CircularBuffer.h"
+//#include "CircularBuffer.h"
+#include "Fixpoint/FixedPoint.h"
 #include "DataTypesAndParsers.h"
 #include <vector>
 #include <memory>

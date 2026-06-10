@@ -28,10 +28,13 @@ linux {
     DEFINES += QT_NO_DEBUG_OUTPUT
     DEFINES += LINUX_PLATFORM
     # 强制使用 C++17，覆盖所有默认设置
-    QMAKE_CXXFLAGS = -std=c++17 -Wno-unused-variable -fPIC
+    QMAKE_CXXFLAGS += -std=c++17 -Wno-unused-variable -fPIC
     QMAKE_CFLAGS = -std=c11
     CONFIG += c++17
     CONFIG += c++1z
+    # 修复 moc 在 GCC 7.x 上解析 stl_relops.h 失败的问题
+    # 定义 _GLIBCXX_VISIBILITY 为空宏，防止 moc 解析失败
+    QMAKE_MOC = /usr/lib64/qt5/bin/moc -D_GLIBCXX_VISIBILITY=default
 }
 
 # 解决QDebug中文乱码/不显示核心配置
@@ -75,6 +78,7 @@ SOURCES +=\
     ConnectionCondition/ShortOpenProcessor.cpp \
     ConnectionValidator.cpp \
     DDS/SimEngineController.cpp \
+    DataFlowScheduler/EventDrivenScheduler.cpp \
     DataFlowScheduler/ReadyQueueScheduler.cpp \
     DataFlowScheduler/SimpleScheduler.cpp \
     DataFlowScheduler/TimeDrivenScheduler.cpp \
@@ -99,6 +103,7 @@ HEADERS  += \
     ConnectionCondition/ShortOpenProcessor.h \
     ConnectionValidator.h \
     DDS/SimEngineController.h \
+    DataFlowScheduler/EventDrivenScheduler.h \
     DataFlowScheduler/ReadyQueueScheduler.h \
     DataFlowScheduler/SimpleScheduler.h \
     DataFlowScheduler/TimeDrivenScheduler.h \

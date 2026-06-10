@@ -5,7 +5,7 @@
 #include "RegisterModel.h"
 #include "Matrix.h"
 #include "DFModel.h"
-#include "FixedPointEnums.h"
+#include "Fixpoint/FixedPointEnums.h"
 #include "DFInterface.h"
 #include "DFErrorHandler.h"
 #include "MatrixCircularBuffer.h"
@@ -694,6 +694,9 @@ template<typename T>
         else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPointEnums::OverflowMode>) return "FixedPointEnums::OverflowMode";
         else if constexpr (std::is_same_v<T, SystemVueModelBuilder::EnvelopeSignal>) return "EnvelopeSignal";
         else if constexpr (std::is_same_v<T, SystemVueModelBuilder::EnvelopeMatrix>) return "EnvelopeMatrix";
+        else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPoint>) return "FixedPoint";
+        else if constexpr (std::is_same_v<T, SystemVueModelBuilder::FixedPointParameters>) return "FixedPointParameters";
+        else if constexpr (std::is_same_v<T, SystemVueModelBuilder::Matrix<SystemVueModelBuilder::FixedPoint>>) return "Matrix<FixedPoint>";
         else return "unknown";
     }
 #endif // GET_DATA_TYPE_STRING_DEFINED

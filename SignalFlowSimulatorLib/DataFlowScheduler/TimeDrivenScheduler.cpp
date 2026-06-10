@@ -5,6 +5,14 @@
 #include <cmath>
 #include <iostream>
 
+#ifdef _WIN32
+    #include <windows.h>
+    #include <psapi.h>
+#else
+    #include <fstream>
+    #include <unistd.h>
+#endif
+
 TimeDrivenScheduler::TimeDrivenScheduler()
     : m_stopSignal(false)
     , m_curStep(0)
@@ -121,7 +129,8 @@ bool TimeDrivenScheduler::RunSimulation(const QString& linkKey,
     // 主仿真循环
     // 与 SimpleScheduler 的设计一致：循环内部检测暂停/停止标志
     // ======================================================================
-    while (!isSimulationComplete(ctx) && !m_stopSignal)
+    // while (!isSimulationComplete(ctx) && !m_stopSignal)
+    while (!areAllSinksComplete(ctx) && !m_stopSignal && ctx.currentTime < ctx.endTime + 1e-9)
     {
         // ========== 检查点1: 停止请求检查 ==========
         // 与 SimpleScheduler 中 m_stopRequested 检测逻辑一致
@@ -200,10 +209,23 @@ bool TimeDrivenScheduler::RunSimulation(const QString& linkKey,
                      << "时间:" << ctx.currentTime;
         }
 
+        // ==================================
+        // ========== 关键步骤      ==========
         // ========== 处理当前时间步 ==========
         if (!processTimeStepForContext(ctx)) {
             LOG_ERROR("[TimeDrivenScheduler] Failed to process time step at t =", ctx.currentTime);
             break;
+        }
+
+        // ========== 内存压力检测 ==========
+        m_stepsSinceLastMemoryCheck++;
+        if (m_stepsSinceLastMemoryCheck >= MEMORY_CHECK_INTERVAL) {
+            m_stepsSinceLastMemoryCheck = 0;
+            if (checkMemoryPressure()) {
+                LOG_ERROR("[TimeDrivenScheduler] 内存压力过大，强制终止仿真");
+                m_stopSignal = true;
+                break;
+            }
         }
 
         // ========== 更新进度 ==========
@@ -471,9 +493,11 @@ bool TimeDrivenScheduler::processTimeStepForContext(SchedulerContext& ctx)
     ctx.currentStep++;
     ctx.totalStepsExecuted++;
 
-    qDebug() << "[TimeDrivenScheduler] Processing step" << ctx.currentStep
-             << "at time" << ctx.currentTime << "s"
-             << "with step size" << ctx.timeStep << "s";
+//    qDebug() << "[TimeDrivenScheduler] Processing step" << ctx.currentStep
+//             << "at time" << ctx.currentTime << "s"
+//             << "with step size" << ctx.timeStep << "s";
+
+    qDebug() << "[TimeDrivenScheduler] Processing step" << ctx.currentStep;
 
     // 在执行前保存当前时间
     double previousTime = ctx.currentTime;
@@ -497,12 +521,17 @@ bool TimeDrivenScheduler::processTimeStepForContext(SchedulerContext& ctx)
         ctx.currentTime += ctx.timeStep;
         
         // 确保时间单调性
-        assertTimeMonotonic(ctx, ctx.currentTime);
+        if (!assertTimeMonotonic(previousTime, ctx.currentTime)) {
+            return false;
+        }
 
         // 检查是否需要刷新SINK(执行Flush)
         if (shouldFlushSink(ctx)) {
             flushAllSinks(ctx);
         }
+
+        // 检查已完成收集的Sink并执行Stop/Done
+        stopCompletedSinks(ctx);
 
         ctx.stepsSinceLastFlush++;
         ctx.dataPointsSinceLastFlush++;
@@ -531,6 +560,11 @@ bool TimeDrivenScheduler::executeOneTimeStep(SchedulerContext& ctx,
         }
 
         bool success = false;
+
+        // 单模型执行超时检测
+        QElapsedTimer blockTimer;
+        blockTimer.start();
+
         switch (block->GetBlockType()) {
         case Block::BlockType::SOURCE:
             success = processSourceInTimeStep(ctx, block);
@@ -543,6 +577,14 @@ bool TimeDrivenScheduler::executeOneTimeStep(SchedulerContext& ctx,
             break;
         default:
             continue;
+        }
+
+        qint64 blockElapsed = blockTimer.elapsed();
+        if (blockElapsed > BLOCK_EXEC_TIMEOUT_MS) {
+            LOG_ERROR("[TimeDrivenScheduler] 模型执行超时:",
+                      block->GetName(), "耗时:", blockElapsed, "ms",
+                      "阈值:", BLOCK_EXEC_TIMEOUT_MS, "ms");
+            return false;
         }
 
         if (!success) {
@@ -571,6 +613,33 @@ void TimeDrivenScheduler::notifyCurrentTime(SchedulerContext& ctx)
     }
 
     qDebug() << "[TimeDrivenScheduler] 时间通知完成: t=" << ctx.currentTime;
+}
+
+bool TimeDrivenScheduler::areAllSinksComplete(const TimeDrivenScheduler::SchedulerContext &ctx) const
+{
+    for (Block* block : ctx.executionOrder) {
+        if (block->GetBlockType() == Block::BlockType::SINK) {
+            if (!block->IsCollectionComplete()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void TimeDrivenScheduler::stopCompletedSinks(TimeDrivenScheduler::SchedulerContext &ctx)
+{
+    for (Block* block : ctx.executionOrder) {
+        if (block->GetBlockType() == Block::BlockType::SINK && !block->IsDone()) {
+            if (block->IsCollectionComplete()) {
+                qDebug() << "[TimeDrivenScheduler] Sink" << QString::fromStdString(block->GetName())
+                         << "collection complete. Stopping...";
+                block->Stop();
+                block->Done();
+                block->SetDone(true);
+            }
+        }
+    }
 }
 
 // ========== 模型处理方法实现 ==========
@@ -632,7 +701,7 @@ bool TimeDrivenScheduler::processProcessorInTimeStep(SchedulerContext& ctx, Bloc
 
 bool TimeDrivenScheduler::processSinkInTimeStep(SchedulerContext& ctx, Block* block)
 {
-    qDebug() << "[TimeDrivenScheduler] Processing SINK:" 
+    qDebug() << "[TimeDrivenScheduler] Processing SINK:"
              << QString::fromStdString(block->GetName())
              << "at time" << ctx.currentTime;
 
@@ -643,11 +712,13 @@ bool TimeDrivenScheduler::processSinkInTimeStep(SchedulerContext& ctx, Block* bl
     
     if (result) {
         ctx.totalDataPointsProcessed++;
+        ctx.sinkDataPoints[block]++;
         ctx.dataPointsSinceLastFlush++;
         
         qDebug() << "[TimeDrivenScheduler] SINK" << QString::fromStdString(block->GetName())
                  << "collected data at time" << ctx.currentTime
-                 << "total points:" << ctx.totalDataPointsProcessed;
+                 << "total points:" << ctx.totalDataPointsProcessed
+                 << "sink points:" << ctx.sinkDataPoints[block];
     } else {
         qDebug() << "[TimeDrivenScheduler] SINK" << QString::fromStdString(block->GetName())
                   << "failed to collect data at time" << ctx.currentTime;
@@ -711,11 +782,12 @@ void TimeDrivenScheduler::initializeTimeConfig(SchedulerContext& ctx)
     ctx.isVariableStep = hasVariableRateModel;
 
     if (ctx.isVariableStep) {
-        // 计算步长范围
-        ctx.minTimeStep = std::min(ctx.timeStep, minRequestedStep);
-        ctx.maxTimeStep = std::max(ctx.timeStep, maxRequestedStep);
 
-        // 确保合理范围
+        // 计算步长范围
+        ctx.minTimeStep = (std::min)(ctx.timeStep, minRequestedStep);
+        ctx.maxTimeStep = (std::max)(ctx.timeStep, maxRequestedStep);
+
+
         if (ctx.minTimeStep < 1e-9) ctx.minTimeStep = 1e-9;
         if (ctx.maxTimeStep > ctx.endTime - ctx.startTimeUs) {
             ctx.maxTimeStep = ctx.endTime - ctx.startTimeUs;
@@ -873,6 +945,12 @@ void TimeDrivenScheduler::applyCommand(SchedulerContext& ctx, Command cmd)
             }
         }
         
+        qDebug() << "[TimeDrivenScheduler] Sink data point counts:";
+        for (const auto& pair : ctx.sinkDataPoints) {
+            qDebug() << "  " << QString::fromStdString(pair.first->GetName())
+                     << ":" << pair.second;
+        }
+
         updateProgress(ctx);
         break;
 
@@ -942,6 +1020,7 @@ void TimeDrivenScheduler::resetSchedulerContext(SchedulerContext& ctx)
     ctx.lastFlushTime = ctx.startTimeUs;
     ctx.isPaused = false;
     ctx.pendingCommand = Command::NONE;
+    ctx.sinkDataPoints.clear();
 
     // 重新初始化块
     for (Block* block : ctx.executionOrder) {
@@ -1204,12 +1283,14 @@ bool TimeDrivenScheduler::validateTimeStep(double step, const SchedulerContext& 
     return true;
 }
 
-void TimeDrivenScheduler::assertTimeMonotonic(const SchedulerContext& ctx, double newTime)
+bool TimeDrivenScheduler::assertTimeMonotonic(double previousTime, double newTime)
 {
-    if (newTime < ctx.currentTime) {
-        qDebug() << "[TimeDrivenScheduler] Time monotonicity violation:"
-                 << "current" << ctx.currentTime << "-> new" << newTime;
+    if (newTime < previousTime) {
+        LOG_ERROR("[TimeDrivenScheduler] Time monotonicity violation:",
+                  "previous", previousTime, "-> new", newTime);
+        return false;
     }
+    return true;
 }
 
 void TimeDrivenScheduler::estimateTotalSteps(SchedulerContext& ctx)
@@ -1223,4 +1304,38 @@ void TimeDrivenScheduler::estimateTotalSteps(SchedulerContext& ctx)
     }
     
     qDebug() << "[TimeDrivenScheduler] Estimated total steps:" << ctx.totalEstimatedSteps;
+}
+
+size_t TimeDrivenScheduler::getProcessMemoryMB()
+{
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        return pmc.WorkingSetSize / (1024 * 1024);
+    }
+    return 0;
+#else
+    std::ifstream statusFile("/proc/self/status");
+    std::string line;
+    while (std::getline(statusFile, line)) {
+        if (line.compare(0, 6, "VmRSS:") == 0) {
+            size_t vmRSS = 0;
+            std::istringstream iss(line.substr(6));
+            iss >> vmRSS;
+            return vmRSS / 1024;  // kB -> MB
+        }
+    }
+    return 0;
+#endif
+}
+
+bool TimeDrivenScheduler::checkMemoryPressure(size_t thresholdMB) const
+{
+    size_t currentMB = getProcessMemoryMB();
+    if (currentMB > 0 && currentMB > thresholdMB) {
+        LOG_ERROR("[TimeDrivenScheduler] 内存使用超限:", currentMB,
+                  "MB，阈值:", thresholdMB, "MB");
+        return true;
+    }
+    return false;
 }

@@ -70,12 +70,21 @@ bool LinkParser::parseSimuParameters(
 
     bool ok = true;
     simuPara.startTime = UnitConvert::convertToStandardUnit("time", startTime_Unit, startTime_Value).toDouble(&ok);
-    simuPara.stopTime = UnitConvert::convertToStandardUnit("time", stopTime_Unit, stopTime_Value).toDouble(&ok);
-    simuPara.samplingRate = UnitConvert::convertToStandardUnit("frequency", samplingRate_Unit, samplingRate_Value).toDouble(&ok);
-    simuPara.time_Interval = UnitConvert::convertToStandardUnit("time", time_Interval_Unit, time_Interval_Value).toDouble(&ok);
-    simuPara.num_Samples = simuObj["Num_Samples"].toString().toInt(&ok);
+    double stopTime = UnitConvert::convertToStandardUnit("time", stopTime_Unit, stopTime_Value).toDouble(&ok);
+    simuPara.stopTime = stopTime;
+    double sampleRate = UnitConvert::convertToStandardUnit("frequency", samplingRate_Unit, samplingRate_Value).toDouble(&ok);
+//    sampleRate *= 2;
+    simuPara.samplingRate = sampleRate;
+    double time_interval = UnitConvert::convertToStandardUnit("time", time_Interval_Unit, time_Interval_Value).toDouble(&ok);
+//    time_interval /= 2;
+    simuPara.time_Interval = time_interval;
+    int num_Samples = simuObj["Num_Samples"].toString().toInt(&ok);
+    simuPara.num_Samples = num_Samples;
 
     qDebug() << "仿真次数：" << simuPara.num_Samples;
+    qDebug() << "stopTime: " << simuPara.stopTime;
+    qDebug() << "time_Interval: " << simuPara.time_Interval;
+    qDebug() << "num_Samples: " << simuPara.num_Samples;
     qDebug() << "samplingRate:" << simuPara.samplingRate;
 
     if (!ok) {

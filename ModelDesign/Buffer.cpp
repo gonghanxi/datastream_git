@@ -421,8 +421,9 @@ size_t Buffer::GetBufferFreeSpace() const
         if (m_dataCount >= m_bufferSize) {
             return 0; // 缓冲区已满
         }
+
         return m_bufferSize - m_dataCount;
-        }
+    }
     return m_bufferSize - m_dataCount;
 }
 

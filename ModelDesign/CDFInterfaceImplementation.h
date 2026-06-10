@@ -11,7 +11,8 @@
 #include "DFParam.h"
 #include "Matrix.h"
 #include "DFPort.h"
-#include "FixedPointEnums.h"
+#include "Fixpoint/FixedPointEnums.h"
+#include "Fixpoint/FixedPoint.h"
 #include "EnvelopeSignal.h"
 #include "CDFParamImplementation.h"
 #include "CDFPortImplementation.h"
@@ -312,6 +313,15 @@ namespace SystemVueModelBuilder {
         DFPort AddInput(EnvelopeMatrixCircularBuffer& envelopeData, const char* pcCodeGenName);
         DFPort AddOutput(EnvelopeMatrixCircularBuffer& envelopeData, const char* pcCodeGenName);
 
+        //FixedPoint
+        DFParam AddParam(FixedPointParameters &fxParam, const char *pcCodeGenName);
+        DFPort AddInput(FixedPoint &fxData, const char *pcCodeGenName);
+        DFPort AddOutput(FixedPoint &fxData, const char *pcCodeGenName);
+        DFPort AddInput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName);
+        DFPort AddOutput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName);
+        DFPort AddInput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName);
+        DFPort AddOutput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName);
+
 
 
         // 获取方法
@@ -359,6 +369,9 @@ namespace SystemVueModelBuilder {
             }
             else if constexpr (std::is_same_v<T, EnvelopeCircularBuffer>) {
                 return "envelope";
+            }
+            else if constexpr (std::is_same_v<T, CircularBuffer<FixedPoint>>) {
+                return "fixedpoint";
             }
             return "unknown";
         }

@@ -75,9 +75,15 @@ private:
                             CompatibilityResult& result);
 
     // 检查组件类型的有效性
-    void checkComponentType(const QString& cmpType,
-                           const QString& context,
+    void checkComponentType(const QString &cmpType,
+                           const QString &context,
                            CompatibilityResult& result);
+
+    // 检查数值字段的合理性范围
+    void checkValueRanges(const QJsonObject& obj,
+                         const QString& objType,
+                         const QString& context,
+                         CompatibilityResult& result);
 
     // 白名单（所有支持的字段）
     QSet<QString> m_whitelist;

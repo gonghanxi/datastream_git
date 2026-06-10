@@ -10,7 +10,8 @@
 #include "SimulationControl.h"
 
 //#include "CircularBuffer.h"
-#include "FixedPointEnums.h"
+#include "Fixpoint/FixedPointEnums.h"
+#include "Fixpoint/FixedPoint.h"
 #include "Matrix.h"
 
 #include "CDFInterfaceImplementation.h"
@@ -179,6 +180,19 @@ namespace SystemVueModelBuilder {
         DFPort AddOutput(DComplexMatrixCircularBuffer& circularBuffer, const char* pcCodeGenName);
         DFPort AddInput(EnvelopeMatrixCircularBuffer& envelopeData, const char* pcCodeGenName);
         DFPort AddOutput(EnvelopeMatrixCircularBuffer& envelopeData, const char* pcCodeGenName);
+
+        /// \name FixedPoint I/O
+        /// 定点数参数
+        DFParam AddParam(FixedPointParameters &fxParam, const char *pcCodeGenName);
+        /// 定点数基础端口
+        DFPort AddInput(FixedPoint &fxData, const char *pcCodeGenName);
+        DFPort AddOutput(FixedPoint &fxData, const char *pcCodeGenName);
+        /// 定点数循环缓冲区端口
+        DFPort AddInput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName);
+        DFPort AddOutput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName);
+        /// 定点数矩阵端口
+        DFPort AddInput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName);
+        DFPort AddOutput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName);
 
 
         /// For internal use only. A C++ Data Flow model must not use this at all

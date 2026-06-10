@@ -908,6 +908,9 @@ bool BufferExpansionImpl::CheckCapacityRequirements(size_t requiredWriteSize, si
 {
     // 1. 检查写入容量（是否有足够空闲空间）
     size_t freeSpace = m_buffer->GetBufferFreeSpace();
+
+
+
     bool writeCapacityOk = (freeSpace >= requiredWriteSize);
 
     if (!writeCapacityOk) {

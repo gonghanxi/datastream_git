@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "fmu.h"
+#include <QDebug>
 
 class FMUManager
 {

@@ -58,7 +58,18 @@ namespace DataTypes {
         MATRIX_FCOMPLEX_BUS,//48
         MATRIX_DCOMPLEX_BUS,//49
         MATRIX_ENVELOPE_BUS,//50
-        ANY //51
+
+        // 定点数类型
+        FIXED_POINT,              //52 基础定点数类型
+        FIXED_POINT_ARRAY,        //53 定点数数组
+        CIRCULAR_BUFFER_FIXED_POINT, //54 定点数循环缓冲区
+        FIXED_POINT_BUS,          //55 定点数总线
+        TIMED_FIXED_POINT,        //56 时域定点数
+        MATRIX_FIXED_POINT,       //57 定点数矩阵
+        MATRIX_TIME_FIXED_POINT,  //58 时域定点数矩阵
+        MATRIX_FIXED_POINT_BUS,   //59 定点数矩阵总线
+
+        ANY //60
     };
 
     // 辅助函数

@@ -1,47 +1,43 @@
 #include "DFErrorHandler.h"
 
 #include <stdexcept>
+#include <iostream>
 
-class ErrorHandlerState
-{
-public:
-};
+static bool s_errorOccurred = false;
 
 void SystemVueModelBuilder::DFErrorHandler::PostError(DFModel *pModel, const char *pcError)
 {
-    //记录错误
     if(!pcError || !pModel) return;
-
+    s_errorOccurred = true;
     throw std::runtime_error(pcError);
 }
 
 void SystemVueModelBuilder::DFErrorHandler::PostWarning(DFModel *pModel, const char *pcWarning)
 {
-    //记录警告
     if(!pModel || !pcWarning) return;
+    std::cerr << "[WARNING] " << pcWarning << std::endl;
 }
 
 void SystemVueModelBuilder::DFErrorHandler::PostInfo(DFModel *pModel, const char *pcMessage)
 {
-    //记录输入
     if(!pModel || !pcMessage) return;
+    std::cout << "[INFO] " << pcMessage << std::endl;
 }
 
 void SystemVueModelBuilder::DFErrorHandler::PostLog(DFModel *pModel, const char *pcMessage)
 {
-    //记录日志
     if(!pModel || !pcMessage) return;
+    std::cout << "[LOG] " << pcMessage << std::endl;
 }
 
 void SystemVueModelBuilder::DFErrorHandler::PostProgress(DFModel *pModel, const char *pcMessage)
 {
-    //记录处理
     if(!pModel || !pcMessage) return;
+    std::cout << "[PROGRESS] " << pcMessage << std::endl;
 }
 
 void SystemVueModelBuilder::DFErrorHandler::ClearProgress(DFModel *pModel)
 {
-    //清空处理
     if(!pModel) return;
 }
 
@@ -52,7 +48,7 @@ bool SystemVueModelBuilder::DFErrorHandler::StopRequested()
 
 bool SystemVueModelBuilder::DFErrorHandler::ErrorOccurred()
 {
-    return true;
+    return s_errorOccurred;
 }
 
 

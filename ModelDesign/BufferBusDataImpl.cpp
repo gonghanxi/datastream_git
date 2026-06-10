@@ -44,6 +44,11 @@ bool SystemVueModelBuilder::BufferBusDataImpl::WriteBusData(const SystemVueModel
         case DataType::DCOMPLEX_BUS:
             success = WriteTypedBusData<std::complex<double>>(data);
             break;
+        case DataType::FIXED_POINT_BUS:
+            // FixedPoint bus requires special handling - convert to double for storage
+            qDebug() << "FixedPoint bus write: converting to double for storage";
+            success = WriteTypedBusData<double>(data);
+            break;
         default:
             qDebug() << "ERROR: Unsupported bus element type: "
                       << static_cast<int>(metadata.elementType);
@@ -120,6 +125,11 @@ bool SystemVueModelBuilder::BufferBusDataImpl::ReadBusDataForReader(size_t readS
         break;
     case DataType::DCOMPLEX_BUS:
         success = ReadTypedBusDataForReader<std::complex<double>>(requiredSize, outputData, readerName);
+        break;
+    case DataType::FIXED_POINT_BUS:
+        // FixedPoint bus requires special handling - convert from double
+        qDebug() << "FixedPoint bus read: converting from double";
+        success = ReadTypedBusDataForReader<double>(requiredSize, outputData, readerName);
         break;
     default:
         qDebug() << "ERROR: Unsupported bus element type: "
@@ -206,6 +216,8 @@ DataType SystemVueModelBuilder::BufferBusDataImpl::GetBusElementType(const Syste
             return DataType::CIRCULAR_BUFFER_FCOMPLEX;
         } else if (dynamic_cast<SystemVueModelBuilder::DComplexCircularBuffer*>(port)) {
             return DataType::CIRCULAR_BUFFER_DCOMPLEX;
+        } else if (dynamic_cast<SystemVueModelBuilder::CircularBuffer<SystemVueModelBuilder::FixedPoint>*>(port)) {
+            return DataType::CIRCULAR_BUFFER_FIXED_POINT;
         }
     }
 

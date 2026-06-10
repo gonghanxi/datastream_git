@@ -36,15 +36,28 @@ bool FMUManager::hasInstance(const QString &guid) const
 
 bool FMUManager::load(std::vector<fmuCreateInfo>fmuinfolist)
 {
+    qDebug() << "[FMUManager] load - fmuinfolist size:" << fmuinfolist.size();
     for(const auto& varinfo: fmuinfolist)
     {
         if(!this->fmumap.contains(varinfo.config.guid))
         {
+            qDebug() << "[FMUManager] Creating FMU for guid:" << varinfo.config.guid;
             std::shared_ptr<FMU> fmu = std::make_shared<FMU>(varinfo);
-            fmu->load();
-            fmu->instantiate();
-            fmu->initstartvalue();
+
+            qDebug() << "[FMUManager] Calling fmu->load()...";
+            bool loadOk = fmu->load();
+            qDebug() << "[FMUManager] fmu->load() returned:" << loadOk;
+
+            qDebug() << "[FMUManager] Calling fmu->instantiate()...";
+            bool instOk = fmu->instantiate();
+            qDebug() << "[FMUManager] fmu->instantiate() returned:" << instOk;
+
+            qDebug() << "[FMUManager] Calling fmu->initstartvalue()...";
+            bool initOk = fmu->initstartvalue();
+            qDebug() << "[FMUManager] fmu->initstartvalue() returned:" << initOk;
+
             this->fmumap.insert(varinfo.config.guid,fmu);
+            qDebug() << "[FMUManager] FMU inserted into map, guid:" << varinfo.config.guid;
         }
     }
     return true;
@@ -67,15 +80,19 @@ bool FMUManager::terminate()
 
 bool FMUManager::dostep(const QString guid,double currentTime, double stepSize)
 {
+    qDebug() << "[FMUManager] dostep - guid:" << guid << "currentTime:" << currentTime << "stepSize:" << stepSize;
+    qDebug() << "[FMUManager] fmumap keys:" << this->fmumap.keys();
+
     auto it = this->fmumap.find(guid);
     if (it == fmumap.end())
     {
+        qDebug() << "[FMUManager] dostep - guid NOT found in map!";
         return false;
     }
 
     std::shared_ptr<FMU> fmuVarPtr = it.value();
-    fmuVarPtr->doStep(currentTime, stepSize);
-    return true;
+    qDebug() << "[FMUManager] dostep - calling fmu->doStep(), fmu ptr:" << fmuVarPtr.get();
+    return fmuVarPtr->doStep(currentTime, stepSize);
 
 //    std::shared_ptr<FMU> p(new FMU())
 }
@@ -115,6 +132,7 @@ std::vector<double> FMUManager::getReals(const QString guid,const std::vector<QS
     if (names.size() > 1)
     {
          result = fmuVarPtr->getReals(names);
+
     }
     else
     {

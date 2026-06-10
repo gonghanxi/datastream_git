@@ -21,10 +21,13 @@ linux {
     DEFINES += QT_NO_DEBUG_OUTPUT
     DEFINES += LINUX_PLATFORM
     # 强制使用 C++17，覆盖所有默认设置
-    QMAKE_CXXFLAGS = -std=c++17 -Wno-unused-variable -fPIC
+    QMAKE_CXXFLAGS += -std=c++17 -Wno-unused-variable -fPIC
     QMAKE_CFLAGS = -std=c11
     CONFIG += c++17
     CONFIG += c++1z
+    # 修复 moc 在 GCC 7.x 上解析 stl_relops.h 失败的问题
+    # 定义 _GLIBCXX_VISIBILITY 为空宏，防止 moc 解析失败
+    QMAKE_MOC = /usr/lib64/qt5/bin/moc -D_GLIBCXX_VISIBILITY=default
 }
 
 # 包含矩阵计算库
@@ -35,6 +38,8 @@ include($$PWD/openBlas/openBlas.pri)
 DEFINES += ADD_
 DEFINES += HAVE_LAPACK_CONFIG_H
 DEFINES += LAPACK_COMPLEX_STRUCTURE
+
+INCLUDEPATH += $$PWD/Fixpoint
 
 SOURCES += \
         Block.cpp \
@@ -61,11 +66,16 @@ SOURCES += \
         DataTypesAndParsers.cpp \
         Dll_templates.cpp \
         DynamicControlImplementation.cpp \
+        Fixpoint/FixedPointBitRef.cpp \
         LapackMatWrapper.cpp \
         RegisterModel.cpp \
         SimulationControl.cpp \
         SinkControlImplementation.cpp \
-        configmanager.cpp
+        configmanager.cpp \
+        Fixpoint/FixedPoint.cpp \
+        Fixpoint/FixedPointParameters.cpp \
+        Fixpoint/FixedPointValue.cpp \
+        Fixpoint/FixedPointObserver.cpp
 #        main.cpp
 #        openBlas/LapackMat.cpp \
 #        openBlas/LapackMatBase.cpp
@@ -98,7 +108,6 @@ HEADERS += \
     DynamicControlImplementation.h \
     EnumTypeConverter.h \
     EnvelopeSignal.h \
-    FixedPointEnums.h \
     LapackMatWrapper.h \
     Matrix.h \
     MatrixCircularBuffer.h \
@@ -114,7 +123,17 @@ HEADERS += \
     TimedCircularBuffer.h \
     TimedDFModel.h \
     configmanager.h \
-    eresult.h
+    eresult.h \
+    Fixpoint/FixedPoint.h \
+    Fixpoint/FixedPointParameters.h \
+    Fixpoint/FixedPointEnums.h \
+    Fixpoint/FixedPointValue.h \
+    Fixpoint/FixedPointBitRef.h \
+    Fixpoint/FixedPointObserver.h \
+    Fixpoint/FixedPointStruct.h \
+    Fixpoint/FixedPointRep.h \
+    Fixpoint/DFFixedPointInterface.h \
+    Fixpoint/DLL_Export/SystemC-FixedPoint.h
 #    openBlas/LapackMat.h \
 #    openBlas/LapackMatBase.h
 

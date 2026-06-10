@@ -6,6 +6,7 @@
 #include <QWaitCondition>
 #include <QAtomicInt>
 #include <QVector>
+#include <QElapsedTimer>
 #include <memory>
 #include <functional>
 
@@ -105,6 +106,7 @@ public:
         int totalDataPointsProcessed;
         int totalStepsExecuted;
         int totalStepsSkipped;
+        std::map<Block*, unsigned long long> sinkDataPoints;  // 每个Sink的收集点数
 
         // 配置
         double samplingRateUs;        // 仿真器采样率
@@ -199,6 +201,12 @@ private:
     // 向所有模型广播当前时间
     void notifyCurrentTime(SchedulerContext& ctx);
 
+    // 检查是否所有Sink执行完毕
+    bool areAllSinksComplete(const SchedulerContext& ctx) const;
+
+    // 将已执行完的Sink停止
+    void stopCompletedSinks(SchedulerContext& ctx);
+
     // ========== 模型处理方法 ==========
 
     // 在时间步中执行SOURCE
@@ -276,7 +284,13 @@ private:
     void handleDataRateMismatch(SchedulerContext& ctx, Block* source, Block* target);
 
     // 确保时间单调性
-    void assertTimeMonotonic(const SchedulerContext& ctx, double newTime);
+    bool assertTimeMonotonic(double previousTime, double newTime);
+
+    // 内存压力检测（返回当前进程内存使用MB，失败返回0）
+    static size_t getProcessMemoryMB();
+
+    // 检查内存是否超限（默认阈值2GB）
+    bool checkMemoryPressure(size_t thresholdMB = 2048) const;
 
     // 预估总步数
     void estimateTotalSteps(SchedulerContext& ctx);
@@ -287,6 +301,12 @@ private:
     std::map<std::string, std::string> m_sinkOutputPaths;
     bool m_stopSignal;
     int m_curStep;  // 兼容原节拍接口
+
+    // 单模型执行超时（毫秒），默认60秒
+    static constexpr int BLOCK_EXEC_TIMEOUT_MS = 60000;
+    // 内存检查间隔（步数），每100步检查一次
+    static constexpr int MEMORY_CHECK_INTERVAL = 100;
+    int m_stepsSinceLastMemoryCheck = 0;
 };
 
 #endif // TIMEDRIVENSCHEDULER_H

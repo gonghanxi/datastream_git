@@ -2,7 +2,7 @@
 #define ISIMRUNNER_H
 
 #include "ILogWriter.h"
-#include "../ModelDesign/Block.h"
+#include "SimuParameter.h"
 #include "simcfgdata.h"
 #include <string>
 

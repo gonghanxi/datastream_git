@@ -1000,3 +1000,74 @@ using namespace SystemVueModelBuilder;
         }
         return result;
     }
+
+    // FixedPoint implementations
+    DFParam CDFInterfaceImplementation::AddParam(FixedPointParameters &fxParam, const char *pcCodeGenName)
+    {
+        // 添加定点数参数
+        if (!pcCodeGenName) {
+            m_lastError = "Invalid code generation name";
+            return DFParam(nullptr);
+        }
+
+        try {
+            CDFParamImplementation* paramImpl = new CDFParamImplementation();
+            if (pcCodeGenName) {
+                paramImpl->SetName(pcCodeGenName);
+            }
+            paramImpl->SetParamType("FixedPointParameters");
+
+            if (!m_modelName.empty()) {
+                paramImpl->PrependCodeGenName(m_modelName.c_str());
+            }
+
+            DFParam dfParam(paramImpl);
+            if (m_configManager) {
+                dfParam.SetConfigManager(m_configManager);
+            }
+
+            m_params.push_back(dfParam);
+            return dfParam;
+        } catch (const std::exception& e) {
+            m_lastError = std::string("Failed to create FixedPointParameters parameter: ") + e.what();
+            return DFParam(nullptr);
+        }
+    }
+
+    DFPort CDFInterfaceImplementation::AddInput(FixedPoint &fxData, const char *pcCodeGenName)
+    {
+        // 添加定点数输入端口 - 使用 CircularBuffer<FixedPoint> 包装
+        CircularBuffer<FixedPoint>* buffer = reinterpret_cast<CircularBuffer<FixedPoint>*>(&fxData);
+        return CreatePortWithSystemVueBuffer(*buffer, pcCodeGenName, true);
+    }
+
+    DFPort CDFInterfaceImplementation::AddOutput(FixedPoint &fxData, const char *pcCodeGenName)
+    {
+        // 添加定点数输出端口 - 使用 CircularBuffer<FixedPoint> 包装
+        CircularBuffer<FixedPoint>* buffer = reinterpret_cast<CircularBuffer<FixedPoint>*>(&fxData);
+        return CreatePortWithSystemVueBuffer(*buffer, pcCodeGenName, false);
+    }
+
+    DFPort CDFInterfaceImplementation::AddInput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName)
+    {
+        // 添加定点数循环缓冲区输入端口
+        return CreatePortWithSystemVueBuffer(circularBuffer, pcCodeGenName, true);
+    }
+
+    DFPort CDFInterfaceImplementation::AddOutput(CircularBuffer<FixedPoint> &circularBuffer, const char *pcCodeGenName)
+    {
+        // 添加定点数循环缓冲区输出端口
+        return CreatePortWithSystemVueBuffer(circularBuffer, pcCodeGenName, false);
+    }
+
+    DFPort CDFInterfaceImplementation::AddInput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName)
+    {
+        // 添加定点数矩阵循环缓冲区输入端口
+        return CreatePortWithSystemVueBuffer(circularBuffer, pcCodeGenName, true);
+    }
+
+    DFPort CDFInterfaceImplementation::AddOutput(FixedPointMatrixCircularBuffer &circularBuffer, const char *pcCodeGenName)
+    {
+        // 添加定点数矩阵循环缓冲区输出端口
+        return CreatePortWithSystemVueBuffer(circularBuffer, pcCodeGenName, false);
+    }

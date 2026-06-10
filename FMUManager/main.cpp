@@ -17,9 +17,9 @@ int main(int argc, char *argv[])
     //模型库路径
     //guid
     //fmi类型
-    fmuConfig config = {"MathModel",
-                        "D:/fmu_test/MathModel/binaries/win64/MathModel.dll",
-                       "f0912b3c-4b87-43ed-877f-05faecf1f74f",
+    fmuConfig config = {"Model44",
+                        "C:/Users/shi/Desktop/matlab_git/GWDataFlowSimulator/build/fmu/debug/Model44.dll",
+                       "f4ae3756-59d3-4b6b-a61e-afb90f2c605a",
                        fmiType(CS)};
     //FMU参数容器
     std::vector<FmuVar> fmuVec1;
@@ -29,24 +29,47 @@ int main(int argc, char *argv[])
     //类型
     //属性
     //初值
-    FmuVar var1 = {"par",
-                 144,
+    FmuVar var1 = {"outport[1]",
+                 64,
                  Real,
-                 Parameter,
-                 double(10)};
-    FmuVar var2 = {"u",
-                 88,
-                 Real,
-                 Input,
+                 Output,
                  double(0.0)};
-    FmuVar var3 = {"y",
+    FmuVar var2 = {"outport[2]",
+                 128,
+                 Real,
+                 Output,
+                 double(0.0)};
+    FmuVar var3 = {"outport[3]",
                  192,
                  Real,
                  Output,
                  double(0.0)};
+    FmuVar var4 = {"outport[4]",
+                 256,
+                 Real,
+                 Output,
+                 double(0.0)};
+    FmuVar var5 = {"outport[5]",
+                 320,
+                 Real,
+                 Output,
+                 double(0.0)};
+    FmuVar var6 = {"outport[6]",
+                 384,
+                 Real,
+                 Output,
+                 double(0.0)};
+//    FmuVar var3 = {"y",
+//                 256,
+//                 Real,
+//                 Output,
+//                 double(0.0)};
     fmuVec1.push_back(var1);
     fmuVec1.push_back(var2);
     fmuVec1.push_back(var3);
+    fmuVec1.push_back(var4);
+    fmuVec1.push_back(var5);
+    fmuVec1.push_back(var6);
 
     fmuCreateInfo fmuinfo={config, fmuVec1};
 
@@ -56,31 +79,52 @@ int main(int argc, char *argv[])
     //FMU加载
     manager.load(fmutestinfolst);
     //仿真步长
-    double stepsize = 0.1;
+    double stepsize = 0.01;
     //仿真次数
     int stepcount = 500;
     //起始时间
     double currrent_time = 0;
     //guid
-    QString guid = "f0912b3c-4b87-43ed-877f-05faecf1f74f";
+    QString guid = "f4ae3756-59d3-4b6b-a61e-afb90f2c605a";
     //输入端口名称组
-    std::vector<QString> input_names = {"u"};
+//    std::vector<QString> input_names = {"u"};
     //输入端口初值组
     std::vector<double> values(1.0);
     //输出端口名称组
-    std::vector<QString> output_names = {"y"};
+    std::vector<QString> output_names = {"outport[1]","outport[2]","outport[3]","outport[4]","outport[5]","outport[6]"};
     //输出端口结果组
     std::vector<double> result;
 
-    values[0] = currrent_time+10;
-    //设置参数/输入端口值 方法
-    manager.setReals(guid, input_names, values);
-    //执行方法
-    manager.dostep(guid, currrent_time, stepsize);
-    //获取执行的值 方法
-    result = manager.getReals(guid,output_names);
 
-    qDebug()<< result[0];
+
+
+    //执行方法
+    for(size_t i = 0; i < stepcount; i++) {
+        //设置参数/输入端口值 方法
+
+//        manager.setReals(guid, input_names, values);
+        bool stepOk = manager.dostep(guid, currrent_time, stepsize);
+        //获取执行的值 方法
+        if (stepOk) {
+            result = manager.getReals(guid,output_names);
+        } else {
+            qDebug() << "doStep failed at time" << currrent_time;
+            result = {};
+        }
+        currrent_time += stepsize;
+        qDebug()<< "current time : " << currrent_time;
+        qDebug()<< "result size: " <<result.size();
+        qDebug()<< "result[0]: "<<result[0];
+        qDebug()<< "result[1]: "<<result[1];
+        qDebug()<< "result[2]: "<<result[2];
+        qDebug()<< "result[3]: "<<result[3];
+        qDebug()<< "result[4]: "<<result[4];
+        qDebug()<< "result[5]: "<<result[5];
+    }
+
+
+
+
 //    for (int i = 0; i < stepcount; i++)
 //    {
 //        values[0] = currrent_time;

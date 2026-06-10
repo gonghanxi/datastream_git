@@ -3,8 +3,12 @@
 
 // #include "DFInterface.h"
 //#include "ILogWriter.h"
+
 #include "../Common/ILogWriter.h"
 #include "../Common/LogExport.h"
+//仿真器参数 — 定义在 Common/SimuParameter.h 中，通过以下 include 引入
+#include "../Common/SimuParameter.h"
+
 #include "Buffer.h"
 #include "BufferReader.h"
 #include "BusConnection.h"
@@ -68,80 +72,7 @@ public:
     std::string Value;
     std::string Name;
 };
-//仿真器参数
-// 仿真器参数
-struct SimuParameter
-{
-    std::string simuName;
-    double startTime;           //开始时间
-    double stopTime;            //结束时间
-    double samplingRate;        //采样率
-    double time_Interval;       //间隔时间
-    size_t num_Samples;         //采样次数
-    std::string linkName;       //链路名称
-    std::string subsystemName;  //子系统名称（新增）
-    std::string User_Id;        //用户ID
 
-    // 默认构造函数
-    SimuParameter()
-        : startTime(0.0), stopTime(0.0), samplingRate(0.0),
-          time_Interval(0.0), num_Samples(0), subsystemName("") {}
-
-    // 拷贝构造函数
-    SimuParameter(const SimuParameter& other)
-        : simuName(other.simuName),
-          startTime(other.startTime),
-          stopTime(other.stopTime),
-          samplingRate(other.samplingRate),
-          time_Interval(other.time_Interval),
-          num_Samples(other.num_Samples),
-          linkName(other.linkName),
-          subsystemName(other.subsystemName) {}
-
-    // 拷贝赋值运算符
-    SimuParameter& operator=(const SimuParameter& other) {
-        if (this != &other) {
-            simuName = other.simuName;
-            startTime = other.startTime;
-            stopTime = other.stopTime;
-            samplingRate = other.samplingRate;
-            time_Interval = other.time_Interval;
-            num_Samples = other.num_Samples;
-            linkName = other.linkName;
-            subsystemName = other.subsystemName;
-        }
-        return *this;
-    }
-
-    // 移动构造函数（C++11）
-    SimuParameter(SimuParameter&& other) noexcept
-        : simuName(std::move(other.simuName)),
-          startTime(other.startTime),
-          stopTime(other.stopTime),
-          samplingRate(other.samplingRate),
-          time_Interval(other.time_Interval),
-          num_Samples(other.num_Samples),
-          linkName(std::move(other.linkName)),
-          subsystemName(std::move(other.subsystemName)) {}
-
-    // 移动赋值运算符（C++11）
-    SimuParameter& operator=(SimuParameter&& other) noexcept {
-        if (this != &other) {
-            simuName = std::move(other.simuName);
-            startTime = other.startTime;
-            stopTime = other.stopTime;
-            samplingRate = other.samplingRate;
-            time_Interval = other.time_Interval;
-            num_Samples = other.num_Samples;
-            linkName = std::move(other.linkName);
-            subsystemName = std::move(other.subsystemName);
-        }
-        return *this;
-    }
-
-    // 析构函数
-    ~SimuParameter() = default;
-};
 
 class BlockPortImpl;
 class BlockSinkImpl;
