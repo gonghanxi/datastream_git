@@ -209,15 +209,19 @@ bool RADAR_SignalAnalyzer_Block::Setup()
 
     if (m_SampleNum <= 0) {
         LOG_ERROR("SampleNum must be > 0");
+        return false;
     }
     if (m_FFTSize < m_SampleNum) {
         LOG_ERROR("FFTSize must be >= SampleNum");
+        return false;
     }
     if ((m_FFTSize & (m_FFTSize - 1)) != 0) {
         LOG_ERROR("Only 2^N FFTSize is supported now. For FFTSize != 2^N, performance may be insufficient.");
+        return false;
     }
     if (m_SampleRate <= 0.0) {
         LOG_ERROR("SampleRate must be > 0");
+        return false;
     }
 
     m_inputBuffer.clear();

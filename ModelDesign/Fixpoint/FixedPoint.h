@@ -14,6 +14,7 @@ Increment the DFInterfaceVersion (defined in DFModel.h) to force a customer to r
 #include <string>
 #include "SystemVue/FixedPointValue.h"
 #include "SystemVue/FixedPointParameters.h"
+#include "SystemVue/FixedPointBitRef.h"
 #include "SystemVue/CircularBuffer.h"
 #include "SystemVue/DLL_Export/SystemC-FixedPoint.h"
 

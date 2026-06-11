@@ -35,7 +35,7 @@ namespace SystemVueModelBuilder
         if (csName) {
             size_t len = strlen(csName) + 1;
             m_csName = new char[len];
-            strcpy_s(m_csName, len, csName);
+            memcpy(m_csName, csName, len);
         }
     }
 

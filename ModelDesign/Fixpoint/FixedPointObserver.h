@@ -1,7 +1,12 @@
 // Copyright 2011 - 2014 Keysight Technologies, Inc   
 #pragma once
 
+#ifdef _WIN32
 #include <crtdbg.h>
+#else
+#include "cassert"
+#define _ASSERT(expr) assert(expr)
+#endif
 #include "SystemVue/FixedPointEnums.h"
 #include "SystemVue/DLL_Export/SystemC-FixedPoint.h"
 #include <cstddef>

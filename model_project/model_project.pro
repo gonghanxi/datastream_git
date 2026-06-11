@@ -193,7 +193,7 @@ LPF_ChebyshevII\
     Mapper \
 Math\
 MathCx \
-MATLAB_Script\
+#MATLAB_Script\
     MaxMin \
 Mixer \
     Modulo \
@@ -229,6 +229,7 @@ PulseGen\
     Quantizer2D \
     Quantizer_M \
     RADAR_ADBF \
+    RADAR_AngleTransform \
     RADAR_AntennaPolarizationRx \
     RADAR_AntennaPolarizationTx \
     RADAR_Antenna_Rx \
