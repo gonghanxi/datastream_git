@@ -139,9 +139,9 @@ bool RADAR_MultiCH_Tx_Block::Initialize()
 
     // 解析参数
     SetDefaultParameters();
-    try { m_NumOfCH = std::stoi(getParameter("NumOfCH").Value); } catch (...) {}
-    try { m_TStep   = std::stod(getParameter("TStep").Value); } catch (...) {}
-    try { m_FCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) {}
+    try { m_NumOfCH = std::stoi(getParameter("NumOfCH").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfCH', using default value."); }
+    try { m_TStep   = std::stod(getParameter("TStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TStep', using default value."); }
+    try { m_FCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FCarrier', using default value."); }
 
     if (m_NumOfCH < 1)
     {

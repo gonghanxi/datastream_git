@@ -33,15 +33,11 @@ bool LogVDet_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_log = std::make_unique<LogVDet>();
     SetDefaultParameters();
-    try {
-        Sensitivity = std::stod(getParameter("Sensitivity").Value);
-        PMin = std::stod(getParameter("PMin").Value);
-        E = std::stod(getParameter("E").Value);
-        Ec = std::stod(getParameter("Ec").Value);
-        RefR = std::stod(getParameter("RefR").Value);
-    } catch (...) {
-
-    }
+    try { Sensitivity = std::stod(getParameter("Sensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sensitivity', using default value."); }
+    try { PMin = std::stod(getParameter("PMin").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PMin', using default value."); }
+    try { E = std::stod(getParameter("E").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'E', using default value."); }
+    try { Ec = std::stod(getParameter("Ec").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Ec', using default value."); }
+    try { RefR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
     SetParameters();
     AddInputPort("input", m_log->input, 1, DataType::ENVELOPE_SIGNAL);
     AddOutputPort("output", m_log->output, 1, DataType::ENVELOPE_SIGNAL);

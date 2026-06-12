@@ -169,8 +169,8 @@ bool BlockAllPole_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_blockSize = std::stoi(getParameter("BlockSize").Value); } catch (...) {}
-	try { m_order = std::stoi(getParameter("Order").Value); } catch (...) {}
+	try { m_blockSize = std::stoi(getParameter("BlockSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
+	try { m_order = std::stoi(getParameter("Order").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Order', using default value."); }
 
 	if (!ValidateParameters()) {
 		return false;

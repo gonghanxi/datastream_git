@@ -122,9 +122,9 @@ bool RADAR_CoIntgr_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_priOrWaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) { }
-    try { m_numOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_priOrWaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_Or_WaveGate', using default value."); }
+    try { m_numOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfPulse', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters(m_priOrWaveGate, m_numOfPulse, m_sampleRate);
 

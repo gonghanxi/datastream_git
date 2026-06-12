@@ -27,15 +27,10 @@ bool RADAR_TargetTrack_Block::Initialize()
     m_radar = std::make_unique<RADAR_TargetTrack>();
     SetDefaultParameters();
 
-    try {
-        PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value);
-        TrackGate = std::stod(getParameter("TrackGate").Value);
-        InitGateStartTime = std::stoi(getParameter("InitGateStartTime").Value);
-        SampleRate = std::stod(getParameter("SampleRate").Value);
-
-    } catch (...) {
-
-    }
+    try { PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_Or_WaveGate', using default value."); }
+    try { TrackGate = std::stod(getParameter("TrackGate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TrackGate', using default value."); }
+    try { InitGateStartTime = std::stoi(getParameter("InitGateStartTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitGateStartTime', using default value."); }
+    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

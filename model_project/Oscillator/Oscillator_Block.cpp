@@ -118,16 +118,16 @@ bool Oscillator_Block::Initialize()
 
     simulator_param = getSimu();
 
-    try { m_frequency = std::stod(getParameter("Frequency").Value); } catch (...) { }
-    try { m_power = std::stod(getParameter("Power").Value); } catch (...) { }
-    try { m_phase = std::stod(getParameter("Phase").Value); } catch (...) { }
-    try { m_randomPhase = ConvertStringToYesOrNo(getParameter("RandomPhase").Value); } catch (...) { }
-    try { m_ndensity = std::stod(getParameter("NDensity").Value); } catch (...) { }
-    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { }
-    try { m_showAdvancedParams = ConvertStringToYesOrNo(getParameter("ShowAdvancedParams").Value); } catch (...) { }
-    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_initialDelay = std::stod(getParameter("InitialDelay").Value); } catch (...) { }
+    try { m_frequency = std::stod(getParameter("Frequency").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Frequency', using default value."); }
+    try { m_power = std::stod(getParameter("Power").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Power', using default value."); }
+    try { m_phase = std::stod(getParameter("Phase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
+    try { m_randomPhase = ConvertStringToYesOrNo(getParameter("RandomPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RandomPhase', using default value."); }
+    try { m_ndensity = std::stod(getParameter("NDensity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NDensity', using default value."); }
+    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
+    try { m_showAdvancedParams = ConvertStringToYesOrNo(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_initialDelay = std::stod(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
 
     SetParameters();
 

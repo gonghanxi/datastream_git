@@ -42,7 +42,7 @@ bool Rotate_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_RotationAngle = std::stod(getParameter("RotationAngle").Value); } catch (...) { }
+    try { m_RotationAngle = std::stod(getParameter("RotationAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RotationAngle', using default value."); }
 
     SetParameters();
 

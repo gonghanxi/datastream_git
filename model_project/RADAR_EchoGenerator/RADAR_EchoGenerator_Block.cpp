@@ -88,14 +88,11 @@ bool RADAR_EchoGenerator_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_radar = std::make_unique<RADAR_EchoGenerator>();
     SetDefaultParameters();
-    try {
-        SampleRate = std::stod(getParameter("SampleRate").Value);
-        SystemLoss = std::stod(getParameter("SystemLoss").Value);
-        IncludePropagationEffect = ConvertStringToSelectedIncludePropagationEffect(getParameter("IncludePropagationEffect").Value);
-        RF_Freq = std::stod(getParameter("RF_Freq").Value);
-        SimulationSampleNum = std::stod(getParameter("SimulationSampleNum").Value);
-    } catch (...) {
-    }
+    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { SystemLoss = std::stod(getParameter("SystemLoss").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SystemLoss', using default value."); }
+    try { IncludePropagationEffect = ConvertStringToSelectedIncludePropagationEffect(getParameter("IncludePropagationEffect").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IncludePropagationEffect', using default value."); }
+    try { RF_Freq = std::stod(getParameter("RF_Freq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RF_Freq', using default value."); }
+    try { SimulationSampleNum = std::stod(getParameter("SimulationSampleNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SimulationSampleNum', using default value."); }
     SetParameters();
 
     AddInputPort("inSignal", m_radar->inSignal, 1, DataType::ENVELOPE_BUS);

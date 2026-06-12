@@ -24,8 +24,8 @@ bool AverageCx_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Average = std::make_unique<AverageCx>();
     SetDefaultParameters();
-    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch(...) {}
-    try { m_BlockSize = std::stoi(getParameter("BlockSize").Value); } catch(...) {}
+    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'NumInputsToAverage', using default value."); }
+    try { m_BlockSize = std::stoi(getParameter("BlockSize").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
     SetParameters();
     if(!m_Average->Setup()) return false;
     AddInputPort("input", m_Average->input, static_cast<size_t>(m_NumInputsToAverage * m_BlockSize), DataType::CIRCULAR_BUFFER_DCOMPLEX);

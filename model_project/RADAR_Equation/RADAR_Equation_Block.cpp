@@ -168,6 +168,7 @@ bool RADAR_Equation_Block::Initialize()
         try {
             outValue = std::stod(getParameter(name).Value);
         } catch (...) {
+            LOG_WARN("Failed to parse parameter '%s', using default value.", name.c_str());
         }
     };
 
@@ -175,6 +176,7 @@ bool RADAR_Equation_Block::Initialize()
         try {
             outValue = ConvertStringToSelectedEqType(getParameter(name).Value);
         } catch (...) {
+            LOG_WARN("Failed to parse parameter '%s', using default value.", name.c_str());
         }
     };
 
@@ -182,6 +184,7 @@ bool RADAR_Equation_Block::Initialize()
         try {
             outValue = ConvertStringToSelectedOutputType(getParameter(name).Value);
         } catch (...) {
+            LOG_WARN("Failed to parse parameter '%s', using default value.", name.c_str());
         }
     };
 
@@ -189,6 +192,7 @@ bool RADAR_Equation_Block::Initialize()
         try {
             outValue = ConvertStringToSelectedAntennaType(getParameter(name).Value);
         } catch (...) {
+            LOG_WARN("Failed to parse parameter '%s', using default value.", name.c_str());
         }
     };
 
@@ -196,6 +200,7 @@ bool RADAR_Equation_Block::Initialize()
         try {
             outValue = ConvertStringToSelectedIntegrationType(getParameter(name).Value);
         } catch (...) {
+            LOG_WARN("Failed to parse parameter '%s', using default value.", name.c_str());
         }
     };
 

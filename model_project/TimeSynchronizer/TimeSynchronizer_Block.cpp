@@ -59,7 +59,7 @@ bool TimeSynchronizer_Block::Initialize()
     SetDefaultParameters();
 
     // 读取参数
-    try { m_Mode = ConvertStringToModeEnum(getParameter("Mode").Value); } catch (...) { }
+    try { m_Mode = ConvertStringToModeEnum(getParameter("Mode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Mode', using default value."); }
 
     SetParameters();
 

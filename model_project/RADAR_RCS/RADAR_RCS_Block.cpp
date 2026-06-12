@@ -96,11 +96,11 @@ bool RADAR_RCS_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_type = ConvertStringToType(getParameter("Type").Value); } catch (...) { }
-    try { m_va = std::stod(getParameter("VA").Value); } catch (...) { }
-    try { m_vb = std::stod(getParameter("VB").Value); } catch (...) { }
-    try { m_tStep = std::stod(getParameter("TStep").Value); } catch (...) { }
-    try { m_durationTime = std::stod(getParameter("DurationTime").Value); } catch (...) { }
+    try { m_type = ConvertStringToType(getParameter("Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Type', using default value."); }
+    try { m_va = std::stod(getParameter("VA").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VA', using default value."); }
+    try { m_vb = std::stod(getParameter("VB").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VB', using default value."); }
+    try { m_tStep = std::stod(getParameter("TStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TStep', using default value."); }
+    try { m_durationTime = std::stod(getParameter("DurationTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DurationTime', using default value."); }
 
     SetParameters();
 

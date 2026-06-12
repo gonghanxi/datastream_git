@@ -163,14 +163,10 @@ bool PAM_Demapper_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_pam = std::make_unique<PAM_Demapper>();
     SetDefaultParameters();
-    try {
-        NumBits = std::stoi(getParameter("NumBits").Value);
-        BitOrder = ConvertStringToBitOrderE(getParameter("BitOrder").Value);
-        HighLevel = std::stod(getParameter("HighLevel").Value);
-        LowLevel = std::stod(getParameter("LowLevel").Value);
-    } catch (...) {
-
-    }
+    try { NumBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { BitOrder = ConvertStringToBitOrderE(getParameter("BitOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
+    try { HighLevel = std::stod(getParameter("HighLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'HighLevel', using default value."); }
+    try { LowLevel = std::stod(getParameter("LowLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LowLevel', using default value."); }
     SetParameters();
     m_pam->update_cache();
 

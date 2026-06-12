@@ -37,7 +37,7 @@ bool ModuloInt_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_moduloValue = std::stoi(getParameter("moduloValue").Value); } catch (...) { }
+    try { m_moduloValue = std::stoi(getParameter("moduloValue").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'moduloValue', using default value."); }
 
     SetParameters();
 

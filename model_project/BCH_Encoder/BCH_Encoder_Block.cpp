@@ -28,12 +28,10 @@ bool BCH_Encoder_Block::Initialize()
     try {
         std::string genString = getParameter("GenPoly").Value;
         parseArrayString(genString, gendata);
-
-        M = std::stoi(getParameter("M").Value);
-        K = std::stoi(getParameter("K").Value);
-        MsgLength = std::stoi(getParameter("MsgLength").Value);
-
-    } catch(...) {}
+    } catch(...) { LOG_WARN("Failed to parse parameter 'GenPoly', using default value."); }
+    try { M = std::stoi(getParameter("M").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'M', using default value."); }
+    try { K = std::stoi(getParameter("K").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'K', using default value."); }
+    try { MsgLength = std::stoi(getParameter("MsgLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'MsgLength', using default value."); }
 
     SetParameters();
 

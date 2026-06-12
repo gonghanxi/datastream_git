@@ -18,7 +18,7 @@ bool VarDelayEnv_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_VarDelay = std::make_unique<VarDelayEnv>();
     SetDefaultParameters();
-    try { MaxDelay = std::stoi(getParameter("MaxDelay").Value); } catch(...) {}
+    try { MaxDelay = std::stoi(getParameter("MaxDelay").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'MaxDelay', using default value."); }
     SetParameters();
     AddInputPort("input", m_VarDelay->input, 1, DataType::ENVELOPE_SIGNAL);
     AddInputPort("control", m_VarDelay->control, 1, DataType::CIRCULAR_BUFFER_INT);

@@ -247,9 +247,9 @@ bool RADAR_MultiCH_Rx_Block::Initialize()
 
     // 解析参数
     SetDefaultParameters();
-    try { m_RefFreq  = std::stod(getParameter("RefFreq").Value); } catch (...) {}
-    try { m_NDensity = std::stod(getParameter("NDensity").Value); } catch (...) {}
-    try { m_NumOfCh  = std::stoi(getParameter("NumOfCh").Value); } catch (...) {}
+    try { m_RefFreq  = std::stod(getParameter("RefFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefFreq', using default value."); }
+    try { m_NDensity = std::stod(getParameter("NDensity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NDensity', using default value."); }
+    try { m_NumOfCh  = std::stoi(getParameter("NumOfCh").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfCh', using default value."); }
 
     if (m_NumOfCh < 1)
     {

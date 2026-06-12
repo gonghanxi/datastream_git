@@ -34,7 +34,7 @@ bool Dirichlet_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_N = std::stod(getParameter("N").Value); } catch (...) { }
+    try { m_N = std::stod(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
 
     SetParameters();
 

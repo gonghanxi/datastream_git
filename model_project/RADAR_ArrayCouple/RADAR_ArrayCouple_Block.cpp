@@ -155,8 +155,8 @@ bool RADAR_ArrayCouple_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_ChannelNum = std::stoi(getParameter("ChannelNum").Value); } catch (...) {}
-    try { m_CoupleCoef = ParseStringToMatrix<std::complex<double>>(getParameter("CoupleCoef").Value); } catch (...) {}
+    try { m_ChannelNum = std::stoi(getParameter("ChannelNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ChannelNum', using default value."); }
+    try { m_CoupleCoef = ParseStringToMatrix<std::complex<double>>(getParameter("CoupleCoef").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CoupleCoef', using default value."); }
 
     // 参数校验（移植自 RADAR_ArrayCouple::Setup）
     if (m_CoupleCoef.NumColumns() != m_ChannelNum || m_CoupleCoef.NumRows() != m_ChannelNum) {

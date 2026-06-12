@@ -98,8 +98,8 @@ bool Delay_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_n = std::stoi(getParameter("N").Value); } catch (...) {}
-	try { m_outputTiming = ConvertStringToOutputTimingEnum(getParameter("OutputTiming").Value); } catch (...) {}
+	try { m_n = std::stoi(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
+	try { m_outputTiming = ConvertStringToOutputTimingEnum(getParameter("OutputTiming").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputTiming', using default value."); }
 
 	SetParameters(m_n, m_outputTiming);
 	ResetState();

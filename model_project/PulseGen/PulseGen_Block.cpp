@@ -57,17 +57,17 @@ bool PulseGen_Block::Initialize()
     SetDefaultParameters();
 
     // 从参数系统获取参数值
-    try { m_LoLevel = std::stod(getParameter("LoLevel").Value); } catch (...) { }
-    try { m_HiLevel = std::stod(getParameter("HiLevel").Value); } catch (...) { }
-    try { m_Period = std::stod(getParameter("Period").Value); } catch (...) { }
-    try { m_Phase = std::stod(getParameter("Phase").Value); } catch (...) { }
-    try { m_PulseWidth = std::stod(getParameter("PulseWidth").Value); } catch (...) { }
-    try { m_EdgeTime = std::stod(getParameter("EdgeTime").Value); } catch (...) { }
-    try { m_RisingEdgeTime = std::stod(getParameter("RisingEdgeTime").Value); } catch (...) { }
-    try { m_FallingEdgeTime = std::stod(getParameter("FallingEdgeTime").Value); } catch (...) { }
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_EdgeSymmetry = ConvertStringToEdgeSymmetrys(getParameter("EdgeSymmetry").Value); } catch (...) { }
-    try { m_Polarity = ConvertStringToPolaritys(getParameter("Polarity").Value); } catch (...) { }
+    try { m_LoLevel = std::stod(getParameter("LoLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LoLevel', using default value."); }
+    try { m_HiLevel = std::stod(getParameter("HiLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'HiLevel', using default value."); }
+    try { m_Period = std::stod(getParameter("Period").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Period', using default value."); }
+    try { m_Phase = std::stod(getParameter("Phase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
+    try { m_PulseWidth = std::stod(getParameter("PulseWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PulseWidth', using default value."); }
+    try { m_EdgeTime = std::stod(getParameter("EdgeTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'EdgeTime', using default value."); }
+    try { m_RisingEdgeTime = std::stod(getParameter("RisingEdgeTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RisingEdgeTime', using default value."); }
+    try { m_FallingEdgeTime = std::stod(getParameter("FallingEdgeTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FallingEdgeTime', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_EdgeSymmetry = ConvertStringToEdgeSymmetrys(getParameter("EdgeSymmetry").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'EdgeSymmetry', using default value."); }
+    try { m_Polarity = ConvertStringToPolaritys(getParameter("Polarity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Polarity', using default value."); }
 
     SetParameters();
 

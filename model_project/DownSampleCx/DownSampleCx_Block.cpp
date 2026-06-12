@@ -47,8 +47,8 @@ bool DownSampleCx_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_factor = std::stoi(getParameter("Factor").Value); } catch (...) { }
-	try { m_phase = std::stoi(getParameter("Phase").Value); } catch (...) { }
+	try { m_factor = std::stoi(getParameter("Factor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor', using default value."); }
+	try { m_phase = std::stoi(getParameter("Phase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
 
 	SetParameters();
 

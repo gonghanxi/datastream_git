@@ -90,9 +90,9 @@ bool PackBus_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_NumRows = std::stoi(getParameter("NumRows").Value); } catch (...) {}
-    try { m_NumCols = std::stoi(getParameter("NumCols").Value); } catch (...) {}
-    try { m_Format = ConvertStringToFormat(getParameter("Format").Value); } catch (...) {}
+    try { m_NumRows = std::stoi(getParameter("NumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumRows', using default value."); }
+    try { m_NumCols = std::stoi(getParameter("NumCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumCols', using default value."); }
+    try { m_Format = ConvertStringToFormat(getParameter("Format").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Format', using default value."); }
 
     SetParameters();
 

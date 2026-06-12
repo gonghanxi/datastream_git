@@ -164,45 +164,45 @@ bool AtoD_M_Block::Initialize()
 
 	m_simulator_param = getSimu();
 
-	try { m_NBits               = std::stoi(getParameter("NBits").Value);               } catch (...) {}
-	try { m_VRef                 = std::stod(getParameter("VRef").Value);                } catch (...) {}
-	try { m_OutputDigitalFormat  = ConvertStringToOutputDigitalFormatEnum(getParameter("OutputDigitalFormat").Value); } catch (...) {}
-	try { m_DistortionModel      = ConvertStringToDistortionModelEnum(getParameter("DistortionModel").Value); } catch (...) {}
-	try { m_EnableJitter         = ConvertStringToEnableJitterEnum(getParameter("EnableJitter").Value); } catch (...) {}
-	try { m_RJrms                = std::stod(getParameter("RJrms").Value);               } catch (...) {}
+	try { m_NBits               = std::stoi(getParameter("NBits").Value);               } catch (...) { LOG_WARN("Failed to parse parameter 'NBits', using default value."); }
+	try { m_VRef                 = std::stod(getParameter("VRef").Value);                } catch (...) { LOG_WARN("Failed to parse parameter 'VRef', using default value."); }
+	try { m_OutputDigitalFormat  = ConvertStringToOutputDigitalFormatEnum(getParameter("OutputDigitalFormat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputDigitalFormat', using default value."); }
+	try { m_DistortionModel      = ConvertStringToDistortionModelEnum(getParameter("DistortionModel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DistortionModel', using default value."); }
+	try { m_EnableJitter         = ConvertStringToEnableJitterEnum(getParameter("EnableJitter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'EnableJitter', using default value."); }
+	try { m_RJrms                = std::stod(getParameter("RJrms").Value);               } catch (...) { LOG_WARN("Failed to parse parameter 'RJrms', using default value."); }
 	try {
 		std::string PrimString = getParameter("PhaseNoiseData").Value;
 		parseArrayString(PrimString, m_PhaseNoiseVector);
-	} catch (...) {}
-	try { m_PN_Type              = ConvertStringToPN_TypeEnum(getParameter("PN_Type").Value); } catch (...) {}
+	} catch (...) { LOG_WARN("Failed to parse parameter 'PhaseNoiseData', using default value."); }
+	try { m_PN_Type              = ConvertStringToPN_TypeEnum(getParameter("PN_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PN_Type', using default value."); }
 
-	try { m_INL  = std::stod(getParameter("INL").Value);  } catch (...) {}
-	try { m_DNL  = std::stod(getParameter("DNL").Value);  } catch (...) {}
+	try { m_INL  = std::stod(getParameter("INL").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'INL', using default value."); }
+	try { m_DNL  = std::stod(getParameter("DNL").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'DNL', using default value."); }
 
-	try { m_ENOB    = std::stoi(getParameter("ENOB").Value);    } catch (...) {}
-	try { m_SNR_dB  = std::stod(getParameter("SNR_dB").Value);  } catch (...) {}
-	try { m_H2_dBc  = std::stod(getParameter("H2_dBc").Value);  } catch (...) {}
-	try { m_H3_dBc  = std::stod(getParameter("H3_dBc").Value);  } catch (...) {}
-	try { m_H4_dBc  = std::stod(getParameter("H4_dBc").Value);  } catch (...) {}
-	try { m_H5_dBc  = std::stod(getParameter("H5_dBc").Value);  } catch (...) {}
+	try { m_ENOB    = std::stoi(getParameter("ENOB").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'ENOB', using default value."); }
+	try { m_SNR_dB  = std::stod(getParameter("SNR_dB").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'SNR_dB', using default value."); }
+	try { m_H2_dBc  = std::stod(getParameter("H2_dBc").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'H2_dBc', using default value."); }
+	try { m_H3_dBc  = std::stod(getParameter("H3_dBc").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'H3_dBc', using default value."); }
+	try { m_H4_dBc  = std::stod(getParameter("H4_dBc").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'H4_dBc', using default value."); }
+	try { m_H5_dBc  = std::stod(getParameter("H5_dBc").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'H5_dBc', using default value."); }
 
-	try { m_SINAD_dB = std::stod(getParameter("SINAD_dB").Value); } catch (...) {}
-	try { m_SFDR_dBc = std::stod(getParameter("SFDR_dBc").Value); } catch (...) {}
-	try { m_FFT_Size = ConvertStringToFFT_SizeEnum(getParameter("FFT_Size").Value); } catch (...) {}
+	try { m_SINAD_dB = std::stod(getParameter("SINAD_dB").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SINAD_dB', using default value."); }
+	try { m_SFDR_dBc = std::stod(getParameter("SFDR_dBc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SFDR_dBc', using default value."); }
+	try { m_FFT_Size = ConvertStringToFFT_SizeEnum(getParameter("FFT_Size").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FFT_Size', using default value."); }
 
-	try { m_SNR_Model             = ConvertStringToSNR_ModelEnum(getParameter("SNR_Model").Value); } catch (...) {}
-	try { m_ThermalNoise_SNR_dBFS = std::stoi(getParameter("ThermalNoise_SNR_dBFS").Value); } catch (...) {}
-	try { m_CenterFreq  = std::stod(getParameter("CenterFreq").Value);  } catch (...) {}
-	try { m_Level_dBFS  = std::stod(getParameter("Level_dBFS").Value);  } catch (...) {}
+	try { m_SNR_Model             = ConvertStringToSNR_ModelEnum(getParameter("SNR_Model").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SNR_Model', using default value."); }
+	try { m_ThermalNoise_SNR_dBFS = std::stoi(getParameter("ThermalNoise_SNR_dBFS").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ThermalNoise_SNR_dBFS', using default value."); }
+	try { m_CenterFreq  = std::stod(getParameter("CenterFreq").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'CenterFreq', using default value."); }
+	try { m_Level_dBFS  = std::stod(getParameter("Level_dBFS").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'Level_dBFS', using default value."); }
 
-	try { m_ConversionType    = ConvertStringToConversionTypeEnum(getParameter("ConversionType").Value); } catch (...) {}
-	try { m_Clock   = std::stod(getParameter("Clock").Value);   } catch (...) {}
-	try { m_Phase   = std::stod(getParameter("Phase").Value);   } catch (...) {}
+	try { m_ConversionType    = ConvertStringToConversionTypeEnum(getParameter("ConversionType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ConversionType', using default value."); }
+	try { m_Clock   = std::stod(getParameter("Clock").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'Clock', using default value."); }
+	try { m_Phase   = std::stod(getParameter("Phase").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
 
-	try { m_DownsampleFactor   = std::stoi(getParameter("DownsampleFactor").Value);   } catch (...) {}
-	try { m_DownsamplePhase    = std::stoi(getParameter("DownsamplePhase").Value);    } catch (...) {}
-	try { m_AntiAliasingFilter = ConvertStringToAntiAliasingFilterEnum(getParameter("AntiAliasingFilter").Value); } catch (...) {}
-	try { m_ExcessBW = std::stod(getParameter("ExcessBW").Value); } catch (...) {}
+	try { m_DownsampleFactor   = std::stoi(getParameter("DownsampleFactor").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'DownsampleFactor', using default value."); }
+	try { m_DownsamplePhase    = std::stoi(getParameter("DownsamplePhase").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'DownsamplePhase', using default value."); }
+	try { m_AntiAliasingFilter = ConvertStringToAntiAliasingFilterEnum(getParameter("AntiAliasingFilter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntiAliasingFilter', using default value."); }
+	try { m_ExcessBW = std::stod(getParameter("ExcessBW").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ExcessBW', using default value."); }
 
 	SetParameters();
 

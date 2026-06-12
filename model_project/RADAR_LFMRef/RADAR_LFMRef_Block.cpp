@@ -216,11 +216,11 @@ bool RADAR_LFMRef_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Pulsewidth = std::stod(getParameter("Pulsewidth").Value); } catch (...) {}
-    try { m_Bandwidth  = std::stod(getParameter("Bandwidth").Value);  } catch (...) {}
-    try { m_FM_Offset  = std::stod(getParameter("FM_Offset").Value);  } catch (...) {}
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
-    try { m_FFTSize    = std::stoi(getParameter("FFTSize").Value);    } catch (...) {}
+    try { m_Pulsewidth = std::stod(getParameter("Pulsewidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pulsewidth', using default value."); }
+    try { m_Bandwidth  = std::stod(getParameter("Bandwidth").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { m_FM_Offset  = std::stod(getParameter("FM_Offset").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'FM_Offset', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_FFTSize    = std::stoi(getParameter("FFTSize").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'FFTSize', using default value."); }
 
     SetParameters();
 

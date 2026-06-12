@@ -213,12 +213,12 @@ bool SDomainIIR_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_factor = std::stod(getParameter("Factor").Value); } catch (...) { }
-    try { m_realPoles = ParseVectorDouble(getParameter("RealPoles").Value); } catch (...) { }
-    try { m_complexPoles = ParseVectorDComplex(getParameter("ComplexConjugatePoles").Value); } catch (...) { }
-    try { m_realZeros = ParseVectorDouble(getParameter("RealZeros").Value); } catch (...) { }
-    try { m_freqUnit = ConvertStringToFreqUnit(getParameter("FreqUnit").Value); } catch (...) { }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_factor = std::stod(getParameter("Factor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor', using default value."); }
+    try { m_realPoles = ParseVectorDouble(getParameter("RealPoles").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RealPoles', using default value."); }
+    try { m_complexPoles = ParseVectorDComplex(getParameter("ComplexConjugatePoles").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ComplexConjugatePoles', using default value."); }
+    try { m_realZeros = ParseVectorDouble(getParameter("RealZeros").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RealZeros', using default value."); }
+    try { m_freqUnit = ConvertStringToFreqUnit(getParameter("FreqUnit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FreqUnit', using default value."); }
     SetParameters();
 
     return m_sdomainIIR->Initialize();

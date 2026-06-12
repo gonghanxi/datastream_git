@@ -943,34 +943,34 @@ bool RADAR_CornerReflectorLocation_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Trajectory_Mode = ConvertStringToTrajectoryMode(getParameter("Trajectory_Mode").Value); } catch (...) {}
-    try { m_Motion_Mode     = ConvertStringToMotionMode(getParameter("Motion_Mode").Value);         } catch (...) {}
-    try { m_NumberOfCornerReflector = std::stoi(getParameter("NumberOfCornerReflector").Value);     } catch (...) {}
-    try { m_ReflectorType   = ConvertStringToReflectorType(getParameter("ReflectorType").Value);    } catch (...) {}
-    try { m_RCS_Model       = ConvertStringToRCSModel(getParameter("RCS_Model").Value);             } catch (...) {}
-    try { m_RCS_OutputUnit  = ConvertStringToRCSOutputUnit(getParameter("RCS_OutputUnit").Value);   } catch (...) {}
-    try { m_FileName        = getParameter("FileName").Value; } catch (...) {}
+    try { m_Trajectory_Mode = ConvertStringToTrajectoryMode(getParameter("Trajectory_Mode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Trajectory_Mode', using default value."); }
+    try { m_Motion_Mode     = ConvertStringToMotionMode(getParameter("Motion_Mode").Value);         } catch (...) { LOG_WARN("Failed to parse parameter 'Motion_Mode', using default value."); }
+    try { m_NumberOfCornerReflector = std::stoi(getParameter("NumberOfCornerReflector").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'NumberOfCornerReflector', using default value."); }
+    try { m_ReflectorType   = ConvertStringToReflectorType(getParameter("ReflectorType").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'ReflectorType', using default value."); }
+    try { m_RCS_Model       = ConvertStringToRCSModel(getParameter("RCS_Model").Value);             } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_Model', using default value."); }
+    try { m_RCS_OutputUnit  = ConvertStringToRCSOutputUnit(getParameter("RCS_OutputUnit").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_OutputUnit', using default value."); }
+    try { m_FileName        = getParameter("FileName").Value; } catch (...) { LOG_WARN("Failed to parse parameter 'FileName', using default value."); }
 
-    try { m_CornerLocData            = ParseStringToDoubleVector(getParameter("CornerLoc").Value);            } catch (...) {}
-    try { m_EdgeLengthData           = ParseStringToDoubleVector(getParameter("EdgeLength").Value);           } catch (...) {}
-    try { m_EfficiencyData           = ParseStringToDoubleVector(getParameter("Efficiency").Value);           } catch (...) {}
-    try { m_CornerRollOffsetData     = ParseStringToDoubleVector(getParameter("CornerRollOffset").Value);     } catch (...) {}
-    try { m_CornerPitchOffsetData    = ParseStringToDoubleVector(getParameter("CornerPitchOffset").Value);    } catch (...) {}
-    try { m_CornerYawOffsetData      = ParseStringToDoubleVector(getParameter("CornerYawOffset").Value);      } catch (...) {}
-    try { m_PhaseCenterOffsetData    = ParseStringToDoubleVector(getParameter("PhaseCenterOffset").Value);    } catch (...) {}
-    try { m_Radar_Position_XYZData   = ParseStringToDoubleVector(getParameter("Radar_Position_XYZ").Value);   } catch (...) {}
-    try { m_Position_InitialData     = ParseStringToDoubleVector(getParameter("Position_Initial").Value);     } catch (...) {}
-    try { m_Position_Initial_XYZData = ParseStringToDoubleVector(getParameter("Position_Initial_XYZ").Value); } catch (...) {}
-    try { m_Velocity_Initial_XYZData = ParseStringToDoubleVector(getParameter("Velocity_Initial_XYZ").Value); } catch (...) {}
-    try { m_Accelerate_XYZData       = ParseStringToDoubleVector(getParameter("Accelerate_XYZ").Value);       } catch (...) {}
-    try { m_Jerk_XYZData             = ParseStringToDoubleVector(getParameter("Jerk_XYZ").Value);             } catch (...) {}
+    try { m_CornerLocData            = ParseStringToDoubleVector(getParameter("CornerLoc").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'CornerLoc', using default value."); }
+    try { m_EdgeLengthData           = ParseStringToDoubleVector(getParameter("EdgeLength").Value);           } catch (...) { LOG_WARN("Failed to parse parameter 'EdgeLength', using default value."); }
+    try { m_EfficiencyData           = ParseStringToDoubleVector(getParameter("Efficiency").Value);           } catch (...) { LOG_WARN("Failed to parse parameter 'Efficiency', using default value."); }
+    try { m_CornerRollOffsetData     = ParseStringToDoubleVector(getParameter("CornerRollOffset").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'CornerRollOffset', using default value."); }
+    try { m_CornerPitchOffsetData    = ParseStringToDoubleVector(getParameter("CornerPitchOffset").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'CornerPitchOffset', using default value."); }
+    try { m_CornerYawOffsetData      = ParseStringToDoubleVector(getParameter("CornerYawOffset").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'CornerYawOffset', using default value."); }
+    try { m_PhaseCenterOffsetData    = ParseStringToDoubleVector(getParameter("PhaseCenterOffset").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseCenterOffset', using default value."); }
+    try { m_Radar_Position_XYZData   = ParseStringToDoubleVector(getParameter("Radar_Position_XYZ").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'Radar_Position_XYZ', using default value."); }
+    try { m_Position_InitialData     = ParseStringToDoubleVector(getParameter("Position_Initial").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Position_Initial', using default value."); }
+    try { m_Position_Initial_XYZData = ParseStringToDoubleVector(getParameter("Position_Initial_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Position_Initial_XYZ', using default value."); }
+    try { m_Velocity_Initial_XYZData = ParseStringToDoubleVector(getParameter("Velocity_Initial_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Velocity_Initial_XYZ', using default value."); }
+    try { m_Accelerate_XYZData       = ParseStringToDoubleVector(getParameter("Accelerate_XYZ").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'Accelerate_XYZ', using default value."); }
+    try { m_Jerk_XYZData             = ParseStringToDoubleVector(getParameter("Jerk_XYZ").Value);             } catch (...) { LOG_WARN("Failed to parse parameter 'Jerk_XYZ', using default value."); }
 
-    try { m_CarrierFreq        = std::stod(getParameter("CarrierFreq").Value);         } catch (...) {}
-    try { m_BoresightHalfAngle = std::stod(getParameter("BoresightHalfAngle").Value);  } catch (...) {}
-    try { m_RCS_Floor          = std::stod(getParameter("RCS_Floor").Value);           } catch (...) {}
-    try { m_Velocity_Initial   = std::stod(getParameter("Velocity_Initial").Value);    } catch (...) {}
-    try { m_Accelerate_Initial = std::stod(getParameter("Accelerate_Initial").Value);  } catch (...) {}
-    try { m_TimeStep           = std::stod(getParameter("TimeStep").Value);            } catch (...) {}
+    try { m_CarrierFreq        = std::stod(getParameter("CarrierFreq").Value);         } catch (...) { LOG_WARN("Failed to parse parameter 'CarrierFreq', using default value."); }
+    try { m_BoresightHalfAngle = std::stod(getParameter("BoresightHalfAngle").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'BoresightHalfAngle', using default value."); }
+    try { m_RCS_Floor          = std::stod(getParameter("RCS_Floor").Value);           } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_Floor', using default value."); }
+    try { m_Velocity_Initial   = std::stod(getParameter("Velocity_Initial").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'Velocity_Initial', using default value."); }
+    try { m_Accelerate_Initial = std::stod(getParameter("Accelerate_Initial").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'Accelerate_Initial', using default value."); }
+    try { m_TimeStep           = std::stod(getParameter("TimeStep").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'TimeStep', using default value."); }
 
     SetAlgoParameters();
 

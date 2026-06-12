@@ -213,18 +213,18 @@ bool Mixer_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_convGain = std::stod(getParameter("ConvGain").Value); } catch (...) { }
-    try { m_enableNoise = ConvertStringToEnableNoise(getParameter("EnableNoise").Value); } catch (...) { }
-    try { m_noiseFigure = std::stod(getParameter("NoiseFigure").Value); } catch (...) { }
-    try { m_sideband = ConvertStringToSideband(getParameter("Sideband").Value); } catch (...) { }
-    try { m_sidebandSuppression = std::stod(getParameter("SidebandSuppression").Value); } catch (...) { }
-    try { m_rfRej = std::stod(getParameter("RfRej").Value); } catch (...) { }
-    try { m_loRej = std::stod(getParameter("LoRej").Value); } catch (...) { }
-    try { m_loRfIso = std::stod(getParameter("LoRfIso").Value); } catch (...) { }
-    try { m_rfLoIso = std::stod(getParameter("RfLoIso").Value); } catch (...) { }
-    try { m_soiOut = std::stod(getParameter("SOIout").Value); } catch (...) { }
-    try { m_toiOut = std::stod(getParameter("TOIout").Value); } catch (...) { }
-    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { }
+    try { m_convGain = std::stod(getParameter("ConvGain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ConvGain', using default value."); }
+    try { m_enableNoise = ConvertStringToEnableNoise(getParameter("EnableNoise").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'EnableNoise', using default value."); }
+    try { m_noiseFigure = std::stod(getParameter("NoiseFigure").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NoiseFigure', using default value."); }
+    try { m_sideband = ConvertStringToSideband(getParameter("Sideband").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sideband', using default value."); }
+    try { m_sidebandSuppression = std::stod(getParameter("SidebandSuppression").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SidebandSuppression', using default value."); }
+    try { m_rfRej = std::stod(getParameter("RfRej").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RfRej', using default value."); }
+    try { m_loRej = std::stod(getParameter("LoRej").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LoRej', using default value."); }
+    try { m_loRfIso = std::stod(getParameter("LoRfIso").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LoRfIso', using default value."); }
+    try { m_rfLoIso = std::stod(getParameter("RfLoIso").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RfLoIso', using default value."); }
+    try { m_soiOut = std::stod(getParameter("SOIout").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SOIout', using default value."); }
+    try { m_toiOut = std::stod(getParameter("TOIout").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TOIout', using default value."); }
+    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
 
     SetParameters();
     return true;

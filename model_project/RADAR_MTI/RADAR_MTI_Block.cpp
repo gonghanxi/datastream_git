@@ -185,10 +185,10 @@ bool RADAR_MTI_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_numOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { }
-    try { m_mtiType = ConvertStringToMTIType(getParameter("MTI_Type").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_numOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfPulse', using default value."); }
+    try { m_mtiType = ConvertStringToMTIType(getParameter("MTI_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MTI_Type', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters(m_pri, m_sampleRate, m_numOfPulse, m_mtiType);
 

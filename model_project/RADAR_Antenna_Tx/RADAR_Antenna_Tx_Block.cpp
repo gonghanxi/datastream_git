@@ -173,29 +173,29 @@ bool RADAR_Antenna_Tx_Block::Initialize()
     m_ant = std::make_unique<RADAR_Antenna_Tx>();
     SetDefaultParamters();
 
-    try { m_RadarWorkMode = ConvertStringToRadarWorkMode(getParameter("RadarWorkMode").Value); } catch (...) {}
-    try { m_Pattern = ConvertStringToPattern(getParameter("Pattern").Value); } catch (...) {}
-    try { m_Factor1 = std::stod(getParameter("Factor1").Value); } catch (...) {}
-    try { m_Factor2 = std::stod(getParameter("Factor2").Value); } catch (...) {}
+    try { m_RadarWorkMode = ConvertStringToRadarWorkMode(getParameter("RadarWorkMode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RadarWorkMode', using default value."); }
+    try { m_Pattern = ConvertStringToPattern(getParameter("Pattern").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pattern', using default value."); }
+    try { m_Factor1 = std::stod(getParameter("Factor1").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor1', using default value."); }
+    try { m_Factor2 = std::stod(getParameter("Factor2").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor2', using default value."); }
     try {
         std::string PrimString = getParameter("AntennaPatternArray").Value;
         parseArrayString(PrimString, primdata);
-    } catch(...) {}
-    try { m_Sidelobe_Levels = std::stod(getParameter("Sidelobe_Levels").Value); } catch (...) {}
-    try { m_nBar = std::stoi(getParameter("nBar").Value); } catch (...) {}
-    try { m_AntennaHeight = std::stod(getParameter("AntennaHeight").Value); } catch (...) {}
-    try { m_AntennaWidth = std::stod(getParameter("AntennaWidth").Value); } catch (...) {}
-    try { m_AntennaScanPattern = ConvertStringToAntennaScanPattern(getParameter("AntennaScanPattern").Value); } catch (...) {}
-    try { m_ScanRate = std::stod(getParameter("ScanRate").Value); } catch (...) {}
-    try { m_ElevationAngle = std::stod(getParameter("ElevationAngle").Value); } catch (...) {}
-    try { m_SectorScanStartAngle = std::stod(getParameter("SectorScanStartAngle").Value); } catch (...) {}
-    try { m_SectorScanEndAngle = std::stod(getParameter("SectorScanEndAngle").Value); } catch (...) {}
-    try { m_FlybackTime = std::stod(getParameter("FlybackTime").Value); } catch (...) {}
-    try { m_RetraceTime = std::stod(getParameter("RetraceTime").Value); } catch (...) {}
-    try { m_NumberOfRasterBars = std::stoi(getParameter("NumberOfRasterBars").Value); } catch (...) {}
-    try { m_RasterBarWidth = std::stod(getParameter("RasterBarWidth").Value); } catch (...) {}
-    try { m_BeamAzimuthAngle = std::stod(getParameter("BeamAzimuthAngle").Value); } catch (...) {}
-    try { m_BeamElevationAngle = std::stod(getParameter("BeamElevationAngle").Value); } catch (...) {}
+    } catch(...) { LOG_WARN("Failed to parse parameter 'AntennaPatternArray', using default value."); }
+    try { m_Sidelobe_Levels = std::stod(getParameter("Sidelobe_Levels").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sidelobe_Levels', using default value."); }
+    try { m_nBar = std::stoi(getParameter("nBar").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'nBar', using default value."); }
+    try { m_AntennaHeight = std::stod(getParameter("AntennaHeight").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntennaHeight', using default value."); }
+    try { m_AntennaWidth = std::stod(getParameter("AntennaWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntennaWidth', using default value."); }
+    try { m_AntennaScanPattern = ConvertStringToAntennaScanPattern(getParameter("AntennaScanPattern").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntennaScanPattern', using default value."); }
+    try { m_ScanRate = std::stod(getParameter("ScanRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ScanRate', using default value."); }
+    try { m_ElevationAngle = std::stod(getParameter("ElevationAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ElevationAngle', using default value."); }
+    try { m_SectorScanStartAngle = std::stod(getParameter("SectorScanStartAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SectorScanStartAngle', using default value."); }
+    try { m_SectorScanEndAngle = std::stod(getParameter("SectorScanEndAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SectorScanEndAngle', using default value."); }
+    try { m_FlybackTime = std::stod(getParameter("FlybackTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FlybackTime', using default value."); }
+    try { m_RetraceTime = std::stod(getParameter("RetraceTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RetraceTime', using default value."); }
+    try { m_NumberOfRasterBars = std::stoi(getParameter("NumberOfRasterBars").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumberOfRasterBars', using default value."); }
+    try { m_RasterBarWidth = std::stod(getParameter("RasterBarWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RasterBarWidth', using default value."); }
+    try { m_BeamAzimuthAngle = std::stod(getParameter("BeamAzimuthAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BeamAzimuthAngle', using default value."); }
+    try { m_BeamElevationAngle = std::stod(getParameter("BeamElevationAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BeamElevationAngle', using default value."); }
 
     SetParameters();
 

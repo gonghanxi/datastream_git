@@ -88,12 +88,12 @@ bool RADAR_NLFM_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_pulsewidth = std::stod(getParameter("Pulsewidth").Value); } catch (...) { }
-    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_nlfType = ConvertStringToNLFType(getParameter("NLF_Type").Value); } catch (...) { }
-    try { m_polyCoef = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("Polynomial_Coef").Value); } catch (...) { }
+    try { m_pulsewidth = std::stod(getParameter("Pulsewidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pulsewidth', using default value."); }
+    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_nlfType = ConvertStringToNLFType(getParameter("NLF_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NLF_Type', using default value."); }
+    try { m_polyCoef = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("Polynomial_Coef").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Polynomial_Coef', using default value."); }
 
     SetParameters();
 

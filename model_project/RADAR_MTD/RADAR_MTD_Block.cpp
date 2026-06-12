@@ -420,10 +420,10 @@ bool RADAR_MTD_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
 
     // 从参数系统获取参数值
-    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_NumOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { }
-    try { m_WindowType = ConvertStringToSelectedWindowType(getParameter("WindowType").Value); } catch (...) { }
+    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_NumOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfPulse', using default value."); }
+    try { m_WindowType = ConvertStringToSelectedWindowType(getParameter("WindowType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
 
     // 解析数组参数：频率权重
     try {

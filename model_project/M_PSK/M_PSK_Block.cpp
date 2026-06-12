@@ -122,8 +122,8 @@ bool M_PSK_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_modType = ConvertStringToModType(getParameter("ModType").Value); } catch(...) {}
-    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch(...) {}
+    try { m_modType = ConvertStringToModType(getParameter("ModType").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ModType', using default value."); }
+    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
 
     SetParameters();
 

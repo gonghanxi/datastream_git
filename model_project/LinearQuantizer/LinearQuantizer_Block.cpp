@@ -101,9 +101,9 @@ bool LinearQuantizer_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_levels = std::stoi(getParameter("Levels").Value); } catch (...) { }
-    try { m_low = std::stod(getParameter("Low").Value); } catch (...) { }
-    try { m_high = std::stod(getParameter("High").Value); } catch (...) { }
+    try { m_levels = std::stoi(getParameter("Levels").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Levels', using default value."); }
+    try { m_low = std::stod(getParameter("Low").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Low', using default value."); }
+    try { m_high = std::stod(getParameter("High").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'High', using default value."); }
 
     if (m_levels < 2) {
         std::cout << "LinearQuantizer: Levels must be >= 2." << std::endl;

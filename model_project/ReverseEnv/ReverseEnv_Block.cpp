@@ -97,7 +97,7 @@ bool ReverseEnv_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_n = std::stoi(getParameter("N").Value); } catch (...) { }
+	try { m_n = std::stoi(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
 
 	if (m_n <= 0) {
 		std::cout << "Port rate must be greater than 0." << std::endl;

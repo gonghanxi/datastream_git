@@ -90,17 +90,17 @@ bool RADAR_EWDeceptionJamming_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_SampleNum      = std::stoi(getParameter("SampleNum").Value);              } catch (...) {}
-    try { m_SampleRate     = std::stod(getParameter("SampleRate").Value);             } catch (...) {}
-    try { m_FalseTargetNum = std::stoi(getParameter("FalseTargetNum").Value);         } catch (...) {}
-    try { m_MaxRange       = std::stod(getParameter("MaxRange").Value);               } catch (...) {}
-    try { m_System_Loss    = std::stod(getParameter("System_Loss").Value);            } catch (...) {}
+    try { m_SampleNum      = std::stoi(getParameter("SampleNum").Value);              } catch (...) { LOG_WARN("Failed to parse parameter 'SampleNum', using default value."); }
+    try { m_SampleRate     = std::stod(getParameter("SampleRate").Value);             } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_FalseTargetNum = std::stoi(getParameter("FalseTargetNum").Value);         } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetNum', using default value."); }
+    try { m_MaxRange       = std::stod(getParameter("MaxRange").Value);               } catch (...) { LOG_WARN("Failed to parse parameter 'MaxRange', using default value."); }
+    try { m_System_Loss    = std::stod(getParameter("System_Loss").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'System_Loss', using default value."); }
     try { m_FalseTargetRangeDelay    = ParseStringToMatrix<double>(
-              getParameter("FalseTargetRangeDelay").Value);                           } catch (...) {}
+              getParameter("FalseTargetRangeDelay").Value);                           } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetRangeDelay', using default value."); }
     try { m_FalseTargetDopplerOffset = ParseStringToMatrix<double>(
-              getParameter("FalseTargetDopplerOffset").Value);                       } catch (...) {}
+              getParameter("FalseTargetDopplerOffset").Value);                       } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetDopplerOffset', using default value."); }
     try { m_FalseTargetGain          = ParseStringToMatrix<double>(
-              getParameter("FalseTargetGain").Value);                                } catch (...) {}
+              getParameter("FalseTargetGain").Value);                                } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetGain', using default value."); }
 
     SetParameters();
 

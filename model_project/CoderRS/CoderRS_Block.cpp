@@ -26,14 +26,12 @@ bool CoderRS_Block::Initialize()
     SetDefaultParameters();
 
     try {
-    std::string PrimString = getParameter("PrimPoly").Value;
-    parseArrayString(PrimString, primdata);
-
-    GF = std::stoi(getParameter("GF").Value);
-    CodeLength = std::stoi(getParameter("CodeLength").Value);
-    MessageLength = std::stoi(getParameter("MessageLength").Value);
-
-    } catch(...) {}
+        std::string PrimString = getParameter("PrimPoly").Value;
+        parseArrayString(PrimString, primdata);
+    } catch(...) { LOG_WARN("Failed to parse parameter 'PrimPoly', using default value."); }
+    try { GF = std::stoi(getParameter("GF").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'GF', using default value."); }
+    try { CodeLength = std::stoi(getParameter("CodeLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'CodeLength', using default value."); }
+    try { MessageLength = std::stoi(getParameter("MessageLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'MessageLength', using default value."); }
 
     SetParameters();
 

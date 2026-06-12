@@ -93,19 +93,19 @@ bool Window_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_windowType = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { }
-    try { m_length = std::stoi(getParameter("Length").Value); } catch (...) { }
-    try { m_zeroPad = std::stoi(getParameter("ZeroPad").Value); } catch (...) { }
-    try { m_kaiserParameter = std::stod(getParameter("KaiserParameter").Value); } catch (...) { }
-    try { m_showAdvancedParams = ConvertStringToShowAdvancedParams(getParameter("ShowAdvancedParams").Value); } catch (...) { }
-    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_windowType = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_length = std::stoi(getParameter("Length").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Length', using default value."); }
+    try { m_zeroPad = std::stoi(getParameter("ZeroPad").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ZeroPad', using default value."); }
+    try { m_kaiserParameter = std::stod(getParameter("KaiserParameter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'KaiserParameter', using default value."); }
+    try { m_showAdvancedParams = ConvertStringToShowAdvancedParams(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
     
     if (m_sampleRate <= 0.0) {
         LOG_ERROR("SampleRate must be greater than 0.");
         return false;
     }
-    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { }
+    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
 
     SetParameters();
 

@@ -37,7 +37,7 @@ bool PolynomialInt_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Polynomial = std::make_unique<PolynomialInt>();
     SetDefaultParameters();
-    try{ Coefficients = ParseStringToMatrix<int>(getParameter("Coefficients").Value); } catch(...) {}
+    try{ Coefficients = ParseStringToMatrix<int>(getParameter("Coefficients").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Coefficients', using default value."); }
     SetParameters();
     AddInputPort("input", m_Polynomial->input, 1, DataType::CIRCULAR_BUFFER_INT);
     AddOutputPort("output", m_Polynomial->output, 1, DataType::CIRCULAR_BUFFER_INT);

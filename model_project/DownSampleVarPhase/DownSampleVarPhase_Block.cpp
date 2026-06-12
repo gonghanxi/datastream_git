@@ -114,7 +114,7 @@ bool DownSampleVarPhase_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Factor = std::stoi(getParameter("Factor").Value); } catch (...) {}
+    try { m_Factor = std::stoi(getParameter("Factor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor', using default value."); }
 
     SetParameters();
 

@@ -94,8 +94,8 @@ bool InterleaveDeinterleaveCx_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { Rows = std::stoi(getParameter("Rows").Value); } catch (...) { }
-    try { Columns = std::stoi(getParameter("Columns").Value); } catch (...) { }
+    try { Rows = std::stoi(getParameter("Rows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Rows', using default value."); }
+    try { Columns = std::stoi(getParameter("Columns").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Columns', using default value."); }
 
 
     SetParameters();

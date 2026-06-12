@@ -28,7 +28,7 @@ bool ConvolveCx_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Convolve = std::make_unique<ConvolveCx>();
     SetDefaultParameters();
-    try { m_TruncationDepth = std::stoi(getParameter("TruncationDepth").Value); } catch (...) {}
+    try { m_TruncationDepth = std::stoi(getParameter("TruncationDepth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TruncationDepth', using default value."); }
     SetParameters();
 
     AddInputPort("inA", m_Convolve->inA, 1, DataType::CIRCULAR_BUFFER_DCOMPLEX);

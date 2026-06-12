@@ -54,11 +54,11 @@ bool FreqMpyDiv_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_multDiv = ConvertStringToMultDivEnum(getParameter("MultDiv").Value); } catch (...) {}
-    try { m_nominalX = std::stod(getParameter("NominalX").Value); } catch (...) {}
-    try { m_maxX = std::stod(getParameter("MaxX").Value); } catch (...) {}
-    try { m_minX = std::stod(getParameter("MinX").Value); } catch (...) {}
-    try { m_operatorType = ConvertStringToOperatorTypeEnum(getParameter("OperatorType").Value); } catch (...) {}
+    try { m_multDiv = ConvertStringToMultDivEnum(getParameter("MultDiv").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MultDiv', using default value."); }
+    try { m_nominalX = std::stod(getParameter("NominalX").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NominalX', using default value."); }
+    try { m_maxX = std::stod(getParameter("MaxX").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MaxX', using default value."); }
+    try { m_minX = std::stod(getParameter("MinX").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MinX', using default value."); }
+    try { m_operatorType = ConvertStringToOperatorTypeEnum(getParameter("OperatorType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OperatorType', using default value."); }
 
     m_freqMpyDiv->input.SetRate(1); // TODO: input not connected; timing setup may be unreliable
     m_freqMpyDiv->input.SetStartTime(getSimu().startTime); // TODO: input not connected; timing setup may be unreliable

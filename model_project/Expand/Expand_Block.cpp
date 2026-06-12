@@ -63,9 +63,9 @@ bool Expand_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Expand = std::make_unique<Expand>();
     SetDefaultParameters();
-    try { m_CompressionType = ConvertStringToSelectedCompressionType(getParameter("CompressionType").Value); } catch (...) {}
-    try { m_CompressionK = std::stod(getParameter("CompressionK").Value); } catch (...) {}
-    try { m_Max = std::stod(getParameter("Max").Value); } catch (...) {}
+    try { m_CompressionType = ConvertStringToSelectedCompressionType(getParameter("CompressionType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CompressionType', using default value."); }
+    try { m_CompressionK = std::stod(getParameter("CompressionK").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CompressionK', using default value."); }
+    try { m_Max = std::stod(getParameter("Max").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Max', using default value."); }
     SetParameters();
     if(!m_Expand->Setup()) return false;
     AddInputPort("input", m_Expand->input, 1, DataType::CIRCULAR_BUFFER_DOUBLE);

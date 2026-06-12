@@ -73,7 +73,7 @@ bool RealToInt_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_convertType = ConvertStringToConvertType(getParameter("ConvertType").Value); } catch (...) {}
+    try { m_convertType = ConvertStringToConvertType(getParameter("ConvertType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ConvertType', using default value."); }
 
     SetParameters();
 

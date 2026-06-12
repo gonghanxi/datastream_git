@@ -84,10 +84,8 @@ bool RADAR_Pf_Measurement_Block::Initialize()
 
      SetDefaultParameters();
 
-     try {
-         Start = std::stoi(getParameter("Start").Value);
-         Stop = std::stoi(getParameter("Stop").Value);;
-     } catch (...) {}
+     try { Start = std::stoi(getParameter("Start").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Start', using default value."); }
+     try { Stop = std::stoi(getParameter("Stop").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Stop', using default value."); }
 
      SetParameters();
 

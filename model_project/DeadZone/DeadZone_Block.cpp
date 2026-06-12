@@ -75,9 +75,9 @@ bool DeadZone_Block::Initialize()
     m_DeadZone = std::make_unique<DeadZone>();
 
     SetDefaultParameters();
-    try { m_K    = std::stod(getParameter("K").Value);    } catch(...) {}
-    try { m_Low  = std::stod(getParameter("Low").Value);  } catch(...) {}
-    try { m_High = std::stod(getParameter("High").Value); } catch(...) {}
+    try { m_K    = std::stod(getParameter("K").Value);    } catch(...) { LOG_WARN("Failed to parse parameter 'K', using default value."); }
+    try { m_Low  = std::stod(getParameter("Low").Value);  } catch(...) { LOG_WARN("Failed to parse parameter 'Low', using default value."); }
+    try { m_High = std::stod(getParameter("High").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'High', using default value."); }
     SetParameters();
 
     if (m_Low >= m_High)

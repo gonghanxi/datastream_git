@@ -225,20 +225,20 @@ bool RADAR_Ground_Clutter_Block::Initialize()
 
     // 解析参数
     SetDefaultParameters();
-    try { m_GroundType      = ConvertStringToGroundType(getParameter("GroundType").Value); } catch (...) {}
-    try { m_Scatter0        = std::stod(getParameter("Scatter0").Value); } catch (...) {}
-    try { m_RF_Freq         = std::stod(getParameter("RF_Freq").Value); } catch (...) {}
-    try { m_AntennaPattern  = ConvertStringToAntennaPattern(getParameter("Antenna_Pattern").Value); } catch (...) {}
-    try { m_GrazingAngle    = std::stod(getParameter("GrazingAngle").Value); } catch (...) {}
-    try { m_BodyRollAngle   = std::stod(getParameter("BodyRollAngle").Value); } catch (...) {}
-    try { m_BodyPitchAngle  = std::stod(getParameter("BodyPitchAngle").Value); } catch (...) {}
-    try { m_BodyYawAngle    = std::stod(getParameter("BodyYawAngle").Value); } catch (...) {}
-    try { m_AntTiltAngle    = std::stod(getParameter("AntTiltAngle").Value); } catch (...) {}
-    try { m_AntYawAngle     = std::stod(getParameter("AntYawAngle").Value); } catch (...) {}
-    try { m_PRF             = std::stod(getParameter("PRF").Value); } catch (...) {}
-    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value); } catch (...) {}
-    try { m_AntennaHeight   = std::stod(getParameter("Antenna_Height").Value); } catch (...) {}
-    try { m_PlatformVelocity = std::stod(getParameter("Platform_Velocity").Value); } catch (...) {}
+    try { m_GroundType      = ConvertStringToGroundType(getParameter("GroundType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GroundType', using default value."); }
+    try { m_Scatter0        = std::stod(getParameter("Scatter0").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Scatter0', using default value."); }
+    try { m_RF_Freq         = std::stod(getParameter("RF_Freq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RF_Freq', using default value."); }
+    try { m_AntennaPattern  = ConvertStringToAntennaPattern(getParameter("Antenna_Pattern").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Antenna_Pattern', using default value."); }
+    try { m_GrazingAngle    = std::stod(getParameter("GrazingAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GrazingAngle', using default value."); }
+    try { m_BodyRollAngle   = std::stod(getParameter("BodyRollAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BodyRollAngle', using default value."); }
+    try { m_BodyPitchAngle  = std::stod(getParameter("BodyPitchAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BodyPitchAngle', using default value."); }
+    try { m_BodyYawAngle    = std::stod(getParameter("BodyYawAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BodyYawAngle', using default value."); }
+    try { m_AntTiltAngle    = std::stod(getParameter("AntTiltAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntTiltAngle', using default value."); }
+    try { m_AntYawAngle     = std::stod(getParameter("AntYawAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntYawAngle', using default value."); }
+    try { m_PRF             = std::stod(getParameter("PRF").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRF', using default value."); }
+    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_AntennaHeight   = std::stod(getParameter("Antenna_Height").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Antenna_Height', using default value."); }
+    try { m_PlatformVelocity = std::stod(getParameter("Platform_Velocity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Platform_Velocity', using default value."); }
 
     if (m_PRF <= 0)
     {

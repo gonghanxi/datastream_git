@@ -66,7 +66,7 @@ bool Reciprocal_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_MagLimit = std::stod(getParameter("MagLimit").Value); } catch (...) { }
+    try { m_MagLimit = std::stod(getParameter("MagLimit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MagLimit', using default value."); }
 
     SetParameters();
 

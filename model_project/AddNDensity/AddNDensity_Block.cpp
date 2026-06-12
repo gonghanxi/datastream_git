@@ -37,12 +37,8 @@ bool AddNDensity_Block::Initialize()
 
     SetDefaultParamters();
 
-    try {
-        NDensity = std::stod(getParameter("NDensity").Value);
-        RefR = std::stod(getParameter("RefR").Value);
-    } catch (...) {
-
-    }
+    try { NDensity = std::stod(getParameter("NDensity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NDensity', using default value."); }
+    try { RefR = std::stod(getParameter("RefR").Value);         } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value.");     }
 
     SetParameters();
 

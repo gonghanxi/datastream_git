@@ -419,16 +419,16 @@ bool RADAR_CFAR_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_CFAR_Type = ConvertStringToCFARType(getParameter("CFAR_Type").Value); } catch (...) {}
-    try { m_CFAR_Dimension = ConvertStringToCFARDimension(getParameter("CFAR_Dimension").Value); } catch (...) {}
-    try { m_CellSize = std::stoi(getParameter("CellSize").Value); } catch (...) {}
-    try { m_ReferenceCell = std::stoi(getParameter("ReferenceCell").Value); } catch (...) {}
-    try { m_GuardCell = std::stoi(getParameter("GuardCell").Value); } catch (...) {}
-    try { m_Detector_Type = ConvertStringToDetectorType(getParameter("Detector_Type").Value); } catch (...) {}
-    try { m_Threshold = ConvertStringToThresholdType(getParameter("Threshold").Value); } catch (...) {}
-    try { m_Pf = std::stod(getParameter("Pf").Value); } catch (...) {}
-    try { m_Alpha = std::stod(getParameter("Alpha").Value); } catch (...) {}
-    try { m_Beta = std::stod(getParameter("Beta").Value); } catch (...) {}
+    try { m_CFAR_Type = ConvertStringToCFARType(getParameter("CFAR_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CFAR_Type', using default value."); }
+    try { m_CFAR_Dimension = ConvertStringToCFARDimension(getParameter("CFAR_Dimension").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CFAR_Dimension', using default value."); }
+    try { m_CellSize = std::stoi(getParameter("CellSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CellSize', using default value."); }
+    try { m_ReferenceCell = std::stoi(getParameter("ReferenceCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ReferenceCell', using default value."); }
+    try { m_GuardCell = std::stoi(getParameter("GuardCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GuardCell', using default value."); }
+    try { m_Detector_Type = ConvertStringToDetectorType(getParameter("Detector_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Detector_Type', using default value."); }
+    try { m_Threshold = ConvertStringToThresholdType(getParameter("Threshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Threshold', using default value."); }
+    try { m_Pf = std::stod(getParameter("Pf").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pf', using default value."); }
+    try { m_Alpha = std::stod(getParameter("Alpha").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Alpha', using default value."); }
+    try { m_Beta = std::stod(getParameter("Beta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Beta', using default value."); }
 
     SetParameters();
 

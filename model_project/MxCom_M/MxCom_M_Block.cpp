@@ -164,10 +164,10 @@ bool MxCom_M_Block::Initialize()
     SetDefaultParameters();
 
     // 读取参数
-    try { m_OutputNumRows = std::stoi(getParameter("OutputNumRows").Value); } catch (...) {}
-    try { m_OutputNumCols = std::stoi(getParameter("OutputNumCols").Value); } catch (...) {}
-    try { m_InputNumRows = std::stoi(getParameter("InputNumRows").Value); } catch (...) {}
-    try { m_InputNumCols = std::stoi(getParameter("InputNumCols").Value); } catch (...) {}
+    try { m_OutputNumRows = std::stoi(getParameter("OutputNumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputNumRows', using default value."); }
+    try { m_OutputNumCols = std::stoi(getParameter("OutputNumCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputNumCols', using default value."); }
+    try { m_InputNumRows = std::stoi(getParameter("InputNumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputNumRows', using default value."); }
+    try { m_InputNumCols = std::stoi(getParameter("InputNumCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputNumCols', using default value."); }
 
     SetParameters();
 

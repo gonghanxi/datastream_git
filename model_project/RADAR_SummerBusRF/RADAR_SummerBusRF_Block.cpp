@@ -313,7 +313,7 @@ bool RADAR_SummerBusRF_Block::Initialize()
 
     simulator_param = getSimu();
 
-    try { m_FcOut = ConvertStringToFcOut(getParameter("FcOut").Value); } catch (...) {}
+    try { m_FcOut = ConvertStringToFcOut(getParameter("FcOut").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FcOut', using default value."); }
 
     SetParameters();
 

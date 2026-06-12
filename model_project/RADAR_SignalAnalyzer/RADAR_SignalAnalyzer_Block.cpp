@@ -490,15 +490,15 @@ bool RADAR_SignalAnalyzer_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_AnalyzerType    = ConvertStringToAnalyzerType(getParameter("AnalyzerType").Value);    } catch (...) {}
-    try { m_WindowType      = ConvertStringToWindowType(getParameter("WindowType").Value);        } catch (...) {}
-    try { m_WindowParameter = std::stod(getParameter("WindowParameter").Value);                   } catch (...) {}
-    try { m_CorrType        = ConvertStringToCorrType(getParameter("CorrType").Value);            } catch (...) {}
-    try { m_NormalizedType  = ConvertStringToNormalizedType(getParameter("NormalizedType").Value);} catch (...) {}
-    try { m_FFTShiftType    = ConvertStringToFFTShiftType(getParameter("FFTShiftType").Value);    } catch (...) {}
-    try { m_SampleNum       = std::stoi(getParameter("SampleNum").Value);                         } catch (...) {}
-    try { m_FFTSize         = std::stoi(getParameter("FFTSize").Value);                           } catch (...) {}
-    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value);                        } catch (...) {}
+    try { m_AnalyzerType    = ConvertStringToAnalyzerType(getParameter("AnalyzerType").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'AnalyzerType', using default value."); }
+    try { m_WindowType      = ConvertStringToWindowType(getParameter("WindowType").Value);        } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_WindowParameter = std::stod(getParameter("WindowParameter").Value);                   } catch (...) { LOG_WARN("Failed to parse parameter 'WindowParameter', using default value."); }
+    try { m_CorrType        = ConvertStringToCorrType(getParameter("CorrType").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'CorrType', using default value."); }
+    try { m_NormalizedType  = ConvertStringToNormalizedType(getParameter("NormalizedType").Value);} catch (...) { LOG_WARN("Failed to parse parameter 'NormalizedType', using default value."); }
+    try { m_FFTShiftType    = ConvertStringToFFTShiftType(getParameter("FFTShiftType").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'FFTShiftType', using default value."); }
+    try { m_SampleNum       = std::stoi(getParameter("SampleNum").Value);                         } catch (...) { LOG_WARN("Failed to parse parameter 'SampleNum', using default value."); }
+    try { m_FFTSize         = std::stoi(getParameter("FFTSize").Value);                           } catch (...) { LOG_WARN("Failed to parse parameter 'FFTSize', using default value."); }
+    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value);                        } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

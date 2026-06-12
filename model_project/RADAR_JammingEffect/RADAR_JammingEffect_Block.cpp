@@ -123,16 +123,14 @@ bool RADAR_JammingEffect_Block::Initialize()
 
      SetDefaultParameters();
 
-     try {
-         JammingType     = ConvertStringToJammingType(getParameter("JammingType").Value);
-         Start           = std::stoi(getParameter("Start").Value);
-         PRI_NUM         = std::stoi(getParameter("PRI_NUM").Value);
-         FFT_Size        = std::stoi(getParameter("FFT_Size").Value);
-         DetectionNum    = std::stoi(getParameter("DetectionNum").Value);
-         TargetsInPRI    = std::stoi(getParameter("TargetsInPRI").Value);
-         FalseTargetNum  = std::stoi(getParameter("FalseTargetNum").Value);
-         TargetThreshold = std::stod(getParameter("TargetThreshold").Value);
-     } catch (...) {}
+     try { JammingType     = ConvertStringToJammingType(getParameter("JammingType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'JammingType', using default value."); }
+     try { Start           = std::stoi(getParameter("Start").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Start', using default value."); }
+     try { PRI_NUM         = std::stoi(getParameter("PRI_NUM").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_NUM', using default value."); }
+     try { FFT_Size        = std::stoi(getParameter("FFT_Size").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FFT_Size', using default value."); }
+     try { DetectionNum    = std::stoi(getParameter("DetectionNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DetectionNum', using default value."); }
+     try { TargetsInPRI    = std::stoi(getParameter("TargetsInPRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetsInPRI', using default value."); }
+     try { FalseTargetNum  = std::stoi(getParameter("FalseTargetNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetNum', using default value."); }
+     try { TargetThreshold = std::stod(getParameter("TargetThreshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetThreshold', using default value."); }
 
      SetParameters();
 

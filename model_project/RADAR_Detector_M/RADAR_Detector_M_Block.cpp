@@ -166,9 +166,9 @@ bool RADAR_Detector_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Type       = ConvertStringToDetectorType(getParameter("Type").Value); } catch (...) {}
-    try { m_Log_Coefb  = std::stod(getParameter("Log_Coefb").Value); }             catch (...) {}
-    try { m_Log_Coefa  = std::stod(getParameter("Log_Coefa").Value); }             catch (...) {}
+    try { m_Type       = ConvertStringToDetectorType(getParameter("Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Type', using default value."); }
+    try { m_Log_Coefb  = std::stod(getParameter("Log_Coefb").Value); }             catch (...) { LOG_WARN("Failed to parse parameter 'Log_Coefb', using default value."); }
+    try { m_Log_Coefa  = std::stod(getParameter("Log_Coefa").Value); }             catch (...) { LOG_WARN("Failed to parse parameter 'Log_Coefa', using default value."); }
 
     SetParameters();
 

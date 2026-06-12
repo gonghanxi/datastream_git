@@ -106,18 +106,18 @@ bool GaussianNoiseGen_Block::Initialize()
 
     simulator_param = getSimu();
 
-    try { m_nDensity = std::stod(getParameter("NDensity").Value); } catch (...) { }
-    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { }
-    try { m_showAdvancedParams = ConvertStringToShowAdvanced(getParameter("ShowAdvancedParams").Value); } catch (...) { }
-    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { }
+    try { m_nDensity = std::stod(getParameter("NDensity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NDensity', using default value."); }
+    try { m_refR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
+    try { m_showAdvancedParams = ConvertStringToShowAdvanced(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
     if(m_sampleRateOption == GaussianNoiseGen::TimedFromSampleRate) {
-        try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+        try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
     }
-    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { }
-    try { m_burstMode = ConvertStringToBurstMode(getParameter("BurstMode").Value); } catch (...) { }
-    try { m_burstLength = std::stoi(getParameter("BurstLength").Value); } catch (...) { }
-    try { m_burstPeriod = std::stoi(getParameter("BurstPeriod").Value); } catch (...) { }
-    try { m_burstDelay = std::stoi(getParameter("BurstDelay").Value); } catch (...) { }
+    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
+    try { m_burstMode = ConvertStringToBurstMode(getParameter("BurstMode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstMode', using default value."); }
+    try { m_burstLength = std::stoi(getParameter("BurstLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstLength', using default value."); }
+    try { m_burstPeriod = std::stoi(getParameter("BurstPeriod").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstPeriod', using default value."); }
+    try { m_burstDelay = std::stoi(getParameter("BurstDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstDelay', using default value."); }
 
     SetParameters();
     //m_gaussian->output.SetSampleRate(getSimu().samplingRate);

@@ -77,12 +77,12 @@ bool OSF_Block::Initialize()
     try {
         std::string value = getParameter("N").Value;
         if (!value.empty()) m_n = std::stoi(value);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
 
     try {
         std::string value = getParameter("Percentile").Value;
         if (!value.empty()) m_percentile = std::stoi(value);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Percentile', using default value."); }
 
     // 验证参数
     if (!ValidateParameters()) {

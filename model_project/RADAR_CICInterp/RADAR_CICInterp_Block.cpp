@@ -92,11 +92,11 @@ bool RADAR_CICInterp_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Order     = std::stoi(getParameter("Order").Value);     } catch (...) {}
-    try { m_Ratio     = std::stoi(getParameter("Ratio").Value);     } catch (...) {}
-    try { m_DiffDelay = std::stoi(getParameter("DiffDelay").Value); } catch (...) {}
-    try { m_Phase     = std::stoi(getParameter("Phase").Value);     } catch (...) {}
-    try { m_Fill      = Cx(std::stod(getParameter("Fill").Value), 0.0); } catch (...) {}
+    try { m_Order     = std::stoi(getParameter("Order").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Order', using default value."); }
+    try { m_Ratio     = std::stoi(getParameter("Ratio").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Ratio', using default value."); }
+    try { m_DiffDelay = std::stoi(getParameter("DiffDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DiffDelay', using default value."); }
+    try { m_Phase     = std::stoi(getParameter("Phase").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
+    try { m_Fill      = Cx(std::stod(getParameter("Fill").Value), 0.0); } catch (...) { LOG_WARN("Failed to parse parameter 'Fill', using default value."); }
 
     SetParameters();
 

@@ -191,7 +191,7 @@ bool AdaptLinQuant_Block::Initialize()
     {
         m_Bits = std::stoi(getParameter("Bits").Value);
     }
-    catch (...) {}
+    catch (...) { LOG_WARN("Failed to parse parameter 'Bits', using default value."); }
 
     if (m_Bits < 1 || m_Bits > 31)
     {

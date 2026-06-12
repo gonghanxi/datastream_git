@@ -250,10 +250,10 @@ bool SVD_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Threshold      = std::stod(getParameter("Threshold").Value);      } catch (...) {}
-    try { m_MaxIterations  = std::stoi(getParameter("MaxIterations").Value);  } catch (...) {}
-    try { m_GenerateLeft   = ConvertStringToGenerateLeft(getParameter("GenerateLeft").Value);   } catch (...) {}
-    try { m_GenerateRight  = ConvertStringToGenerateRight(getParameter("GenerateRight").Value); } catch (...) {}
+    try { m_Threshold      = std::stod(getParameter("Threshold").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'Threshold', using default value."); }
+    try { m_MaxIterations  = std::stoi(getParameter("MaxIterations").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'MaxIterations', using default value."); }
+    try { m_GenerateLeft   = ConvertStringToGenerateLeft(getParameter("GenerateLeft").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'GenerateLeft', using default value."); }
+    try { m_GenerateRight  = ConvertStringToGenerateRight(getParameter("GenerateRight").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GenerateRight', using default value."); }
 
     if (m_MaxIterations < 1) m_MaxIterations = 1;
     if (m_Threshold < 0.0)   m_Threshold = 0.0;

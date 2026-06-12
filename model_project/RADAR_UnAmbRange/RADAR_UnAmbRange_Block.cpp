@@ -192,9 +192,9 @@ bool RADAR_UnAmbRange_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRI = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("PRI").Value); } catch (...) { }
-    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { }
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_PRI = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CPI_Num', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

@@ -67,8 +67,8 @@ bool BitShiftRegister_Block::Initialize()
 
 
     SetDefaultParamters();
-    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { }
-    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch (...) { }
+    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
 
     if (m_numBits <= 0) {
         m_numBits = 1;

@@ -89,10 +89,10 @@ bool RADAR_CICDecimate_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Order     = std::stoi(getParameter("Order").Value);     } catch (...) {}
-    try { m_Ratio     = std::stoi(getParameter("Ratio").Value);     } catch (...) {}
-    try { m_DiffDelay = std::stoi(getParameter("DiffDelay").Value); } catch (...) {}
-    try { m_Phase     = std::stoi(getParameter("Phase").Value);     } catch (...) {}
+    try { m_Order     = std::stoi(getParameter("Order").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Order', using default value."); }
+    try { m_Ratio     = std::stoi(getParameter("Ratio").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Ratio', using default value."); }
+    try { m_DiffDelay = std::stoi(getParameter("DiffDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DiffDelay', using default value."); }
+    try { m_Phase     = std::stoi(getParameter("Phase").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
 
     SetParameters();
 

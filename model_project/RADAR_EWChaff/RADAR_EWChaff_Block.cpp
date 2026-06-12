@@ -941,35 +941,35 @@ bool RADAR_EWChaff_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Chaff_Mode           = ConvertStringToChaffMode(getParameter("Chaff_Mode").Value); } catch (...) {}
-    try { m_Cloud_Model          = ConvertStringToCloudModel(getParameter("Cloud_Model").Value); } catch (...) {}
-    try { m_RCS_Model            = ConvertStringToRCSModel(getParameter("RCS_Model").Value); } catch (...) {}
-    try { m_RCS_OutputUnit       = ConvertStringToRCSOutputUnit(getParameter("RCS_OutputUnit").Value); } catch (...) {}
-    try { m_Cell_RCS_Distribution = ConvertStringToCellRCSDistribution(getParameter("Cell_RCS_Distribution").Value); } catch (...) {}
-    try { m_NumberOfChaffCell    = std::stoi(getParameter("NumberOfChaffCell").Value); } catch (...) {}
-    try { m_FileName = getParameter("FileName").Value; } catch (...) {}
+    try { m_Chaff_Mode           = ConvertStringToChaffMode(getParameter("Chaff_Mode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Chaff_Mode', using default value."); }
+    try { m_Cloud_Model          = ConvertStringToCloudModel(getParameter("Cloud_Model").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cloud_Model', using default value."); }
+    try { m_RCS_Model            = ConvertStringToRCSModel(getParameter("RCS_Model").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_Model', using default value."); }
+    try { m_RCS_OutputUnit       = ConvertStringToRCSOutputUnit(getParameter("RCS_OutputUnit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_OutputUnit', using default value."); }
+    try { m_Cell_RCS_Distribution = ConvertStringToCellRCSDistribution(getParameter("Cell_RCS_Distribution").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cell_RCS_Distribution', using default value."); }
+    try { m_NumberOfChaffCell    = std::stoi(getParameter("NumberOfChaffCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumberOfChaffCell', using default value."); }
+    try { m_FileName = getParameter("FileName").Value; } catch (...) { LOG_WARN("Failed to parse parameter 'FileName', using default value."); }
 
-    try { m_Release_Position_XYZData    = ParseStringToDoubleVector(getParameter("Release_Position_XYZ").Value); } catch (...) {}
-    try { m_Initial_Velocity_XYZData    = ParseStringToDoubleVector(getParameter("Initial_Velocity_XYZ").Value); } catch (...) {}
-    try { m_Wind_Velocity_XYZData       = ParseStringToDoubleVector(getParameter("Wind_Velocity_XYZ").Value); } catch (...) {}
-    try { m_Cloud_Initial_Radius_XYZData = ParseStringToDoubleVector(getParameter("Cloud_Initial_Radius_XYZ").Value); } catch (...) {}
-    try { m_Cloud_ExpansionRate_XYZData  = ParseStringToDoubleVector(getParameter("Cloud_ExpansionRate_XYZ").Value); } catch (...) {}
-    try { m_Cloud_MaxRadius_XYZData      = ParseStringToDoubleVector(getParameter("Cloud_MaxRadius_XYZ").Value); } catch (...) {}
+    try { m_Release_Position_XYZData    = ParseStringToDoubleVector(getParameter("Release_Position_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Release_Position_XYZ', using default value."); }
+    try { m_Initial_Velocity_XYZData    = ParseStringToDoubleVector(getParameter("Initial_Velocity_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Initial_Velocity_XYZ', using default value."); }
+    try { m_Wind_Velocity_XYZData       = ParseStringToDoubleVector(getParameter("Wind_Velocity_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Wind_Velocity_XYZ', using default value."); }
+    try { m_Cloud_Initial_Radius_XYZData = ParseStringToDoubleVector(getParameter("Cloud_Initial_Radius_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cloud_Initial_Radius_XYZ', using default value."); }
+    try { m_Cloud_ExpansionRate_XYZData  = ParseStringToDoubleVector(getParameter("Cloud_ExpansionRate_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cloud_ExpansionRate_XYZ', using default value."); }
+    try { m_Cloud_MaxRadius_XYZData      = ParseStringToDoubleVector(getParameter("Cloud_MaxRadius_XYZ").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cloud_MaxRadius_XYZ', using default value."); }
 
-    try { m_Fall_Speed         = std::stod(getParameter("Fall_Speed").Value); } catch (...) {}
-    try { m_VelocityDecayTime  = std::stod(getParameter("VelocityDecayTime").Value); } catch (...) {}
-    try { m_Cloud_Lifetime     = std::stod(getParameter("Cloud_Lifetime").Value); } catch (...) {}
-    try { m_CarrierFreq        = std::stod(getParameter("CarrierFreq").Value); } catch (...) {}
-    try { m_DipoleLength       = std::stod(getParameter("DipoleLength").Value); } catch (...) {}
-    try { m_DipoleLengthSpread = std::stod(getParameter("DipoleLengthSpread").Value); } catch (...) {}
-    try { m_NumberOfDipoles    = std::stod(getParameter("NumberOfDipoles").Value); } catch (...) {}
-    try { m_ReferenceDipoleCount = std::stod(getParameter("ReferenceDipoleCount").Value); } catch (...) {}
-    try { m_TotalRCS_Reference = std::stod(getParameter("TotalRCS_Reference").Value); } catch (...) {}
-    try { m_RCS_GrowthTime     = std::stod(getParameter("RCS_GrowthTime").Value); } catch (...) {}
-    try { m_RCS_DecayTime      = std::stod(getParameter("RCS_DecayTime").Value); } catch (...) {}
-    try { m_RCS_Floor          = std::stod(getParameter("RCS_Floor").Value); } catch (...) {}
-    try { m_GaussianWeightSigma = std::stod(getParameter("GaussianWeightSigma").Value); } catch (...) {}
-    try { m_TimeStep           = std::stod(getParameter("TimeStep").Value); } catch (...) {}
+    try { m_Fall_Speed         = std::stod(getParameter("Fall_Speed").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Fall_Speed', using default value."); }
+    try { m_VelocityDecayTime  = std::stod(getParameter("VelocityDecayTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VelocityDecayTime', using default value."); }
+    try { m_Cloud_Lifetime     = std::stod(getParameter("Cloud_Lifetime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Cloud_Lifetime', using default value."); }
+    try { m_CarrierFreq        = std::stod(getParameter("CarrierFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CarrierFreq', using default value."); }
+    try { m_DipoleLength       = std::stod(getParameter("DipoleLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DipoleLength', using default value."); }
+    try { m_DipoleLengthSpread = std::stod(getParameter("DipoleLengthSpread").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DipoleLengthSpread', using default value."); }
+    try { m_NumberOfDipoles    = std::stod(getParameter("NumberOfDipoles").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumberOfDipoles', using default value."); }
+    try { m_ReferenceDipoleCount = std::stod(getParameter("ReferenceDipoleCount").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ReferenceDipoleCount', using default value."); }
+    try { m_TotalRCS_Reference = std::stod(getParameter("TotalRCS_Reference").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TotalRCS_Reference', using default value."); }
+    try { m_RCS_GrowthTime     = std::stod(getParameter("RCS_GrowthTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_GrowthTime', using default value."); }
+    try { m_RCS_DecayTime      = std::stod(getParameter("RCS_DecayTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_DecayTime', using default value."); }
+    try { m_RCS_Floor          = std::stod(getParameter("RCS_Floor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RCS_Floor', using default value."); }
+    try { m_GaussianWeightSigma = std::stod(getParameter("GaussianWeightSigma").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GaussianWeightSigma', using default value."); }
+    try { m_TimeStep           = std::stod(getParameter("TimeStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TimeStep', using default value."); }
 
     SetAlgoParameters();
 

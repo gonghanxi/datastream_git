@@ -253,17 +253,17 @@ bool PhaseShifter_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_phaseShift = std::stod(getParameter("PhaseShift").Value); } catch (...) { }
-    try { m_insertionLoss = std::stod(getParameter("InsertionLoss").Value); } catch (...) { }
-    try { m_quantization = ConvertStringToQuantEnum(getParameter("Quantization").Value); } catch (...) { }
-    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { }
-    try { m_phaseShiftError = ConvertStringToErrEnum(getParameter("PhaseShiftError").Value); } catch (...) { }
-    try { m_customError = std::stod(getParameter("CustomError").Value); } catch (...) { }
-    try { m_stdDev = std::stod(getParameter("StdDev").Value); } catch (...) { }
-    try { m_min = std::stod(getParameter("Min").Value); } catch (...) { }
-    try { m_max = std::stod(getParameter("Max").Value); } catch (...) { }
-    try { m_sensitivity = std::stod(getParameter("Sensitivity").Value); } catch (...) { }
-    try { m_hilbertFilterLength = std::stoi(getParameter("HilbertFilterLength").Value); } catch (...) { }
+    try { m_phaseShift = std::stod(getParameter("PhaseShift").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseShift', using default value."); }
+    try { m_insertionLoss = std::stod(getParameter("InsertionLoss").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InsertionLoss', using default value."); }
+    try { m_quantization = ConvertStringToQuantEnum(getParameter("Quantization").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Quantization', using default value."); }
+    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { m_phaseShiftError = ConvertStringToErrEnum(getParameter("PhaseShiftError").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseShiftError', using default value."); }
+    try { m_customError = std::stod(getParameter("CustomError").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CustomError', using default value."); }
+    try { m_stdDev = std::stod(getParameter("StdDev").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StdDev', using default value."); }
+    try { m_min = std::stod(getParameter("Min").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Min', using default value."); }
+    try { m_max = std::stod(getParameter("Max").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Max', using default value."); }
+    try { m_sensitivity = std::stod(getParameter("Sensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sensitivity', using default value."); }
+    try { m_hilbertFilterLength = std::stoi(getParameter("HilbertFilterLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'HilbertFilterLength', using default value."); }
 
     SetParameters();
 

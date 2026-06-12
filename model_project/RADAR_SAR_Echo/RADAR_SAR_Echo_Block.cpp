@@ -152,20 +152,20 @@ bool RADAR_SAR_Echo_Block::Initialize()
     SetDefaultParamters();
     //simulator_param = getSimu();
 
-    try{ m_SAR_Mode = ConvertStringToSAR_Mode(getParameter("SAR_Mode").Value); } catch(...) {}
-    try{ m_Fc = std::stod(getParameter("Fc").Value); } catch (...) { }
-    try{ m_Xmin = std::stod(getParameter("Xmin").Value);} catch (...) { }
-    try{ m_Xmax = std::stod(getParameter("Xmax").Value);} catch(...) { }
-    try{ m_Yc = std::stod(getParameter("Yc").Value);} catch(...) { }
-    try{ m_Y0 = std::stod(getParameter("Y0").Value);} catch(...) { }
-    try{ m_H = std::stod(getParameter("H").Value);} catch(...) { }
-    try{ m_Vr = std::stod(getParameter("Vr").Value);} catch(...) { }
-    try{ m_D = std::stod(getParameter("D").Value);} catch(...) { }
-    try{ m_Tr = std::stod(getParameter("Tr").Value);} catch(...) { }
-    try{ m_Br = std::stod(getParameter("Br").Value);} catch(...) { }
-    try{ m_SampleRate = std::stod(getParameter("SampleRate").Value);} catch(...) { }
-    try{ m_EchoGenerate_Mode = ConvertStringToEchoGenerate_Mode(getParameter("EchoGenerate_Mode").Value);} catch(...) {}
-    try{ m_TargetInfo = ParseStringToMatrix<double>(getParameter("TargetInfo").Value);} catch(...) { }
+    try{ m_SAR_Mode = ConvertStringToSAR_Mode(getParameter("SAR_Mode").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'SAR_Mode', using default value."); }
+    try{ m_Fc = std::stod(getParameter("Fc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Fc', using default value."); }
+    try{ m_Xmin = std::stod(getParameter("Xmin").Value);} catch (...) { LOG_WARN("Failed to parse parameter 'Xmin', using default value."); }
+    try{ m_Xmax = std::stod(getParameter("Xmax").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Xmax', using default value."); }
+    try{ m_Yc = std::stod(getParameter("Yc").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Yc', using default value."); }
+    try{ m_Y0 = std::stod(getParameter("Y0").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Y0', using default value."); }
+    try{ m_H = std::stod(getParameter("H").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'H', using default value."); }
+    try{ m_Vr = std::stod(getParameter("Vr").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Vr', using default value."); }
+    try{ m_D = std::stod(getParameter("D").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'D', using default value."); }
+    try{ m_Tr = std::stod(getParameter("Tr").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Tr', using default value."); }
+    try{ m_Br = std::stod(getParameter("Br").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'Br', using default value."); }
+    try{ m_SampleRate = std::stod(getParameter("SampleRate").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try{ m_EchoGenerate_Mode = ConvertStringToEchoGenerate_Mode(getParameter("EchoGenerate_Mode").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'EchoGenerate_Mode', using default value."); }
+    try{ m_TargetInfo = ParseStringToMatrix<double>(getParameter("TargetInfo").Value);} catch(...) { LOG_WARN("Failed to parse parameter 'TargetInfo', using default value."); }
 
     SetParameters();
 

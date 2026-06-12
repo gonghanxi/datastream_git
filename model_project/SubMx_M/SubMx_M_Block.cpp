@@ -99,10 +99,10 @@ bool SubMx_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_StartRow = std::stoi(getParameter("StartRow").Value); } catch (...) {}
-    try { m_StartCol = std::stoi(getParameter("StartCol").Value); } catch (...) {}
-    try { m_NumRows  = std::stoi(getParameter("NumRows").Value);  } catch (...) {}
-    try { m_NumCols  = std::stoi(getParameter("NumCols").Value);  } catch (...) {}
+    try { m_StartRow = std::stoi(getParameter("StartRow").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartRow', using default value."); }
+    try { m_StartCol = std::stoi(getParameter("StartCol").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartCol', using default value."); }
+    try { m_NumRows  = std::stoi(getParameter("NumRows").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'NumRows', using default value."); }
+    try { m_NumCols  = std::stoi(getParameter("NumCols").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'NumCols', using default value."); }
 
     SetParameters();
 

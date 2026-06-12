@@ -156,9 +156,9 @@ bool RADAR_MatchedFilter_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_pulseWidth = std::stod(getParameter("PulseWidth").Value); } catch (...) { }
-    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_pulseWidth = std::stod(getParameter("PulseWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PulseWidth', using default value."); }
+    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters(m_pulseWidth, m_pri, m_sampleRate);
 

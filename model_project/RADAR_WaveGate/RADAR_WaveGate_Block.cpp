@@ -127,10 +127,10 @@ bool RADAR_WaveGate_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { PRF = std::stod(getParameter("PRF").Value); } catch (...) { }
-    try { StartTime = std::stod(getParameter("StartTime").Value); } catch (...) { }
-    try { GateTime = std::stod(getParameter("GateTime").Value); } catch (...) { }
-    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { PRF = std::stod(getParameter("PRF").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRF', using default value."); }
+    try { StartTime = std::stod(getParameter("StartTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartTime', using default value."); }
+    try { GateTime = std::stod(getParameter("GateTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GateTime', using default value."); }
+    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

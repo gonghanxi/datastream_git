@@ -39,11 +39,11 @@ bool LogAmp_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Sensitivity = std::stod(getParameter("Sensitivity").Value); } catch (...) { }
-    try { m_PMin = std::stod(getParameter("PMin").Value); } catch (...) { }
-    try { m_E = std::stod(getParameter("E").Value); } catch (...) { }
-    try { m_Ec = std::stod(getParameter("Ec").Value); } catch (...) { }
-    try { m_RefR = std::stod(getParameter("RefR").Value); } catch (...) { }
+    try { m_Sensitivity = std::stod(getParameter("Sensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sensitivity', using default value."); }
+    try { m_PMin = std::stod(getParameter("PMin").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PMin', using default value."); }
+    try { m_E = std::stod(getParameter("E").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'E', using default value."); }
+    try { m_Ec = std::stod(getParameter("Ec").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Ec', using default value."); }
+    try { m_RefR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
 
     if(m_Ec == 0) {
         LOG_ERROR("Ec Must not equal 0");

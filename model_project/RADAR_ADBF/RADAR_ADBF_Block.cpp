@@ -67,14 +67,14 @@ bool RADAR_ADBF_Block::Initialize()
     m_radar_adbf = std::make_unique<RADAR_ADBF>();
     SetDefaultParamters();
 
-    try { m_NumOfXAntElement = std::stod(getParameter("NumOfXAntElement").Value); } catch (...) {}
-    try { m_NumOfYAntElement = std::stod(getParameter("NumOfYAntElement").Value); } catch (...) {}
-    try { m_Dx = std::stod(getParameter("Dx").Value); } catch (...) {}
-    try { m_Dy = std::stod(getParameter("Dy").Value); } catch (...) {}
-    try { m_NumOfSamples = std::stoi(getParameter("NumOfSamples").Value); } catch (...) {}
-    try { m_Theta = std::stod(getParameter("Theta").Value); } catch (...) {}
-    try { m_Phi = std::stod(getParameter("Phi").Value); } catch (...) {}
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
+    try { m_NumOfXAntElement = std::stod(getParameter("NumOfXAntElement").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfXAntElement', using default value."); }
+    try { m_NumOfYAntElement = std::stod(getParameter("NumOfYAntElement").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfYAntElement', using default value."); }
+    try { m_Dx = std::stod(getParameter("Dx").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Dx', using default value."); }
+    try { m_Dy = std::stod(getParameter("Dy").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Dy', using default value."); }
+    try { m_NumOfSamples = std::stoi(getParameter("NumOfSamples").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfSamples', using default value."); }
+    try { m_Theta = std::stod(getParameter("Theta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Theta', using default value."); }
+    try { m_Phi = std::stod(getParameter("Phi").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phi', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

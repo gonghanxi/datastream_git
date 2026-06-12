@@ -195,8 +195,8 @@ bool EnvFcChange_M_Block::Initialize()
     m_EnvFcChange_M = std::make_unique<EnvFcChange_M>();
 
     SetDefaultParameters();
-    try { m_OutputFc  = std::stod(getParameter("OutputFc").Value);  } catch (...) {}
-    try { m_Bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) {}
+    try { m_OutputFc  = std::stod(getParameter("OutputFc").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'OutputFc', using default value."); }
+    try { m_Bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
     m_simulatorParam = getSimu();
     SetParameters();
 

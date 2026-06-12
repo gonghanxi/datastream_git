@@ -94,11 +94,11 @@ bool SwitchSPST_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_Loss      = std::stod(getParameter("Loss").Value);      } catch (...) {}
-    try { m_Isolation = std::stod(getParameter("Isolation").Value); } catch (...) {}
-    try { m_VThreshold = std::stod(getParameter("VThreshold").Value); } catch (...) {}
-    try { m_TOn       = std::stod(getParameter("TOn").Value);       } catch (...) {}
-    try { m_TOff      = std::stod(getParameter("TOff").Value);      } catch (...) {}
+    try { m_Loss      = std::stod(getParameter("Loss").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'Loss', using default value."); }
+    try { m_Isolation = std::stod(getParameter("Isolation").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Isolation', using default value."); }
+    try { m_VThreshold = std::stod(getParameter("VThreshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VThreshold', using default value."); }
+    try { m_TOn       = std::stod(getParameter("TOn").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'TOn', using default value."); }
+    try { m_TOff      = std::stod(getParameter("TOff").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'TOff', using default value."); }
 
     SetParameters();
 

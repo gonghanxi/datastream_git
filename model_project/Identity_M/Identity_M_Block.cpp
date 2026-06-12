@@ -73,10 +73,10 @@ bool Identity_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_RowsCols = std::stoi(getParameter("RowsCols").Value); } catch (...) { }
-    try { m_ShowAdvancedParams = ConvertStringToSelectedShowAdvancedParams(getParameter("SelectedShowAdvancedParams").Value); } catch (...) { }
-    try { m_SampleRateOption = ConvertStringToSelectedSampleRateOption(getParameter("SelectedSampleRateOption").Value); } catch (...) { }
-    try { m_InitialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { }
+    try { m_RowsCols = std::stoi(getParameter("RowsCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RowsCols', using default value."); }
+    try { m_ShowAdvancedParams = ConvertStringToSelectedShowAdvancedParams(getParameter("SelectedShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SelectedShowAdvancedParams', using default value."); }
+    try { m_SampleRateOption = ConvertStringToSelectedSampleRateOption(getParameter("SelectedSampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SelectedSampleRateOption', using default value."); }
+    try { m_InitialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
     m_SampleRate = getSimu().samplingRate;
 
     SetParameters();

@@ -84,11 +84,11 @@ bool RADAR_UnAmbVelocity_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRI = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("PRI").Value); } catch (...) { }
-    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { }
-    try { m_fc = std::stod(getParameter("fc").Value); } catch (...) { }
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_Direction = ConvertStringToSelectedDirection(getParameter("Direction").Value); } catch (...) { }
+    try { m_PRI = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CPI_Num', using default value."); }
+    try { m_fc = std::stod(getParameter("fc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'fc', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_Direction = ConvertStringToSelectedDirection(getParameter("Direction").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Direction', using default value."); }
 
     SetParameters();
 

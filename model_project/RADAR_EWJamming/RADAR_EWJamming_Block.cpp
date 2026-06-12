@@ -68,11 +68,11 @@ bool RADAR_EWJamming_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_SampleNum   = std::stoi(getParameter("SampleNum").Value);   } catch (...) {}
-    try { m_SampleRate  = std::stod(getParameter("SampleRate").Value);  } catch (...) {}
-    try { m_Mean        = std::stod(getParameter("Mean").Value);        } catch (...) {}
-    try { m_Stdev       = std::stod(getParameter("Stdev").Value);       } catch (...) {}
-    try { m_System_Loss = std::stod(getParameter("System_Loss").Value); } catch (...) {}
+    try { m_SampleNum   = std::stoi(getParameter("SampleNum").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'SampleNum', using default value."); }
+    try { m_SampleRate  = std::stod(getParameter("SampleRate").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_Mean        = std::stod(getParameter("Mean").Value);        } catch (...) { LOG_WARN("Failed to parse parameter 'Mean', using default value."); }
+    try { m_Stdev       = std::stod(getParameter("Stdev").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'Stdev', using default value."); }
+    try { m_System_Loss = std::stod(getParameter("System_Loss").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'System_Loss', using default value."); }
 
     SetParameters();
 

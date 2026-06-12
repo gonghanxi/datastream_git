@@ -209,12 +209,12 @@ bool MxDeCom_M_Block::Initialize()
     SetDefaultParameters();
 
     // 读取参数
-    try { m_StartRow = std::stoi(getParameter("StartRow").Value); } catch (...) {}
-    try { m_StartCol = std::stoi(getParameter("StartCol").Value); } catch (...) {}
-    try { m_InputNumRows = std::stoi(getParameter("InputNumRows").Value); } catch (...) {}
-    try { m_InputNumCols = std::stoi(getParameter("InputNumCols").Value); } catch (...) {}
-    try { m_OutputNumRows = std::stoi(getParameter("OutputNumRows").Value); } catch (...) {}
-    try { m_OutputNumCols = std::stoi(getParameter("OutputNumCols").Value); } catch (...) {}
+    try { m_StartRow = std::stoi(getParameter("StartRow").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartRow', using default value."); }
+    try { m_StartCol = std::stoi(getParameter("StartCol").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartCol', using default value."); }
+    try { m_InputNumRows = std::stoi(getParameter("InputNumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputNumRows', using default value."); }
+    try { m_InputNumCols = std::stoi(getParameter("InputNumCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputNumCols', using default value."); }
+    try { m_OutputNumRows = std::stoi(getParameter("OutputNumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputNumRows', using default value."); }
+    try { m_OutputNumCols = std::stoi(getParameter("OutputNumCols").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputNumCols', using default value."); }
 
     SetParameters();
 

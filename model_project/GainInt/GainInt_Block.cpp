@@ -56,7 +56,7 @@ bool GainInt_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_gain = std::stod(getParameter("m_Gain").Value); } catch (...) { }
+	try { m_gain = std::stod(getParameter("m_Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'm_Gain', using default value."); }
 
 	SetParameters(m_gain);
 

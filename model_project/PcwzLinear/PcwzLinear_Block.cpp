@@ -121,7 +121,7 @@ bool PcwzLinear_Block::Initialize()
     m_PcwzLinear = std::make_unique<PcwzLinear>();
 
     // 解析 Breakpoints 参数（复数矩阵）
-    try { m_Breakpoints = ParseStringToMatrix<std::complex<double>>(getParameter("numBreakpoints").Value); } catch (...) {}
+    try { m_Breakpoints = ParseStringToMatrix<std::complex<double>>(getParameter("numBreakpoints").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'numBreakpoints', using default value."); }
 
     m_numBreakpoints = static_cast<int>(m_Breakpoints.NumElements());
     if (m_numBreakpoints < 2)

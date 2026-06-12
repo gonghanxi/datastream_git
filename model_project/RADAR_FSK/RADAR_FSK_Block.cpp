@@ -104,14 +104,14 @@ bool RADAR_FSK_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_type = ConvertStringToType(getParameter("Type").Value); } catch (...) { }
-    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_fhSequence = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("FHSequence").Value); } catch (...) { }
-    try { m_fskpskSequence = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("FSKPSKSequence").Value); } catch (...) { }
-    try { m_timeIntervals = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("TimeIntervals").Value); } catch (...) { }
-    try { m_fskpskSubTimePeriod = std::stod(getParameter("FSKPSKSubTimePeriod").Value); } catch (...) { }
-    try { m_codeLength = ConvertStringToCodeLength(getParameter("CodeLength").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_type = ConvertStringToType(getParameter("Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Type', using default value."); }
+    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_fhSequence = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("FHSequence").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FHSequence', using default value."); }
+    try { m_fskpskSequence = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("FSKPSKSequence").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FSKPSKSequence', using default value."); }
+    try { m_timeIntervals = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("TimeIntervals").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TimeIntervals', using default value."); }
+    try { m_fskpskSubTimePeriod = std::stod(getParameter("FSKPSKSubTimePeriod").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FSKPSKSubTimePeriod', using default value."); }
+    try { m_codeLength = ConvertStringToCodeLength(getParameter("CodeLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CodeLength', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

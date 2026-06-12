@@ -39,11 +39,11 @@ bool CrossCorr_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_CrossCorr = std::make_unique<CrossCorr>();
     SetDefaultParameters();
-    try { m_CorrelationType = ConvertStringToCorrelationTypeEnum(getParameter("CorrelationType").Value); } catch (...) {}
-    try { m_Normalization = ConvertStringToNormalizationEnum(getParameter("Normalization").Value); } catch (...) {}
-    try { m_CorrelationLength = std::stoi(getParameter("CorrelationLength").Value); } catch (...) {}
-    try { m_StartLag = std::stoi(getParameter("StartLag").Value); } catch (...) {}
-    try { m_StopLag = std::stoi(getParameter("StopLag").Value); } catch (...) {}
+    try { m_CorrelationType = ConvertStringToCorrelationTypeEnum(getParameter("CorrelationType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CorrelationType', using default value."); }
+    try { m_Normalization = ConvertStringToNormalizationEnum(getParameter("Normalization").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Normalization', using default value."); }
+    try { m_CorrelationLength = std::stoi(getParameter("CorrelationLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CorrelationLength', using default value."); }
+    try { m_StartLag = std::stoi(getParameter("StartLag").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartLag', using default value."); }
+    try { m_StopLag = std::stoi(getParameter("StopLag").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StopLag', using default value."); }
     SetParameters();
 
     if(!m_CrossCorr->Setup()) return false;

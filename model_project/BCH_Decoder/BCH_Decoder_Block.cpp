@@ -41,19 +41,18 @@ bool BCH_Decoder_Block::Initialize()
     SetDefaultParameters();
 
     try {
-    std::string primString = getParameter("PrimPoly").Value;
-    parseArrayString(primString, primdata);
-
-    std::string eraseString = getParameter("ErasePosition").Value;
-    parseArrayString(eraseString, erasedata);
-
-    M = std::stoi(getParameter("M").Value);
-    K = std::stoi(getParameter("K").Value);
-    T = std::stoi(getParameter("T").Value);
-    CodeLength = std::stoi(getParameter("CodeLength").Value);
-    Erase = ConvertStringToEraseEnum(getParameter("Erase").Value);
-
-    } catch(...) {}
+        std::string primString = getParameter("PrimPoly").Value;
+        parseArrayString(primString, primdata);
+    } catch(...) { LOG_WARN("Failed to parse parameter 'PrimPoly', using default value."); }
+    try {
+        std::string eraseString = getParameter("ErasePosition").Value;
+        parseArrayString(eraseString, erasedata);
+    } catch(...) { LOG_WARN("Failed to parse parameter 'ErasePosition', using default value."); }
+    try { M = std::stoi(getParameter("M").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'M', using default value."); }
+    try { K = std::stoi(getParameter("K").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'K', using default value."); }
+    try { T = std::stoi(getParameter("T").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'T', using default value."); }
+    try { CodeLength = std::stoi(getParameter("CodeLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'CodeLength', using default value."); }
+    try { Erase = ConvertStringToEraseEnum(getParameter("Erase").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Erase', using default value."); }
 
     SetParameters();
 

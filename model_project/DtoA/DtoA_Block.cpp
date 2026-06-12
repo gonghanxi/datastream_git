@@ -198,23 +198,23 @@ bool DtoA_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_nbits = std::stoi(getParameter("NBits").Value); } catch (...) { }
-    try { m_vref = std::stod(getParameter("VRef").Value); } catch (...) { }
-    try { m_inputDigitalFormat = ConvertStringToDigFmt(getParameter("InputDigitalFormat").Value); } catch (...) { }
-    try { m_repeatOutput = std::stoi(getParameter("RepeatOutput").Value); } catch (...) { }
-    try { m_rjrms = std::stod(getParameter("RJrms").Value); } catch (...) { }
-    try { m_inl = std::stod(getParameter("INL").Value); } catch (...) { }
-    try { m_dnl = std::stod(getParameter("DNL").Value); } catch (...) { }
-    try { m_harmonicDistortion = ConvertStringToHDist(getParameter("HarmonicDistortion").Value); } catch (...) { }
+    try { m_nbits = std::stoi(getParameter("NBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NBits', using default value."); }
+    try { m_vref = std::stod(getParameter("VRef").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VRef', using default value."); }
+    try { m_inputDigitalFormat = ConvertStringToDigFmt(getParameter("InputDigitalFormat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputDigitalFormat', using default value."); }
+    try { m_repeatOutput = std::stoi(getParameter("RepeatOutput").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RepeatOutput', using default value."); }
+    try { m_rjrms = std::stod(getParameter("RJrms").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RJrms', using default value."); }
+    try { m_inl = std::stod(getParameter("INL").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'INL', using default value."); }
+    try { m_dnl = std::stod(getParameter("DNL").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DNL', using default value."); }
+    try { m_harmonicDistortion = ConvertStringToHDist(getParameter("HarmonicDistortion").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'HarmonicDistortion', using default value."); }
 
-    try { m_dbfs = std::stod(getParameter("dBFS").Value); } catch (...) { }
-    try { m_f2_to_f5_dbc = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("F2_to_F5_dBc").Value); } catch (...) { }
-    try { m_c1_to_c5_db = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("C1_to_C5_dB").Value); } catch (...) { }
+    try { m_dbfs = std::stod(getParameter("dBFS").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'dBFS', using default value."); }
+    try { m_f2_to_f5_dbc = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("F2_to_F5_dBc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'F2_to_F5_dBc', using default value."); }
+    try { m_c1_to_c5_db = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("C1_to_C5_dB").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'C1_to_C5_dB', using default value."); }
 
-    try { m_dbcReference = ConvertStringToDbRef(getParameter("dBcReference").Value); } catch (...) { }
-    try { m_dataTable = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("DataTable").Value); } catch (...) { }
-    try { m_fundamentalFo = std::stod(getParameter("FundamentalFo").Value); } catch (...) { }
-    try { m_setPhase = std::stoi(getParameter("SetPhase").Value); } catch (...) { }
+    try { m_dbcReference = ConvertStringToDbRef(getParameter("dBcReference").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'dBcReference', using default value."); }
+    try { m_dataTable = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("DataTable").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DataTable', using default value."); }
+    try { m_fundamentalFo = std::stod(getParameter("FundamentalFo").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FundamentalFo', using default value."); }
+    try { m_setPhase = std::stoi(getParameter("SetPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SetPhase', using default value."); }
 
     SetParameters();
 

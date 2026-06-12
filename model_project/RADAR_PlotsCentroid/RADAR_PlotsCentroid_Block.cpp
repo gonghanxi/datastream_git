@@ -128,10 +128,10 @@ bool RADAR_PlotsCentroid_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Type        = std::stoi(getParameter("Type").Value);        } catch (...) {}
-    try { m_SampleNum   = std::stoi(getParameter("SampleNum").Value);   } catch (...) {}
-    try { m_RangeBinNum = std::stoi(getParameter("RangeBinNum").Value); } catch (...) {}
-    try { m_DopplerBinNum = std::stoi(getParameter("DopplerBinNum").Value); } catch (...) {}
+    try { m_Type        = std::stoi(getParameter("Type").Value);        } catch (...) { LOG_WARN("Failed to parse parameter 'Type', using default value."); }
+    try { m_SampleNum   = std::stoi(getParameter("SampleNum").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'SampleNum', using default value."); }
+    try { m_RangeBinNum = std::stoi(getParameter("RangeBinNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RangeBinNum', using default value."); }
+    try { m_DopplerBinNum = std::stoi(getParameter("DopplerBinNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DopplerBinNum', using default value."); }
 
     SetParameters();
 

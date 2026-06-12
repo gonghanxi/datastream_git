@@ -441,26 +441,26 @@ bool RADAR_Kalman_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Period       = std::stod(getParameter("Period").Value); }       catch (...) {}
-    try { m_Meas_err_var = std::stod(getParameter("Meas_err_var").Value); } catch (...) {}
+    try { m_Period       = std::stod(getParameter("Period").Value); }       catch (...) { LOG_WARN("Failed to parse parameter 'Period', using default value."); }
+    try { m_Meas_err_var = std::stod(getParameter("Meas_err_var").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Meas_err_var', using default value."); }
 
     // 解析矩阵参数
     SystemVueModelBuilder::DoubleMatrix r_mat, a1_mat, h1_mat, g1_mat;
     SystemVueModelBuilder::DoubleMatrix a2_mat, h2_mat, g2_mat;
     SystemVueModelBuilder::DoubleMatrix q1_mat, q2_mat, q3_mat, p_mat, u_mat;
 
-    try { r_mat  = ParseStringToDoubleMatrix(getParameter("r_mat").Value);  } catch (...) {}
-    try { a1_mat = ParseStringToDoubleMatrix(getParameter("a1_mat").Value); } catch (...) {}
-    try { h1_mat = ParseStringToDoubleMatrix(getParameter("h1_mat").Value); } catch (...) {}
-    try { g1_mat = ParseStringToDoubleMatrix(getParameter("g1_mat").Value); } catch (...) {}
-    try { a2_mat = ParseStringToDoubleMatrix(getParameter("a2_mat").Value); } catch (...) {}
-    try { h2_mat = ParseStringToDoubleMatrix(getParameter("h2_mat").Value); } catch (...) {}
-    try { g2_mat = ParseStringToDoubleMatrix(getParameter("g2_mat").Value); } catch (...) {}
-    try { q1_mat = ParseStringToDoubleMatrix(getParameter("q1_mat").Value); } catch (...) {}
-    try { q2_mat = ParseStringToDoubleMatrix(getParameter("q2_mat").Value); } catch (...) {}
-    try { q3_mat = ParseStringToDoubleMatrix(getParameter("q3_mat").Value); } catch (...) {}
-    try { p_mat  = ParseStringToDoubleMatrix(getParameter("p_mat").Value);  } catch (...) {}
-    try { u_mat  = ParseStringToDoubleMatrix(getParameter("u_mat").Value);  } catch (...) {}
+    try { r_mat  = ParseStringToDoubleMatrix(getParameter("r_mat").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'r_mat', using default value."); }
+    try { a1_mat = ParseStringToDoubleMatrix(getParameter("a1_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'a1_mat', using default value."); }
+    try { h1_mat = ParseStringToDoubleMatrix(getParameter("h1_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'h1_mat', using default value."); }
+    try { g1_mat = ParseStringToDoubleMatrix(getParameter("g1_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'g1_mat', using default value."); }
+    try { a2_mat = ParseStringToDoubleMatrix(getParameter("a2_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'a2_mat', using default value."); }
+    try { h2_mat = ParseStringToDoubleMatrix(getParameter("h2_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'h2_mat', using default value."); }
+    try { g2_mat = ParseStringToDoubleMatrix(getParameter("g2_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'g2_mat', using default value."); }
+    try { q1_mat = ParseStringToDoubleMatrix(getParameter("q1_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'q1_mat', using default value."); }
+    try { q2_mat = ParseStringToDoubleMatrix(getParameter("q2_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'q2_mat', using default value."); }
+    try { q3_mat = ParseStringToDoubleMatrix(getParameter("q3_mat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'q3_mat', using default value."); }
+    try { p_mat  = ParseStringToDoubleMatrix(getParameter("p_mat").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'p_mat', using default value."); }
+    try { u_mat  = ParseStringToDoubleMatrix(getParameter("u_mat").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'u_mat', using default value."); }
 
     MatrixToColumnMajor(r_mat,  m_r_arr,  m_r_matSize);
     MatrixToColumnMajor(a1_mat, m_a1_arr, m_a1_matSize);

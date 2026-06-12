@@ -39,10 +39,10 @@ bool BitDeformatter_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_BitDeformatter = std::make_unique<BitDeformatter>();
     SetDefaultParameters();
-    try { m_Format = ConvertStringToSelectedFormat(getParameter("Format").Value); } catch (...) {}
-    try { m_SamplesPerBit = std::stoi(getParameter("SamplesPerBit").Value); } catch (...) {}
-    try { m_LogicZeroLevel = std::stod(getParameter("LogicZeroLevel").Value); } catch (...) {}
-    try { m_LogicOneLevel = std::stod(getParameter("LogicOneLevel").Value); } catch (...) {}
+    try { m_Format = ConvertStringToSelectedFormat(getParameter("Format").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Format', using default value."); }
+    try { m_SamplesPerBit = std::stoi(getParameter("SamplesPerBit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SamplesPerBit', using default value."); }
+    try { m_LogicZeroLevel = std::stod(getParameter("LogicZeroLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LogicZeroLevel', using default value."); }
+    try { m_LogicOneLevel = std::stod(getParameter("LogicOneLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LogicOneLevel', using default value."); }
     SetParameters();
     if(!m_BitDeformatter->Setup()) return false;
     AddInputPort("input", m_BitDeformatter->input, static_cast<size_t>(m_SamplesPerBit), DataType::CIRCULAR_BUFFER_DOUBLE);

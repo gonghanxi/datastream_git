@@ -162,7 +162,7 @@ bool AverageCxWOffset_Block::Initialize()
     m_AverageCxWOffset = std::make_unique<AverageCxWOffset>();
 
     SetDefaultParameters();
-    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch(...) {}
+    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'NumInputsToAverage', using default value."); }
     SetParameters();
     if (!m_AverageCxWOffset->Setup()) return false;
 

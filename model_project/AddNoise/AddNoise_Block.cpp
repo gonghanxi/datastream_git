@@ -75,10 +75,10 @@ bool AddNoise_Block::Initialize()
     m_AddNoise = std::make_unique<AddNoise>();
 
     // 解析参数
-    try { m_Bandwidth              = std::stod(getParameter("Bandwidth").Value);              } catch (...) {}
-    try { m_NoiseFigure            = std::stod(getParameter("NoiseFigure").Value);            } catch (...) {}
-    try { m_SystemNoiseTemperature = std::stod(getParameter("SystemNoiseTemperature").Value); } catch (...) {}
-    try { m_RefR                   = std::stod(getParameter("RefR").Value);                   } catch (...) {}
+    try { m_Bandwidth              = std::stod(getParameter("Bandwidth").Value);              } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { m_NoiseFigure            = std::stod(getParameter("NoiseFigure").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'NoiseFigure', using default value."); }
+    try { m_SystemNoiseTemperature = std::stod(getParameter("SystemNoiseTemperature").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SystemNoiseTemperature', using default value."); }
+    try { m_RefR                   = std::stod(getParameter("RefR").Value);                   } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
 
     if (m_Bandwidth < 0)
     {

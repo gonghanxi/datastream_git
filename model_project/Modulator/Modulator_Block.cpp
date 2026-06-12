@@ -326,20 +326,20 @@ bool Modulator_Block::Initialize()
     simulator_param = getSimu();
     SetDefaultParameters();
 
-    try { m_InputType = ConvertStringToInputTypeEnum(getParameter("InputType").Value); } catch (...) {}
-    try { m_FCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) {}
-    try { m_InitialPhase = std::stod(getParameter("InitialPhase").Value); } catch (...) {}
-    try { m_AmpSensitivity = std::stod(getParameter("AmpSensitivity").Value); } catch (...) {}
-    try { m_PhaseSensitivity = std::stod(getParameter("PhaseSensitivity").Value); } catch (...) {}
-    try { m_FreqSensitivity = std::stod(getParameter("FreqSensitivity").Value); } catch (...) {}
-    try { m_ConjugatedQuadrature = ConvertStringToConjQuadEnum(getParameter("ConjugatedQuadrature").Value); } catch (...) {}
-    try { m_MirrorSignal = ConvertStringToMirrorEnum(getParameter("MirrorSignal").Value); } catch (...) {}
-    try { m_ShowIQ_Impairments = ConvertStringToShowIQEnum(getParameter("ShowIQ_Impairments").Value); } catch (...) {}
-    try { m_GainImbalance = std::stod(getParameter("GainImbalance").Value); } catch (...) {}
-    try { m_PhaseImbalance = std::stod(getParameter("PhaseImbalance").Value); } catch (...) {}
-    try { m_I_OriginOffset = std::stod(getParameter("I_OriginOffset").Value); } catch (...) {}
-    try { m_Q_OriginOffset = std::stod(getParameter("Q_OriginOffset").Value); } catch (...) {}
-    try { m_IQ_Rotation = std::stod(getParameter("IQ_Rotation").Value); } catch (...) {}
+    try { m_InputType = ConvertStringToInputTypeEnum(getParameter("InputType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InputType', using default value."); }
+    try { m_FCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FCarrier', using default value."); }
+    try { m_InitialPhase = std::stod(getParameter("InitialPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialPhase', using default value."); }
+    try { m_AmpSensitivity = std::stod(getParameter("AmpSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AmpSensitivity', using default value."); }
+    try { m_PhaseSensitivity = std::stod(getParameter("PhaseSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseSensitivity', using default value."); }
+    try { m_FreqSensitivity = std::stod(getParameter("FreqSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FreqSensitivity', using default value."); }
+    try { m_ConjugatedQuadrature = ConvertStringToConjQuadEnum(getParameter("ConjugatedQuadrature").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ConjugatedQuadrature', using default value."); }
+    try { m_MirrorSignal = ConvertStringToMirrorEnum(getParameter("MirrorSignal").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MirrorSignal', using default value."); }
+    try { m_ShowIQ_Impairments = ConvertStringToShowIQEnum(getParameter("ShowIQ_Impairments").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowIQ_Impairments', using default value."); }
+    try { m_GainImbalance = std::stod(getParameter("GainImbalance").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GainImbalance', using default value."); }
+    try { m_PhaseImbalance = std::stod(getParameter("PhaseImbalance").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseImbalance', using default value."); }
+    try { m_I_OriginOffset = std::stod(getParameter("I_OriginOffset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'I_OriginOffset', using default value."); }
+    try { m_Q_OriginOffset = std::stod(getParameter("Q_OriginOffset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Q_OriginOffset', using default value."); }
+    try { m_IQ_Rotation = std::stod(getParameter("IQ_Rotation").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IQ_Rotation', using default value."); }
 
 
     SetParameters(m_InputType, m_FCarrier,m_InitialPhase, m_AmpSensitivity,

@@ -488,10 +488,10 @@ bool RADAR_MTD_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_WindowType       = ConvertStringToWindowType(getParameter("WindowType").Value);            } catch (...) {}
-    try { m_NumOfPulse       = std::stoi(getParameter("NumOfPulse").Value);                            } catch (...) {}
-    try { m_Freq_WeightData      = ParseStringToDoubleVector(getParameter("Freq_Weight").Value);           } catch (...) {}
-    try { m_WindowParametersData     = ParseStringToDoubleVector(getParameter("WindowParameters").Value);      } catch (...) {}
+    try { m_WindowType       = ConvertStringToWindowType(getParameter("WindowType").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_NumOfPulse       = std::stoi(getParameter("NumOfPulse").Value);                            } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfPulse', using default value."); }
+    try { m_Freq_WeightData      = ParseStringToDoubleVector(getParameter("Freq_Weight").Value);           } catch (...) { LOG_WARN("Failed to parse parameter 'Freq_Weight', using default value."); }
+    try { m_WindowParametersData     = ParseStringToDoubleVector(getParameter("WindowParameters").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'WindowParameters', using default value."); }
 
     SetParameters();
 

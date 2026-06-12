@@ -67,10 +67,10 @@ bool SchmittTrig_Block::Initialize()
     m_SchmittTrig = std::make_unique<SchmittTrig>();
 
     // 解析参数
-    try { m_ILow  = std::stod(getParameter("ILow").Value);  } catch (...) {}
-    try { m_IHigh = std::stod(getParameter("IHigh").Value); } catch (...) {}
-    try { m_OLow  = std::stod(getParameter("OLow").Value);  } catch (...) {}
-    try { m_OHigh = std::stod(getParameter("OHigh").Value); } catch (...) {}
+    try { m_ILow  = std::stod(getParameter("ILow").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'ILow', using default value."); }
+    try { m_IHigh = std::stod(getParameter("IHigh").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IHigh', using default value."); }
+    try { m_OLow  = std::stod(getParameter("OLow").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'OLow', using default value."); }
+    try { m_OHigh = std::stod(getParameter("OHigh").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OHigh', using default value."); }
 
     if (m_ILow > m_IHigh)
     {

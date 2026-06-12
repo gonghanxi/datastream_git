@@ -259,12 +259,12 @@ bool RADAR_PulseCompression_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_samplenum = std::stoi(getParameter("Samplenum").Value); } catch (...) { }
-    try { m_fftSize = std::stoi(getParameter("FFTSize").Value); } catch (...) { }
-    try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
-    try { m_windowType = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { }
-    try { m_windowParameter = std::stod(getParameter("WindowParameter").Value); } catch (...) { }
+    try { m_samplenum = std::stoi(getParameter("Samplenum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Samplenum', using default value."); }
+    try { m_fftSize = std::stoi(getParameter("FFTSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FFTSize', using default value."); }
+    try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_windowType = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_windowParameter = std::stod(getParameter("WindowParameter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowParameter', using default value."); }
 
     SetParameters(m_samplenum, m_fftSize, m_bandwidth, m_sampleRate, m_windowType, m_windowParameter);
 

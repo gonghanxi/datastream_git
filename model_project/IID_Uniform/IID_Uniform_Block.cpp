@@ -99,21 +99,21 @@ bool IID_Uniform_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_loLevel = std::stod(getParameter("LoLevel").Value); } catch (...) { }
-    try { m_hiLevel = std::stod(getParameter("HiLevel").Value); } catch (...) { }
-    try { m_showAdvancedParams = ConvertStringToShowAdvancedParams(getParameter("ShowAdvancedParams").Value); } catch (...) { }
-    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_loLevel = std::stod(getParameter("LoLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LoLevel', using default value."); }
+    try { m_hiLevel = std::stod(getParameter("HiLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'HiLevel', using default value."); }
+    try { m_showAdvancedParams = ConvertStringToShowAdvancedParams(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
     
     if (m_sampleRate <= 0.0) {
         std::cout << "SampleRate must be greater than 0." << std::endl;
         return false;
     }
-    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { }
-    try { m_burstMode = ConvertStringToBurstMode(getParameter("BurstMode").Value); } catch (...) { }
-    try { m_burstLength = std::stoi(getParameter("BurstLength").Value); } catch (...) { }
-    try { m_burstPeriod = std::stoi(getParameter("BurstPeriod").Value); } catch (...) { }
-    try { m_burstDelay = std::stoi(getParameter("BurstDelay").Value); } catch (...) { }
+    try { m_initialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
+    try { m_burstMode = ConvertStringToBurstMode(getParameter("BurstMode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstMode', using default value."); }
+    try { m_burstLength = std::stoi(getParameter("BurstLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstLength', using default value."); }
+    try { m_burstPeriod = std::stoi(getParameter("BurstPeriod").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstPeriod', using default value."); }
+    try { m_burstDelay = std::stoi(getParameter("BurstDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BurstDelay', using default value."); }
 
     SetParameters();
 

@@ -69,8 +69,8 @@ bool GrayEncoder_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_gray = std::make_unique<GrayEncoder>();
     SetDefaultParameters();
-    try { NumBits = std::stoi(getParameter("NumBits").Value); } catch (...) {}
-    try { m_BitOrder = ConvertStringToBitOrderE(getParameter("BitOrder").Value); } catch (...) {}
+    try { NumBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { m_BitOrder = ConvertStringToBitOrderE(getParameter("BitOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
     SetParameters();
 
     if (NumBits <= 0)

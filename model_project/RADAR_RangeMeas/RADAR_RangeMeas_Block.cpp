@@ -142,9 +142,9 @@ bool RADAR_RangeMeas_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { }
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_CPI_Num = std::stoi(getParameter("CPI_Num").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CPI_Num', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     m_PRINum = static_cast<int>(m_PRI * m_SampleRate);
     m_portRate = m_PRINum * m_CPI_Num;

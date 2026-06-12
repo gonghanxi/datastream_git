@@ -52,15 +52,13 @@ bool ConvolutionalCoder_Block::Initialize()
     m_con = std::make_unique<ConvolutionalCoder>();
     SetDefaultParameters();
     try {
-    std::string PrimString = getParameter("Polynomial").Value;
-    parseArrayString(PrimString, primdata);
-
-    CodingRate = ConvertStringToCodingRateEnum(getParameter("CodingRate").Value);
-    ConstraintLength = std::stoi(getParameter("ConstraintLength").Value);
-    ZeroTail = ConvertStringToZeroTailEnum(getParameter("ZeroTail").Value);
-    BitSequenceLength = std::stoi(getParameter("BitSequenceLength").Value);
-
-    } catch(...) {}
+        std::string PrimString = getParameter("Polynomial").Value;
+        parseArrayString(PrimString, primdata);
+    } catch(...) { LOG_WARN("Failed to parse parameter 'Polynomial', using default value."); }
+    try { CodingRate = ConvertStringToCodingRateEnum(getParameter("CodingRate").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'CodingRate', using default value."); }
+    try { ConstraintLength = std::stoi(getParameter("ConstraintLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ConstraintLength', using default value."); }
+    try { ZeroTail = ConvertStringToZeroTailEnum(getParameter("ZeroTail").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ZeroTail', using default value."); }
+    try { BitSequenceLength = std::stoi(getParameter("BitSequenceLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'BitSequenceLength', using default value."); }
 
     SetParameters();
 

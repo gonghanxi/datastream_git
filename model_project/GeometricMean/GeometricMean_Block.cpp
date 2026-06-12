@@ -24,8 +24,8 @@ bool GeometricMean_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_GeometricMean = std::make_unique<GeometricMean>();
     SetDefaultParameters();
-    try { m_N = std::stoi(getParameter("N").Value); } catch (...) {}
-    try { m_Gain = std::stod(getParameter("Gain").Value); } catch (...) {}
+    try { m_N = std::stoi(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
+    try { m_Gain = std::stod(getParameter("Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Gain', using default value."); }
     SetParameters();
     if(!m_GeometricMean->Setup()) return false;
     AddInputPort("input", m_GeometricMean->input, static_cast<size_t>(m_N), DataType::CIRCULAR_BUFFER_DOUBLE);

@@ -64,10 +64,10 @@ bool Limit_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Limit = std::make_unique<Limit>();
     SetDefaultParameters();
-    try { LimiterType = ConvertStringToSelectedLimiterType(getParameter("LimiterType").Value); } catch (...) {}
-    try { K = std::stod(getParameter("K").Value); } catch (...) {}
-    try { Bottom = std::stod(getParameter("Bottom").Value); } catch (...) {}
-    try { Top = std::stod(getParameter("Top").Value); } catch (...) {}
+    try { LimiterType = ConvertStringToSelectedLimiterType(getParameter("LimiterType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LimiterType', using default value."); }
+    try { K = std::stod(getParameter("K").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'K', using default value."); }
+    try { Bottom = std::stod(getParameter("Bottom").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bottom', using default value."); }
+    try { Top = std::stod(getParameter("Top").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Top', using default value."); }
     SetParameters();
     if(!m_Limit->Setup()) return false;
     AddInputPort("input", m_Limit->input, 1, DataType::CIRCULAR_BUFFER_DOUBLE);

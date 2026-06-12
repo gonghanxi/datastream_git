@@ -191,10 +191,10 @@ bool FFT_Cx_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_fftSize = std::stoi(getParameter("FFTSize").Value); } catch (...) {}
-	try { m_size = std::stoi(getParameter("Size").Value); } catch (...) {}
-	try { m_direction = ConvertStringToDirection(getParameter("Direction").Value); } catch (...) {}
-	try { m_freqSequence = ConvertStringToFreqSequence(getParameter("FreqSequence").Value); } catch (...) {}
+	try { m_fftSize = std::stoi(getParameter("FFTSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FFTSize', using default value."); }
+	try { m_size = std::stoi(getParameter("Size").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Size', using default value."); }
+	try { m_direction = ConvertStringToDirection(getParameter("Direction").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Direction', using default value."); }
+	try { m_freqSequence = ConvertStringToFreqSequence(getParameter("FreqSequence").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FreqSequence', using default value."); }
 
 	SetParameters(m_fftSize, m_size, m_direction, m_freqSequence);
 

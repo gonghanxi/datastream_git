@@ -241,10 +241,10 @@ bool MaxMin_Block::Initialize()
     m_MaxMin = std::make_unique<MaxMin>();
 
     SetDefaultParameters();
-    try { m_N         = std::stoi(getParameter("N").Value);          } catch (...) {}
-    try { m_MaxOrMin  = ConvertStringToMaxOrMin(getParameter("MaxOrMin").Value);   } catch (...) {}
-    try { m_Compare   = ConvertStringToCompare(getParameter("Compare").Value);     } catch (...) {}
-    try { m_OutputType = ConvertStringToOutputType(getParameter("OutputType").Value); } catch (...) {}
+    try { m_N         = std::stoi(getParameter("N").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
+    try { m_MaxOrMin  = ConvertStringToMaxOrMin(getParameter("MaxOrMin").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'MaxOrMin', using default value."); }
+    try { m_Compare   = ConvertStringToCompare(getParameter("Compare").Value);     } catch (...) { LOG_WARN("Failed to parse parameter 'Compare', using default value."); }
+    try { m_OutputType = ConvertStringToOutputType(getParameter("OutputType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputType', using default value."); }
     SetParameters();
 
     if (m_N < 1)

@@ -143,7 +143,7 @@ bool TrigCx_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_FunctionType = ConvertStringToSelectedFunctionType(getParameter("FunctionType").Value); } catch (...) { }
+    try { m_FunctionType = ConvertStringToSelectedFunctionType(getParameter("FunctionType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FunctionType', using default value."); }
 
     SetParameters();
 

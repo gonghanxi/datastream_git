@@ -173,15 +173,11 @@ bool PeakDetector_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_peak = std::make_unique<PeakDetector>();
     SetDefaultParameters();
-    try {
-        ChargeTimeConstant = std::stod(getParameter("ChargeTimeConstant").Value);
-        DecayTimeConstant = std::stod(getParameter("DecayTimeConstant").Value);
-        VThreshold = std::stod(getParameter("VThreshold").Value);
-        VTransWidth = std::stod(getParameter("VTransWidth").Value);
-        Polarity = ConvertStringToSelectedPolarity(getParameter("Polarity").Value);
-    } catch (...) {
-
-    }
+    try { ChargeTimeConstant = std::stod(getParameter("ChargeTimeConstant").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ChargeTimeConstant', using default value."); }
+    try { DecayTimeConstant = std::stod(getParameter("DecayTimeConstant").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DecayTimeConstant', using default value."); }
+    try { VThreshold = std::stod(getParameter("VThreshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VThreshold', using default value."); }
+    try { VTransWidth = std::stod(getParameter("VTransWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VTransWidth', using default value."); }
+    try { Polarity = ConvertStringToSelectedPolarity(getParameter("Polarity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Polarity', using default value."); }
     SetParameters();
 
     AddInputPort("input", m_peak->input, 1, DataType::ENVELOPE_SIGNAL);

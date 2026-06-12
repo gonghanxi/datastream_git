@@ -114,10 +114,10 @@ bool Limit_M_Block::Initialize()
     SetDefaultParameters();
 
     // 读取参数
-    try { m_K = std::stod(getParameter("K").Value); } catch (...) {}
-    try { m_Bottom = std::stod(getParameter("Bottom").Value); } catch (...) {}
-    try { m_Top = std::stod(getParameter("Top").Value); } catch (...) {}
-    try { m_LimiterType = ConvertStringToSelectedLimiterType(getParameter("LimiterType").Value); } catch (...) {}
+    try { m_K = std::stod(getParameter("K").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'K', using default value."); }
+    try { m_Bottom = std::stod(getParameter("Bottom").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bottom', using default value."); }
+    try { m_Top = std::stod(getParameter("Top").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Top', using default value."); }
+    try { m_LimiterType = ConvertStringToSelectedLimiterType(getParameter("LimiterType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LimiterType', using default value."); }
 
     SetParameters();
 

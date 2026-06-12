@@ -107,13 +107,13 @@ bool DiagonalCx_M_Block::Initialize()
     SetDefaultParameters();
 
     // 读取参数
-    try { m_ShowAdvancedParams = ConvertStringToShowAdvancedEnum(getParameter("ShowAdvancedParams").Value); } catch (...) {}
-    try { m_SampleRateOption = ConvertStringToSampleRateOptionEnum(getParameter("SampleRateOption").Value); } catch (...) {}
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
-    try { m_InitialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) {}
+    try { m_ShowAdvancedParams = ConvertStringToShowAdvancedEnum(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_SampleRateOption = ConvertStringToSampleRateOptionEnum(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_InitialDelay = std::stoi(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
 
     // DiagonalElements 参数（复数矩阵类型）
-    try { m_DiagonalElements = ParseStringToMatrix<std::complex<double>>(getParameter("DiagonalElements").Value); } catch (...) {}
+    try { m_DiagonalElements = ParseStringToMatrix<std::complex<double>>(getParameter("DiagonalElements").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DiagonalElements', using default value."); }
 
     SetParameters();
 

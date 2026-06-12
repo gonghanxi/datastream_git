@@ -58,9 +58,9 @@ bool Unwrap_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PhaseType = ConvertStringToSelectedPhaseType(getParameter("FunctionType").Value); } catch (...) { }
-    try { m_OutPhase = std::stod(getParameter("OutPhase").Value); } catch (...) { }
-    try { m_PrevPhase = std::stod(getParameter("PrevPhase").Value); } catch (...) { }
+    try { m_PhaseType = ConvertStringToSelectedPhaseType(getParameter("FunctionType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FunctionType', using default value."); }
+    try { m_OutPhase = std::stod(getParameter("OutPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutPhase', using default value."); }
+    try { m_PrevPhase = std::stod(getParameter("PrevPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PrevPhase', using default value."); }
 
     SetParameters();
 

@@ -67,9 +67,9 @@ bool RADAR_BinaryDetector_Block::Initialize()
     SetDefaultParameters();
 
     // 解析参数
-    try { m_Threshold  = std::stod(getParameter("Threshold").Value); } catch (...) {}
-    try { m_PRI        = std::stod(getParameter("PRI").Value); } catch (...) {}
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
+    try { m_Threshold  = std::stod(getParameter("Threshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Threshold', using default value."); }
+    try { m_PRI        = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     // ---- 参数校验 (from RADAR_BinaryDetector::Setup) ----
     bool bStatus = true;

@@ -215,11 +215,11 @@ bool RADAR_DOA_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Fc = std::stod(getParameter("Fc").Value); } catch (...) { }
-    try { m_D = std::stod(getParameter("D").Value); } catch (...) { }
-    try { m_NumOfCh = std::stoi(getParameter("NumOfCh").Value); } catch (...) { }
-    try { m_SnapShotLen = std::stoi(getParameter("SnapShotLen").Value); } catch (...) { }
-    try { m_MTI_Type = ConvertStringToSelectedMTI_Type(getParameter("MTI_Type").Value); } catch (...) { }
+    try { m_Fc = std::stod(getParameter("Fc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Fc', using default value."); }
+    try { m_D = std::stod(getParameter("D").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D', using default value."); }
+    try { m_NumOfCh = std::stoi(getParameter("NumOfCh").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfCh', using default value."); }
+    try { m_SnapShotLen = std::stoi(getParameter("SnapShotLen").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SnapShotLen', using default value."); }
+    try { m_MTI_Type = ConvertStringToSelectedMTI_Type(getParameter("MTI_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MTI_Type', using default value."); }
 
     SetParameters();
 

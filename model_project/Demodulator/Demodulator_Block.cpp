@@ -195,19 +195,19 @@ bool Demodulator_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_outputType = ConvertStringToOutputType(getParameter("OutputType").Value); } catch (...) {}
-	try { m_fCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) {}
-	try { m_initialPhase = std::stod(getParameter("InitialPhase").Value); } catch (...) {}
-	try { m_ampSensitivity = std::stod(getParameter("AmpSensitivity").Value); } catch (...) {}
-	try { m_phaseSensitivity = std::stod(getParameter("PhaseSensitivity").Value); } catch (...) {}
-	try { m_freqSensitivity = std::stod(getParameter("FreqSensitivity").Value); } catch (...) {}
-	try { m_mirrorSignal = ConvertStringToMirror(getParameter("MirrorSignal").Value); } catch (...) {}
-	try { m_showIQImpairments = ConvertStringToIQImp(getParameter("ShowIQ_Impairments").Value); } catch (...) {}
-	try { m_gainImbalance = std::stod(getParameter("GainImbalance").Value); } catch (...) {}
-	try { m_phaseImbalance = std::stod(getParameter("PhaseImbalance").Value); } catch (...) {}
-	try { m_iOriginOffset = std::stod(getParameter("I_OriginOffset").Value); } catch (...) {}
-	try { m_qOriginOffset = std::stod(getParameter("Q_OriginOffset").Value); } catch (...) {}
-	try { m_iqRotation = std::stod(getParameter("IQ_Rotation").Value); } catch (...) {}
+	try { m_outputType = ConvertStringToOutputType(getParameter("OutputType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputType', using default value."); }
+	try { m_fCarrier = std::stod(getParameter("FCarrier").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FCarrier', using default value."); }
+	try { m_initialPhase = std::stod(getParameter("InitialPhase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialPhase', using default value."); }
+	try { m_ampSensitivity = std::stod(getParameter("AmpSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AmpSensitivity', using default value."); }
+	try { m_phaseSensitivity = std::stod(getParameter("PhaseSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseSensitivity', using default value."); }
+	try { m_freqSensitivity = std::stod(getParameter("FreqSensitivity").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FreqSensitivity', using default value."); }
+	try { m_mirrorSignal = ConvertStringToMirror(getParameter("MirrorSignal").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MirrorSignal', using default value."); }
+	try { m_showIQImpairments = ConvertStringToIQImp(getParameter("ShowIQ_Impairments").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowIQ_Impairments', using default value."); }
+	try { m_gainImbalance = std::stod(getParameter("GainImbalance").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GainImbalance', using default value."); }
+	try { m_phaseImbalance = std::stod(getParameter("PhaseImbalance").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseImbalance', using default value."); }
+	try { m_iOriginOffset = std::stod(getParameter("I_OriginOffset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'I_OriginOffset', using default value."); }
+	try { m_qOriginOffset = std::stod(getParameter("Q_OriginOffset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Q_OriginOffset', using default value."); }
+	try { m_iqRotation = std::stod(getParameter("IQ_Rotation").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IQ_Rotation', using default value."); }
 
 	SetParameters();
 

@@ -76,10 +76,10 @@ bool Chop_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_nRead = std::stoi(getParameter("nRead").Value); } catch (...) { }
-    try { m_nWrite = std::stoi(getParameter("nWrite").Value); } catch (...) { }
-    try { m_offset = std::stoi(getParameter("Offset").Value); } catch (...) { }
-    try { m_usePastInputs = ConvertStringToQueryEnum(getParameter("UsePastInputs").Value); } catch (...) { }
+    try { m_nRead = std::stoi(getParameter("nRead").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'nRead', using default value."); }
+    try { m_nWrite = std::stoi(getParameter("nWrite").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'nWrite', using default value."); }
+    try { m_offset = std::stoi(getParameter("Offset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Offset', using default value."); }
+    try { m_usePastInputs = ConvertStringToQueryEnum(getParameter("UsePastInputs").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'UsePastInputs', using default value."); }
 
     if (m_nRead <= 0 || m_nWrite <= 0) {
         return false;

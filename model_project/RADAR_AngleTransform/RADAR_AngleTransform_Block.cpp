@@ -115,7 +115,7 @@ bool RADAR_AngleTransform_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_TransformType = ConvertStringToTransformTypeEnum(getParameter("TransformType").Value); } catch (...) {}
+    try { m_TransformType = ConvertStringToTransformTypeEnum(getParameter("TransformType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TransformType', using default value."); }
 
     SetParameters();
 

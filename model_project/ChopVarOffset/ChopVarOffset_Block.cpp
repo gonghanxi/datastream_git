@@ -210,8 +210,8 @@ bool ChopVarOffset_Block::Initialize()
     m_ChopVarOffset = std::make_unique<ChopVarOffset>();
 
     SetDefaultParameters();
-    try { m_nRead  = std::stoi(getParameter("nRead").Value);  } catch(...) {}
-    try { m_nWrite = std::stoi(getParameter("nWrite").Value); } catch(...) {}
+    try { m_nRead  = std::stoi(getParameter("nRead").Value);  } catch(...) { LOG_WARN("Failed to parse parameter 'nRead', using default value."); }
+    try { m_nWrite = std::stoi(getParameter("nWrite").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'nWrite', using default value."); }
     SetParameters();
     if (!m_ChopVarOffset->Setup()) return false;
 

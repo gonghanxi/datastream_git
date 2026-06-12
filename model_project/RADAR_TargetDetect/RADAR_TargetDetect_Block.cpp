@@ -43,19 +43,13 @@ bool RADAR_TargetDetect_Block::Initialize()
     m_radar = std::make_unique<RADAR_TargetDetect>();
     SetDefaultParameters();
 
-    try {
-        DetectType = ConvertStringToSelectedDetectType(getParameter("DetectType").Value);
-
-        PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value);
-        FalseAlarmProbability = std::stod(getParameter("FalseAlarmProbability").Value);
-        ReferenceCell = std::stoi(getParameter("ReferenceCell").Value);
-        GuardCell = std::stoi(getParameter("GuardCell").Value);
-        FreqChannelNum = std::stoi(getParameter("FreqChannelNum").Value);
-        SampleRate = std::stod(getParameter("SampleRate").Value);
-
-    } catch (...) {
-
-    }
+    try { DetectType = ConvertStringToSelectedDetectType(getParameter("DetectType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DetectType', using default value."); }
+    try { PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_Or_WaveGate', using default value."); }
+    try { FalseAlarmProbability = std::stod(getParameter("FalseAlarmProbability").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FalseAlarmProbability', using default value."); }
+    try { ReferenceCell = std::stoi(getParameter("ReferenceCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ReferenceCell', using default value."); }
+    try { GuardCell = std::stoi(getParameter("GuardCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GuardCell', using default value."); }
+    try { FreqChannelNum = std::stoi(getParameter("FreqChannelNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FreqChannelNum', using default value."); }
+    try { SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

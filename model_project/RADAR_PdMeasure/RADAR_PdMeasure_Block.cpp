@@ -122,9 +122,9 @@ bool RADAR_PdMeasure_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRI              = std::stod(getParameter("PRI").Value);              } catch (...) {}
-    try { m_SampleRate       = std::stod(getParameter("SampleRate").Value);       } catch (...) {}
-    try { m_SimulationNumber = std::stoi(getParameter("SimulationNumber").Value); } catch (...) {}
+    try { m_PRI              = std::stod(getParameter("PRI").Value);              } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_SampleRate       = std::stod(getParameter("SampleRate").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
+    try { m_SimulationNumber = std::stoi(getParameter("SimulationNumber").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SimulationNumber', using default value."); }
 
     SetParameters();
 

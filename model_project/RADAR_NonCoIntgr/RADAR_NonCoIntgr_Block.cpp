@@ -174,9 +174,9 @@ bool RADAR_NonCoIntgr_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) {}
-    try { m_Number          = std::stoi(getParameter("Number").Value);          } catch (...) {}
-    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value);      } catch (...) {}
+    try { m_PRI_Or_WaveGate = std::stod(getParameter("PRI_Or_WaveGate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_Or_WaveGate', using default value."); }
+    try { m_Number          = std::stoi(getParameter("Number").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'Number', using default value."); }
+    try { m_SampleRate      = std::stod(getParameter("SampleRate").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     ComputeRates();
 

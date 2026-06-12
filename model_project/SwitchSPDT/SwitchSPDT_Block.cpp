@@ -113,15 +113,15 @@ bool SwitchSPDT_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_Loss1      = std::stod(getParameter("Loss1").Value);      } catch (...) {}
-    try { m_Isolation1 = std::stod(getParameter("Isolation1").Value); } catch (...) {}
-    try { m_Loss2      = std::stod(getParameter("Loss2").Value);      } catch (...) {}
-    try { m_Isolation2 = std::stod(getParameter("Isolation2").Value); } catch (...) {}
-    try { m_VThreshold = std::stod(getParameter("VThreshold").Value); } catch (...) {}
-    try { m_TOn1       = std::stod(getParameter("TOn1").Value);       } catch (...) {}
-    try { m_TOff1      = std::stod(getParameter("TOff1").Value);      } catch (...) {}
-    try { m_TOn2       = std::stod(getParameter("TOn2").Value);       } catch (...) {}
-    try { m_TOff2      = std::stod(getParameter("TOff2").Value);      } catch (...) {}
+    try { m_Loss1      = std::stod(getParameter("Loss1").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'Loss1', using default value."); }
+    try { m_Isolation1 = std::stod(getParameter("Isolation1").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Isolation1', using default value."); }
+    try { m_Loss2      = std::stod(getParameter("Loss2").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'Loss2', using default value."); }
+    try { m_Isolation2 = std::stod(getParameter("Isolation2").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Isolation2', using default value."); }
+    try { m_VThreshold = std::stod(getParameter("VThreshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VThreshold', using default value."); }
+    try { m_TOn1       = std::stod(getParameter("TOn1").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'TOn1', using default value."); }
+    try { m_TOff1      = std::stod(getParameter("TOff1").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'TOff1', using default value."); }
+    try { m_TOn2       = std::stod(getParameter("TOn2").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'TOn2', using default value."); }
+    try { m_TOff2      = std::stod(getParameter("TOff2").Value);      } catch (...) { LOG_WARN("Failed to parse parameter 'TOff2', using default value."); }
 
     SetParameters();
 

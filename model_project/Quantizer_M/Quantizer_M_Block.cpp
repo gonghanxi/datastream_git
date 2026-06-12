@@ -97,13 +97,13 @@ bool Quantizer_M_Block::Initialize()
     try {
         std::string thresholdsStr = getParameter("Thresholds").Value;
         parseArrayString(thresholdsStr, m_thresholdsData);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Thresholds', using default value."); }
 
     // 读取 Levels 参数
     try {
         std::string levelsStr = getParameter("Levels").Value;
         parseArrayString(levelsStr, m_levelsData);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Levels', using default value."); }
 
     SetParameters();
 

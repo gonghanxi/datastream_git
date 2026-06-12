@@ -65,8 +65,8 @@ bool BitsToInt_Block::Initialize()
     m_bitsToInt = std::make_unique<BitsToInt>();
 
     SetDefaultParamters();
-    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { }
-    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch (...) { }
+    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { m_bitOrder = ConvertStringToBitOrder(getParameter("BitOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
 
     if (m_numBits < 1) {
         m_numBits = 1;

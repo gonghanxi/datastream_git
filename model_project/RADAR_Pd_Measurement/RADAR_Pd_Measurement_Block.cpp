@@ -90,14 +90,12 @@ bool RADAR_Pd_Measurement_Block::Initialize()
 
      SetDefaultParameters();
 
-     try {
-         Start = std::stoi(getParameter("Start").Value);
-         PRI_NUM = std::stoi(getParameter("PRI_NUM").Value);;
-         FFT_Size = std::stoi(getParameter("FFT_Size").Value);;
-         DetectionNum = std::stoi(getParameter("DetectionNum").Value);;
-         TargetsInPRI = std::stoi(getParameter("TargetsInPRI").Value);;
-         TargetThreshold = std::stod(getParameter("TargetThreshold").Value);;
-     } catch (...) {}
+     try { Start = std::stoi(getParameter("Start").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Start', using default value."); }
+     try { PRI_NUM = std::stoi(getParameter("PRI_NUM").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_NUM', using default value."); }
+     try { FFT_Size = std::stoi(getParameter("FFT_Size").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FFT_Size', using default value."); }
+     try { DetectionNum = std::stoi(getParameter("DetectionNum").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DetectionNum', using default value."); }
+     try { TargetsInPRI = std::stoi(getParameter("TargetsInPRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetsInPRI', using default value."); }
+     try { TargetThreshold = std::stod(getParameter("TargetThreshold").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetThreshold', using default value."); }
 
      SetParameters();
 

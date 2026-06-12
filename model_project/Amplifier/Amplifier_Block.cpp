@@ -236,29 +236,29 @@ bool Amplifier_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_gainUnit = ConvertStringToGainUnit(getParameter("GainUnit").Value); } catch (...) { }
-    try { m_gain = std::stod(getParameter("Gain").Value); } catch (...) { }
-    try { m_quantization = ConvertStringToQuantization(getParameter("Quantization").Value); } catch (...) { }
-    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { }
-    try { m_stepSize = std::stod(getParameter("StepSize").Value); } catch (...) { }
-    try { m_maxGain = std::stod(getParameter("MaxGain").Value); } catch (...) { }
-    try { m_levels = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("Levels").Value); } catch (...) { }
-    try { m_gainError = ConvertStringToGainError(getParameter("GainError").Value); } catch (...) { }
-    try { m_stdDev = std::stod(getParameter("StdDev").Value); } catch (...) { }
-    try { m_min = std::stod(getParameter("Min").Value); } catch (...) { }
-    try { m_max = std::stod(getParameter("Max").Value); } catch (...) { }
-    try { m_customError = std::stod(getParameter("CustomError").Value); } catch (...) { }
-    try { m_noiseFigure = std::stod(getParameter("NoiseFigure").Value); } catch (...) { }
-    try { m_gcType = ConvertStringToGCType(getParameter("GCType").Value); } catch (...) { }
+    try { m_gainUnit = ConvertStringToGainUnit(getParameter("GainUnit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GainUnit', using default value."); }
+    try { m_gain = std::stod(getParameter("Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Gain', using default value."); }
+    try { m_quantization = ConvertStringToQuantization(getParameter("Quantization").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Quantization', using default value."); }
+    try { m_numBits = std::stoi(getParameter("NumBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumBits', using default value."); }
+    try { m_stepSize = std::stod(getParameter("StepSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StepSize', using default value."); }
+    try { m_maxGain = std::stod(getParameter("MaxGain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MaxGain', using default value."); }
+    try { m_levels = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("Levels").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Levels', using default value."); }
+    try { m_gainError = ConvertStringToGainError(getParameter("GainError").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GainError', using default value."); }
+    try { m_stdDev = std::stod(getParameter("StdDev").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StdDev', using default value."); }
+    try { m_min = std::stod(getParameter("Min").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Min', using default value."); }
+    try { m_max = std::stod(getParameter("Max").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Max', using default value."); }
+    try { m_customError = std::stod(getParameter("CustomError").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CustomError', using default value."); }
+    try { m_noiseFigure = std::stod(getParameter("NoiseFigure").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NoiseFigure', using default value."); }
+    try { m_gcType = ConvertStringToGCType(getParameter("GCType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GCType', using default value."); }
 
-    try { TOIout = std::stod(getParameter("TOIout").Value); } catch (...) { }
-    try { dBc1out = std::stod(getParameter("dBc1out").Value); } catch (...) { }
-    try { PSat = std::stod(getParameter("PSat").Value); } catch (...) { }
-    try { GCSat = std::stod(getParameter("GCSat").Value); } catch (...) { }
-    try { RappS = std::stoi(getParameter("RappS").Value); } catch (...) { }
-    try { GComp = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("GComp").Value); } catch (...) { }
+    try { TOIout = std::stod(getParameter("TOIout").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TOIout', using default value."); }
+    try { dBc1out = std::stod(getParameter("dBc1out").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'dBc1out', using default value."); }
+    try { PSat = std::stod(getParameter("PSat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PSat', using default value."); }
+    try { GCSat = std::stod(getParameter("GCSat").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GCSat', using default value."); }
+    try { RappS = std::stoi(getParameter("RappS").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RappS', using default value."); }
+    try { GComp = DataTypesAndParsers::ParseStringToMatrixDouble(getParameter("GComp").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GComp', using default value."); }
 
-    try { RefR = std::stod(getParameter("RefR").Value); } catch (...) { }
+    try { RefR = std::stod(getParameter("RefR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RefR', using default value."); }
 
     if (m_numBits < 0) {
         m_numBits = 0;

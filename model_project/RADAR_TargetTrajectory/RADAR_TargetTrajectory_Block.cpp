@@ -90,33 +90,34 @@ bool RADAR_TargetTrajectory_Block::Initialize()
     m_radar = std::make_unique<RADAR_TargetTrajectory>();
     SetDefaultParameters();
 
+    try { Coordinate_Mode = ConvertStringToCoordinate_ModeEnum(getParameter("Coordinate_Mode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Coordinate_Mode', using default value."); }
+    try { Range_Initial = std::stod(getParameter("Range_Initial").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Range_Initial', using default value."); }
+    try { ElevationAngle = std::stod(getParameter("ElevationAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ElevationAngle', using default value."); }
+    try { AzimuthAngle = std::stod(getParameter("AzimuthAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AzimuthAngle', using default value."); }
+    try { Velocity_Initial = std::stod(getParameter("Velocity_Initial").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Velocity_Initial', using default value."); }
+    try { Accelerate = std::stod(getParameter("Accelerate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Accelerate', using default value."); }
+    try { Jerk = std::stod(getParameter("Jerk").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Jerk', using default value."); }
+    try { TimeStep = std::stod(getParameter("TimeStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TimeStep', using default value."); }
+
     try {
-        Coordinate_Mode = ConvertStringToCoordinate_ModeEnum(getParameter("Coordinate_Mode").Value);
-
-        Range_Initial = std::stod(getParameter("Range_Initial").Value);
-        ElevationAngle = std::stod(getParameter("ElevationAngle").Value);
-        AzimuthAngle = std::stod(getParameter("AzimuthAngle").Value);
-        Velocity_Initial = std::stod(getParameter("Velocity_Initial").Value);
-        Accelerate = std::stod(getParameter("Accelerate").Value);
-        Jerk = std::stod(getParameter("Jerk").Value);
-        TimeStep = std::stod(getParameter("TimeStep").Value);
-
         std::string PositionString = getParameter("Position_Initial_XYZ").Value;
         parseArrayString(PositionString, Position_Initial_XYZ_data);
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Position_Initial_XYZ', using default value."); }
 
+    try {
         std::string VelocityString = getParameter("Velocity_Initial_XYZ").Value;
         parseArrayString(VelocityString, Velocity_Initial_XYZ_data);
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Velocity_Initial_XYZ', using default value."); }
 
+    try {
         std::string AccelerateString = getParameter("Accelerate_XYZ").Value;
         parseArrayString(AccelerateString, Accelerate_XYZ_data);
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Accelerate_XYZ', using default value."); }
 
+    try {
         std::string JerkString = getParameter("Jerk_XYZ").Value;
         parseArrayString(JerkString, Jerk_XYZ_data);
-
-
-    } catch (...) {
-
-    }
+    } catch (...) { LOG_WARN("Failed to parse parameter 'Jerk_XYZ', using default value."); }
 
     SetParameters();
 

@@ -206,17 +206,17 @@ bool RADAR_Clutter_H_Block::Initialize()
     simulator_param = getSimu();
 
     // 解析参数
-    try { m_RF_Freq      = std::stod(getParameter("RF_Freq").Value); } catch (...) {}
-    try { m_PDF          = ConvertStringToPDF(getParameter("PDF").Value); } catch (...) {}
-    try { m_VA           = std::stod(getParameter("VA").Value); } catch (...) {}
-    try { m_VB           = std::stod(getParameter("VB").Value); } catch (...) {}
-    try { m_PSD          = ConvertStringToPSD(getParameter("PSD").Value); } catch (...) {}
-    try { m_PA           = std::stod(getParameter("PA").Value); } catch (...) {}
-    try { m_PB           = std::stod(getParameter("PB").Value); } catch (...) {}
-    try { m_TStep        = std::stod(getParameter("TStep").Value); } catch (...) {}
-    try { m_FilterLen    = std::stoi(getParameter("FilterLen").Value); } catch (...) {}
-    try { m_DurationTime = std::stod(getParameter("DurationTime").Value); } catch (...) {}
-    try { m_Vr           = std::stod(getParameter("Vr").Value); } catch (...) {}
+    try { m_RF_Freq      = std::stod(getParameter("RF_Freq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RF_Freq', using default value."); }
+    try { m_PDF          = ConvertStringToPDF(getParameter("PDF").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PDF', using default value."); }
+    try { m_VA           = std::stod(getParameter("VA").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VA', using default value."); }
+    try { m_VB           = std::stod(getParameter("VB").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'VB', using default value."); }
+    try { m_PSD          = ConvertStringToPSD(getParameter("PSD").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PSD', using default value."); }
+    try { m_PA           = std::stod(getParameter("PA").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PA', using default value."); }
+    try { m_PB           = std::stod(getParameter("PB").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PB', using default value."); }
+    try { m_TStep        = std::stod(getParameter("TStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TStep', using default value."); }
+    try { m_FilterLen    = std::stoi(getParameter("FilterLen").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FilterLen', using default value."); }
+    try { m_DurationTime = std::stod(getParameter("DurationTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DurationTime', using default value."); }
+    try { m_Vr           = std::stod(getParameter("Vr").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Vr', using default value."); }
 
     if (m_FilterLen <= 0)
     {

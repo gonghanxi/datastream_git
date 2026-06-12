@@ -124,8 +124,8 @@ bool RADAR_PulseCompression_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_WindowType      = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) {}
-    try { m_WindowParameter = std::stod(getParameter("WindowParameter").Value);            } catch (...) {}
+    try { m_WindowType      = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_WindowParameter = std::stod(getParameter("WindowParameter").Value);            } catch (...) { LOG_WARN("Failed to parse parameter 'WindowParameter', using default value."); }
 
     SetParameters();
 

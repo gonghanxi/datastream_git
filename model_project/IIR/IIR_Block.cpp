@@ -96,9 +96,9 @@ bool IIR_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_gain = std::stod(getParameter("Gain").Value); } catch (...) { }
-    try { m_numerator = ParseVectorDouble(getParameter("Numerator").Value); } catch (...) { }
-    try { m_denominator = ParseVectorDouble(getParameter("Denominator").Value); } catch (...) { }
+    try { m_gain = std::stod(getParameter("Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Gain', using default value."); }
+    try { m_numerator = ParseVectorDouble(getParameter("Numerator").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Numerator', using default value."); }
+    try { m_denominator = ParseVectorDouble(getParameter("Denominator").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Denominator', using default value."); }
 
     SetParameters();
 

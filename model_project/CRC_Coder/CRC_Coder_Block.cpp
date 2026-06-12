@@ -65,17 +65,13 @@ bool CRC_Coder_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_crc = std::make_unique<CRC_Coder>();
     SetDefaultParameters();
-    try {
-
-    ParityPosition = ConvertStringToParityPositionEnum(getParameter("ParityPosition").Value);
-    ReverseData = ConvertStringToYesNoEnum(getParameter("ReverseData").Value);
-    ReverseParity = ConvertStringToYesNoEnum(getParameter("ReverseParity").Value);
-    ComplementParity = ConvertStringToYesNoEnum(getParameter("ComplementParity").Value);
-    MessageLength = std::stoi(getParameter("MessageLength").Value);
-    InitialState = std::stoi(getParameter("InitialState").Value);
-    Polynomial = std::stoi(getParameter("Polynomial").Value);
-
-    } catch(...) {}
+    try { ParityPosition = ConvertStringToParityPositionEnum(getParameter("ParityPosition").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ParityPosition', using default value."); }
+    try { ReverseData = ConvertStringToYesNoEnum(getParameter("ReverseData").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ReverseData', using default value."); }
+    try { ReverseParity = ConvertStringToYesNoEnum(getParameter("ReverseParity").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ReverseParity', using default value."); }
+    try { ComplementParity = ConvertStringToYesNoEnum(getParameter("ComplementParity").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ComplementParity', using default value."); }
+    try { MessageLength = std::stoi(getParameter("MessageLength").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'MessageLength', using default value."); }
+    try { InitialState = std::stoi(getParameter("InitialState").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'InitialState', using default value."); }
+    try { Polynomial = std::stoi(getParameter("Polynomial").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Polynomial', using default value."); }
 
     SetParameters();
 

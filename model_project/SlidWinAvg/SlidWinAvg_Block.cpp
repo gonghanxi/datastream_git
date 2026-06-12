@@ -29,7 +29,7 @@ bool SlidWinAvg_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_SlidWinAvg = std::make_unique<SlidWinAvg>();
     SetDefaultParameters();
-    try { WindowSize = std::stoi(getParameter("WindowSize").Value); } catch(...) {}
+    try { WindowSize = std::stoi(getParameter("WindowSize").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'WindowSize', using default value."); }
     SetParameters();
     AddInputPort("input", m_SlidWinAvg->input, 1, DataType::CIRCULAR_BUFFER_DOUBLE);
     AddOutputPort("output", m_SlidWinAvg->output, 1, DataType::CIRCULAR_BUFFER_DOUBLE);

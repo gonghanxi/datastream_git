@@ -23,8 +23,8 @@ bool RepeatEnv_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Rep = std::make_unique<RepeatEnv>();
     SetDefaultParameters();
-    try { BlockSize = std::stod(getParameter("BlockSize").Value); } catch (...) { }
-    try { NumTimes = std::stod(getParameter("NumTimes").Value); } catch (...) { }
+    try { BlockSize = std::stod(getParameter("BlockSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
+    try { NumTimes = std::stod(getParameter("NumTimes").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumTimes', using default value."); }
     SetParameters();
     if (NumTimes < 1)
     {

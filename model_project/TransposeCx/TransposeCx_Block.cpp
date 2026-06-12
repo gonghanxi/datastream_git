@@ -17,8 +17,8 @@ bool TransposeCx_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Transpose = std::make_unique<TransposeCx>();
     SetDefaultParameters();
-    try { SamplesInRow = std::stoi(getParameter("SamplesInRow").Value); } catch(...) {}
-    try { NumberOfRows = std::stoi(getParameter("NumberOfRows").Value); } catch(...) {}
+    try { SamplesInRow = std::stoi(getParameter("SamplesInRow").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'SamplesInRow', using default value."); }
+    try { NumberOfRows = std::stoi(getParameter("NumberOfRows").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'NumberOfRows', using default value."); }
     SetParameters();
     if(!ModelSetup()) return false;
     AddInputPort("input", m_Transpose->input, static_cast<size_t>(SamplesInRow * NumberOfRows), DataType::CIRCULAR_BUFFER_DCOMPLEX);

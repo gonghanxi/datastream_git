@@ -142,7 +142,7 @@ bool RADAR_CoIntgr_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_NumOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) {}
+    try { m_NumOfPulse = std::stoi(getParameter("NumOfPulse").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfPulse', using default value."); }
 
     if (m_NumOfPulse <= 0) {
         LOG_ERROR("RADAR_CoIntgr_M: NumOfPulse must be greater than 0.");

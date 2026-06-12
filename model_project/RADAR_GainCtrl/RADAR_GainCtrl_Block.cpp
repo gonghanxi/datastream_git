@@ -242,13 +242,13 @@ bool RADAR_GainCtrl_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_ControlType = ConvertStringToSelectedControlType(getParameter("ControlType").Value); } catch (...) { }
-    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_Gain = std::stod(getParameter("Gain").Value); } catch (...) { }
-    try { m_STC_Factor = std::stod(getParameter("STC_Factor").Value); } catch (...) { }
-    try { m_STC_StartTime = std::stod(getParameter("STC_StartTime").Value); } catch (...) { }
-    try { m_STC_StopTime = std::stod(getParameter("STC_StopTime").Value); } catch (...) { }
-    try { m_STC_K_Coef = std::stod(getParameter("STC_K_Coef").Value); } catch (...) { }
+    try { m_ControlType = ConvertStringToSelectedControlType(getParameter("ControlType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ControlType', using default value."); }
+    try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_Gain = std::stod(getParameter("Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Gain', using default value."); }
+    try { m_STC_Factor = std::stod(getParameter("STC_Factor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'STC_Factor', using default value."); }
+    try { m_STC_StartTime = std::stod(getParameter("STC_StartTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'STC_StartTime', using default value."); }
+    try { m_STC_StopTime = std::stod(getParameter("STC_StopTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'STC_StopTime', using default value."); }
+    try { m_STC_K_Coef = std::stod(getParameter("STC_K_Coef").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'STC_K_Coef', using default value."); }
 
     SetParameters();
 

@@ -44,8 +44,8 @@ bool RADAR_Switch_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_PRF = std::stod(getParameter("PRF").Value); } catch (...) { }
-    try { m_SwitchOff_Time = std::stod(getParameter("SwitchOff_Time").Value); } catch (...) { }
+    try { m_PRF = std::stod(getParameter("PRF").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRF', using default value."); }
+    try { m_SwitchOff_Time = std::stod(getParameter("SwitchOff_Time").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SwitchOff_Time', using default value."); }
 
     SetParameters();
 

@@ -54,7 +54,7 @@ bool AsyncCommutatorCx_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_blockSizes = DataTypesAndParsers::ParseStringToMatrixInt(getParameter("BlockSizes").Value); } catch (...) { }
+    try { m_blockSizes = DataTypesAndParsers::ParseStringToMatrixInt(getParameter("BlockSizes").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSizes', using default value."); }
 
     SetParameters();
 

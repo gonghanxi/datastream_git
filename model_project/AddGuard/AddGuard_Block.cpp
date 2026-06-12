@@ -35,10 +35,10 @@ bool AddGuard_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_AddGuard = std::make_unique<AddGuard>();
     SetDefaultParameters();
-    try { m_iIFFTSize = std::stoi(getParameter("iIFFTSize").Value); } catch(...) {}
-    try { m_iPreGuard = std::stoi(getParameter("iPreGuard").Value); } catch(...) {}
-    try { m_iPostGuard = std::stoi(getParameter("iPostGuard").Value); } catch(...) {}
-    try { m_iIntersection = std::stoi(getParameter("iIntersection").Value); } catch(...) {}
+    try { m_iIFFTSize = std::stoi(getParameter("iIFFTSize").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'iIFFTSize', using default value."); }
+    try { m_iPreGuard = std::stoi(getParameter("iPreGuard").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'iPreGuard', using default value."); }
+    try { m_iPostGuard = std::stoi(getParameter("iPostGuard").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'iPostGuard', using default value."); }
+    try { m_iIntersection = std::stoi(getParameter("iIntersection").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'iIntersection', using default value."); }
     SetParameters();
 
     if (m_cplxBuffer)

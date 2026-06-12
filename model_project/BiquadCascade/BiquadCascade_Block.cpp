@@ -175,7 +175,7 @@ bool BiquadCascade_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_taps = ParseVectorDouble(getParameter("Taps").Value); } catch (...) { }
+    try { m_taps = ParseVectorDouble(getParameter("Taps").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Taps', using default value."); }
 
     if (!BuildCascade()) {
         return false;

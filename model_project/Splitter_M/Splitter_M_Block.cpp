@@ -103,11 +103,11 @@ bool Splitter_M_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Splitter = std::make_unique<Splitter_M>();
     SetDefaultParameters();
-    try { Mode = ConvertStringToSelectedMode(getParameter("Mode").Value); } catch(...) {}
-    try { NumRows = std::stoi(getParameter("NumRows").Value); } catch(...) {}
-    try { NumCols = std::stoi(getParameter("NumCols").Value); } catch(...) {}
-    try { ElementMap = ParseStringToMatrix<int>(getParameter("ElementMap").Value); } catch(...) {}
-    try { InsertionLoss = std::stod(getParameter("InsertionLoss").Value); } catch(...) {}
+    try { Mode = ConvertStringToSelectedMode(getParameter("Mode").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Mode', using default value."); }
+    try { NumRows = std::stoi(getParameter("NumRows").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'NumRows', using default value."); }
+    try { NumCols = std::stoi(getParameter("NumCols").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'NumCols', using default value."); }
+    try { ElementMap = ParseStringToMatrix<int>(getParameter("ElementMap").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'ElementMap', using default value."); }
+    try { InsertionLoss = std::stod(getParameter("InsertionLoss").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'InsertionLoss', using default value."); }
     SetParameters();
     AddInputPort("input", m_Splitter->input, 1, DataType::MATRIX_ENVELOPE);
     AddOutputPort("output", m_Splitter->output, 1, DataType::MATRIX_ENVELOPE);

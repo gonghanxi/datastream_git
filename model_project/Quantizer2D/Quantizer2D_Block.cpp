@@ -83,13 +83,13 @@ bool Quantizer2D_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { VxMax = std::stod(getParameter("VxMax").Value); } catch(...) {}
-    try { VxMin = std::stod(getParameter("VxMin").Value); } catch(...) {}
-    try { Nx = std::stod(getParameter("Nx").Value); } catch(...) {}
-    try { VyMax = std::stod(getParameter("VxMax").Value); } catch(...) {}
-    try { VyMin = std::stod(getParameter("VxMax").Value); } catch(...) {}
-    try { Ny = std::stod(getParameter("VxMax").Value); } catch(...) {}
-    try { QuantList = ParseStringToMatrix<std::complex<double>>(getParameter("VxMax").Value); } catch(...) {}
+    try { VxMax = std::stod(getParameter("VxMax").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'VxMax', using default value."); }
+    try { VxMin = std::stod(getParameter("VxMin").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'VxMin', using default value."); }
+    try { Nx = std::stod(getParameter("Nx").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Nx', using default value."); }
+    try { VyMax = std::stod(getParameter("VxMax").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'VyMax', using default value."); }
+    try { VyMin = std::stod(getParameter("VxMax").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'VyMin', using default value."); }
+    try { Ny = std::stod(getParameter("VxMax").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Ny', using default value."); }
+    try { QuantList = ParseStringToMatrix<std::complex<double>>(getParameter("VxMax").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'QuantList', using default value."); }
 
     SetParameters();
 

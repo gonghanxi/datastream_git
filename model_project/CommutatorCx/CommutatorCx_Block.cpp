@@ -64,7 +64,7 @@ bool CommutatorCx_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_blockSize = std::stoi(getParameter("BlockSize").Value); } catch (...) { }
+    try { m_blockSize = std::stoi(getParameter("BlockSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
 
     SetParameters();
 

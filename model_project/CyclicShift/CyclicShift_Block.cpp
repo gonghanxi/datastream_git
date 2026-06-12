@@ -24,8 +24,8 @@ bool CyclicShift_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_CyclicShift = std::make_unique<CyclicShift>();
     SetDefaultParameters();
-    try { m_BlockSize = std::stoi(getParameter("BlockSize").Value); } catch(...) {}
-    try { m_Offset = std::stoi(getParameter("Offset").Value); } catch(...) {}
+    try { m_BlockSize = std::stoi(getParameter("BlockSize").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
+    try { m_Offset = std::stoi(getParameter("Offset").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Offset', using default value."); }
     SetParameters();
     if(!m_CyclicShift->Setup()) return false;
     AddInputPort("input", m_CyclicShift->input, static_cast<size_t>(m_BlockSize), DataType::CIRCULAR_BUFFER_DOUBLE);

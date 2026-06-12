@@ -161,9 +161,9 @@ bool UpSampleCx_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_factor = std::stoi(getParameter("Factor").Value); } catch (...) { }
-	try { m_phase = std::stoi(getParameter("Phase").Value); } catch (...) { }
-	try { m_mode = ConvertStringToModeEnum(getParameter("Mode").Value); } catch (...) { }
+	try { m_factor = std::stoi(getParameter("Factor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Factor', using default value."); }
+	try { m_phase = std::stoi(getParameter("Phase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
+	try { m_mode = ConvertStringToModeEnum(getParameter("Mode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Mode', using default value."); }
 
 	SetParameters(m_factor, m_mode, m_phase);
 

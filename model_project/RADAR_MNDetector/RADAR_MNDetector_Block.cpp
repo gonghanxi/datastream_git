@@ -135,10 +135,10 @@ bool RADAR_MNDetector_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_M          = std::stoi(getParameter("M").Value);          } catch (...) {}
-    try { m_N          = std::stoi(getParameter("N").Value);          } catch (...) {}
-    try { m_PRI        = std::stod(getParameter("PRI").Value);        } catch (...) {}
-    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
+    try { m_M          = std::stoi(getParameter("M").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'M', using default value."); }
+    try { m_N          = std::stoi(getParameter("N").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
+    try { m_PRI        = std::stod(getParameter("PRI").Value);        } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

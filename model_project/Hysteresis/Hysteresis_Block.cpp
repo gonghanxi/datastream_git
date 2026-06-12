@@ -44,9 +44,9 @@ bool Hysteresis_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Hysteresis = std::make_unique<Hysteresis>();
     SetDefaultParameters();
-    try { Bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) {}
-    try { Backlash = std::stod(getParameter("Backlash").Value); } catch (...) {}
-    try { Gain = std::stod(getParameter("Gain").Value); } catch (...) {}
+    try { Bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { Backlash = std::stod(getParameter("Backlash").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Backlash', using default value."); }
+    try { Gain = std::stod(getParameter("Gain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Gain', using default value."); }
     SetParameters();
     if(!m_Hysteresis->Setup()) return false;
     AddInputPort("input", m_Hysteresis->input, 1, DataType::TIMED_DOUBLE);

@@ -45,7 +45,7 @@ bool PolynomialCx_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Polynomial = std::make_unique<PolynomialCx>();
     SetDefaultParameters();
-    try{ Coefficients = ParseStringToMatrix<std::complex<double>>(getParameter("Coefficients").Value); } catch(...) {}
+    try{ Coefficients = ParseStringToMatrix<std::complex<double>>(getParameter("Coefficients").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Coefficients', using default value."); }
     SetParameters();
     AddInputPort("input", m_Polynomial->input, 1, DataType::CIRCULAR_BUFFER_DCOMPLEX);
     AddOutputPort("output", m_Polynomial->output, 1, DataType::CIRCULAR_BUFFER_DCOMPLEX);

@@ -44,13 +44,13 @@ bool IntegratorInt_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Top = std::stoi(getParameter("Top").Value); } catch (...) { }
-    try { m_Bottom = std::stoi(getParameter("Bottom").Value); } catch (...) { }
-    try { m_InitialState = std::stoi(getParameter("InitialState").Value); } catch (...) { }
-    try { m_IntegrationTime = std::stod(getParameter("IntegrationTime").Value); } catch (...) { }
-    try { m_IntegrationSamples = std::stoi(getParameter("IntegrationSamples").Value); } catch (...) { }
-    try { m_LimitOutput = ConvertStringToLimitOutputEnum(getParameter("LimitOutput").Value); } catch (...) { }
-    try { m_UseIntegrationWindow = ConvertStringToWindowEnum(getParameter("UseIntegrationWindow").Value); } catch (...) { }
+    try { m_Top = std::stoi(getParameter("Top").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Top', using default value."); }
+    try { m_Bottom = std::stoi(getParameter("Bottom").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bottom', using default value."); }
+    try { m_InitialState = std::stoi(getParameter("InitialState").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialState', using default value."); }
+    try { m_IntegrationTime = std::stod(getParameter("IntegrationTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IntegrationTime', using default value."); }
+    try { m_IntegrationSamples = std::stoi(getParameter("IntegrationSamples").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IntegrationSamples', using default value."); }
+    try { m_LimitOutput = ConvertStringToLimitOutputEnum(getParameter("LimitOutput").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LimitOutput', using default value."); }
+    try { m_UseIntegrationWindow = ConvertStringToWindowEnum(getParameter("UseIntegrationWindow").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'UseIntegrationWindow', using default value."); }
     simulator_param = getSimu();
 
 //    qDebug() << "IntegratorInt_Block::Initialize - getParameter: " << QString::fromStdString(getParameter("LimitOutput").Value);

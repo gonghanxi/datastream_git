@@ -24,8 +24,8 @@ bool Repeat_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_Repeat = std::make_unique<Repeat>();
     SetDefaultParameters();
-    try { m_BlockSize = std::stod(getParameter("BlockSize").Value); } catch (...) { }
-    try { m_NumTimes = std::stod(getParameter("NumTimes").Value); } catch (...) { }
+    try { m_BlockSize = std::stod(getParameter("BlockSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSize', using default value."); }
+    try { m_NumTimes = std::stod(getParameter("NumTimes").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumTimes', using default value."); }
     SetParameters();
     if (m_NumTimes < 1)
     {

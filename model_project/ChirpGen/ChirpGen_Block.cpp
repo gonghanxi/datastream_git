@@ -113,21 +113,21 @@ bool ChirpGen_Block::Initialize()
 
     simulator_param = getSimu();
 
-    try { m_amplitude = std::stod(getParameter("Amplitude").Value); } catch (...) { }
-    try { m_offset = std::stod(getParameter("Offset").Value); } catch (...) { }
-    try { m_startFreq = std::stod(getParameter("StartFreq").Value); } catch (...) { }
-    try { m_stopFreq = std::stod(getParameter("StopFreq").Value); } catch (...) { }
-    try { m_phase = std::stod(getParameter("Phase").Value); } catch (...) { }
-    try { m_sweepPeriod = std::stod(getParameter("SweepPeriod").Value); } catch (...) { }
-    try { m_showAdvancedParams = ConvertStringToShowAdvanced(getParameter("ShowAdvancedParams").Value); } catch (...) { }
-    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_amplitude = std::stod(getParameter("Amplitude").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Amplitude', using default value."); }
+    try { m_offset = std::stod(getParameter("Offset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Offset', using default value."); }
+    try { m_startFreq = std::stod(getParameter("StartFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StartFreq', using default value."); }
+    try { m_stopFreq = std::stod(getParameter("StopFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StopFreq', using default value."); }
+    try { m_phase = std::stod(getParameter("Phase").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phase', using default value."); }
+    try { m_sweepPeriod = std::stod(getParameter("SweepPeriod").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SweepPeriod', using default value."); }
+    try { m_showAdvancedParams = ConvertStringToShowAdvanced(getParameter("ShowAdvancedParams").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShowAdvancedParams', using default value."); }
+    try { m_sampleRateOption = ConvertStringToSampleRateOption(getParameter("SampleRateOption").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRateOption', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
     
     if (m_sampleRate <= 0.0) {
         LOG_ERROR("SampleRate must be greater than 0.");
         return false;
     }
-    try { m_initialDelay = std::stod(getParameter("InitialDelay").Value); } catch (...) { }
+    try { m_initialDelay = std::stod(getParameter("InitialDelay").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialDelay', using default value."); }
 
     SetParameters();
 

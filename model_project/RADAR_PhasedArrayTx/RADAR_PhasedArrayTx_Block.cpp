@@ -276,37 +276,37 @@ bool RADAR_PhasedArrayTx_Block::Initialize()
     SetDefaultParameters();
 
     // 解析参数
-    try { m_Configuration       = ConvertStringToConfiguration(getParameter("Configuration").Value); } catch (...) {}
-    try { m_AxisType            = ConvertStringToAxisType(getParameter("AxisType").Value); } catch (...) {}
-    try { m_Array2DShapeType    = ConvertStringToArray2DShapeType(getParameter("Array2DShapeType").Value); } catch (...) {}
-    try { m_NumOfAnt1D          = std::stoi(getParameter("NumOfAnt1D").Value); } catch (...) {}
-    try { m_NumOfAnt2D_H        = std::stoi(getParameter("NumOfAnt2D_H").Value); } catch (...) {}
-    try { m_NumOfAnt2D_V        = std::stoi(getParameter("NumOfAnt2D_V").Value); } catch (...) {}
-    try { m_ElementFactor       = std::stod(getParameter("ElementFactor").Value); } catch (...) {}
-    try { m_SpaceType           = ConvertStringToSpaceType(getParameter("SpaceType").Value); } catch (...) {}
-    try { m_GridType            = ConvertStringToGridType(getParameter("GridType").Value); } catch (...) {}
-    try { m_D                   = std::stod(getParameter("D").Value); } catch (...) {}
-    try { m_D_H                 = std::stod(getParameter("D_H").Value); } catch (...) {}
-    try { m_D_V                 = std::stod(getParameter("D_V").Value); } catch (...) {}
-    try { m_D_array             = ParseStringToMatrix<double>(getParameter("D_array").Value); } catch (...) {}
-    try { m_D_H_array           = ParseStringToMatrix<double>(getParameter("D_H_array").Value); } catch (...) {}
-    try { m_D_V_array           = ParseStringToMatrix<double>(getParameter("D_V_array").Value); } catch (...) {}
-    try { m_mask_array          = ParseStringToMatrix<int>(getParameter("mask_array").Value); } catch (...) {}
-    try { m_ReliabilityType     = ConvertStringToReliabilityType(getParameter("ReliabilityType").Value); } catch (...) {}
-    try { m_FailureProbability  = std::stod(getParameter("FailureProbability").Value); } catch (...) {}
-    try { m_TargetTheta         = std::stod(getParameter("TargetTheta").Value); } catch (...) {}
-    try { m_TargetPhi           = std::stod(getParameter("TargetPhi").Value); } catch (...) {}
-    try { m_WindowType          = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) {}
-    try { m_KaiserWindowParameter = std::stod(getParameter("KaiserWindowParameter").Value); } catch (...) {}
-    try { m_Sidelobe_Levels     = std::stod(getParameter("Sidelobe_Levels").Value); } catch (...) {}
-    try { m_nBar                = std::stoi(getParameter("nBar").Value); } catch (...) {}
-    try { m_IsPhaseShift        = ConvertStringToYesorNo(getParameter("IsPhaseShift").Value); } catch (...) {}
-    try { m_BeamTheta           = std::stod(getParameter("BeamTheta").Value); } catch (...) {}
-    try { m_BeamPhi             = std::stod(getParameter("BeamPhi").Value); } catch (...) {}
-    try { m_QuantizationType    = ConvertStringToYesorNo(getParameter("QuantizationType").Value); } catch (...) {}
-    try { m_PhaseShifterBitwidth = std::stoi(getParameter("PhaseShifterBitwidth").Value); } catch (...) {}
-    try { m_PhaseShiftType      = ConvertStringToPhaseShiftType(getParameter("PhaseShiftType").Value); } catch (...) {}
-    try { m_DesiredPhaseShiftAngle = ParseStringToMatrix<double>(getParameter("DesiredPhaseShiftAngle").Value); } catch (...) {}
+    try { m_Configuration       = ConvertStringToConfiguration(getParameter("Configuration").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Configuration', using default value."); }
+    try { m_AxisType            = ConvertStringToAxisType(getParameter("AxisType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AxisType', using default value."); }
+    try { m_Array2DShapeType    = ConvertStringToArray2DShapeType(getParameter("Array2DShapeType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Array2DShapeType', using default value."); }
+    try { m_NumOfAnt1D          = std::stoi(getParameter("NumOfAnt1D").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfAnt1D', using default value."); }
+    try { m_NumOfAnt2D_H        = std::stoi(getParameter("NumOfAnt2D_H").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfAnt2D_H', using default value."); }
+    try { m_NumOfAnt2D_V        = std::stoi(getParameter("NumOfAnt2D_V").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfAnt2D_V', using default value."); }
+    try { m_ElementFactor       = std::stod(getParameter("ElementFactor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ElementFactor', using default value."); }
+    try { m_SpaceType           = ConvertStringToSpaceType(getParameter("SpaceType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SpaceType', using default value."); }
+    try { m_GridType            = ConvertStringToGridType(getParameter("GridType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GridType', using default value."); }
+    try { m_D                   = std::stod(getParameter("D").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D', using default value."); }
+    try { m_D_H                 = std::stod(getParameter("D_H").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D_H', using default value."); }
+    try { m_D_V                 = std::stod(getParameter("D_V").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D_V', using default value."); }
+    try { m_D_array             = ParseStringToMatrix<double>(getParameter("D_array").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D_array', using default value."); }
+    try { m_D_H_array           = ParseStringToMatrix<double>(getParameter("D_H_array").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D_H_array', using default value."); }
+    try { m_D_V_array           = ParseStringToMatrix<double>(getParameter("D_V_array").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D_V_array', using default value."); }
+    try { m_mask_array          = ParseStringToMatrix<int>(getParameter("mask_array").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'mask_array', using default value."); }
+    try { m_ReliabilityType     = ConvertStringToReliabilityType(getParameter("ReliabilityType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ReliabilityType', using default value."); }
+    try { m_FailureProbability  = std::stod(getParameter("FailureProbability").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FailureProbability', using default value."); }
+    try { m_TargetTheta         = std::stod(getParameter("TargetTheta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetTheta', using default value."); }
+    try { m_TargetPhi           = std::stod(getParameter("TargetPhi").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TargetPhi', using default value."); }
+    try { m_WindowType          = ConvertStringToWindowType(getParameter("WindowType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowType', using default value."); }
+    try { m_KaiserWindowParameter = std::stod(getParameter("KaiserWindowParameter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'KaiserWindowParameter', using default value."); }
+    try { m_Sidelobe_Levels     = std::stod(getParameter("Sidelobe_Levels").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Sidelobe_Levels', using default value."); }
+    try { m_nBar                = std::stoi(getParameter("nBar").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'nBar', using default value."); }
+    try { m_IsPhaseShift        = ConvertStringToYesorNo(getParameter("IsPhaseShift").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IsPhaseShift', using default value."); }
+    try { m_BeamTheta           = std::stod(getParameter("BeamTheta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BeamTheta', using default value."); }
+    try { m_BeamPhi             = std::stod(getParameter("BeamPhi").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BeamPhi', using default value."); }
+    try { m_QuantizationType    = ConvertStringToYesorNo(getParameter("QuantizationType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'QuantizationType', using default value."); }
+    try { m_PhaseShifterBitwidth = std::stoi(getParameter("PhaseShifterBitwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseShifterBitwidth', using default value."); }
+    try { m_PhaseShiftType      = ConvertStringToPhaseShiftType(getParameter("PhaseShiftType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseShiftType', using default value."); }
+    try { m_DesiredPhaseShiftAngle = ParseStringToMatrix<double>(getParameter("DesiredPhaseShiftAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DesiredPhaseShiftAngle', using default value."); }
 
     SetParameters();
 

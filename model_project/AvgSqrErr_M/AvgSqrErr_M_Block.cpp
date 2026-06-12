@@ -156,7 +156,7 @@ bool AvgSqrErr_M_Block::Initialize()
     m_AvgSqrErr_M = std::make_unique<AvgSqrErr_M>();
 
     SetDefaultParameters();
-    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch (...) {}
+    try { m_NumInputsToAverage = std::stoi(getParameter("NumInputsToAverage").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumInputsToAverage', using default value."); }
     SetParameters();
     if (!m_AvgSqrErr_M->Setup()) return false;
 

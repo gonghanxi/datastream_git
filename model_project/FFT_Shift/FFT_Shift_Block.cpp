@@ -150,8 +150,8 @@ bool FFT_Shift_Block::Initialize()
     m_FFT_Shift = std::make_unique<FFT_Shift>();
 
     SetDefaultParameters();
-    try { m_FFTSize   = std::stoi(getParameter("FFTSize").Value);   } catch(...) {}
-    try { m_Direction = ConvertStringToDirection(getParameter("Direction").Value); } catch(...) {}
+    try { m_FFTSize   = std::stoi(getParameter("FFTSize").Value);   } catch(...) { LOG_WARN("Failed to parse parameter 'FFTSize', using default value."); }
+    try { m_Direction = ConvertStringToDirection(getParameter("Direction").Value); } catch(...) { LOG_WARN("Failed to parse parameter 'Direction', using default value."); }
     SetParameters();
 
     if (m_FFTSize < 1)

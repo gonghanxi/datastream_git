@@ -74,7 +74,7 @@ bool SetSampleRateEnv_Block::Initialize()
 	AddOutputPort("output", m_setSampleRate->output, 1, Block::DataType::ENVELOPE_SIGNAL);
 
 	SetDefaultParamters();
-	try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) {}
+	try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
     SetParameters(m_sampleRate);
 
 	return true;

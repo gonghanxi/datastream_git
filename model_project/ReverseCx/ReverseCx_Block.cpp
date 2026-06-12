@@ -98,7 +98,7 @@ bool ReverseCx_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_n = std::stoi(getParameter("N").Value); } catch (...) { }
+	try { m_n = std::stoi(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
 
 	if (m_n <= 0) {
         LOG_ERROR("Port rate must be greater than 0.");

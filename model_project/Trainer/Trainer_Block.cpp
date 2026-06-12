@@ -126,7 +126,7 @@ bool Trainer_Block::Initialize()
     {
         m_TrainLength = std::stoi(getParameter("TrainLength").Value);
     }
-    catch (...) {}
+    catch (...) { LOG_WARN("Failed to parse parameter 'TrainLength', using default value."); }
 
     if (m_TrainLength < 0)
     {

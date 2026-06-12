@@ -126,8 +126,8 @@ bool EnvFcChange_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_outputFc = std::stod(getParameter("OutputFc").Value); } catch (...) {}
-	try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) {}
+	try { m_outputFc = std::stod(getParameter("OutputFc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OutputFc', using default value."); }
+	try { m_bandwidth = std::stod(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
 
 	SetParameters(m_outputFc, m_bandwidth);
 

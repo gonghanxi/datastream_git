@@ -117,7 +117,7 @@ bool Logic_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_LogicOperation = ConvertStringToSelectedLogicOperation(getParameter("LogicOperation").Value); } catch (...) { }
+    try { m_LogicOperation = ConvertStringToSelectedLogicOperation(getParameter("LogicOperation").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LogicOperation', using default value."); }
 
     SetParameters();
 

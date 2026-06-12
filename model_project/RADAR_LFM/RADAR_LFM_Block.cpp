@@ -53,12 +53,12 @@ bool RADAR_LFM_Block::Initialize()
 
     SetDefaultParameters();
 
-	try { m_Pulsewidth = ParseStringToMatrix<double>(getParameter("Pulsewidth").Value); } catch (...) { }
-	try { m_PRI = ParseStringToMatrix<double>(getParameter("PRI").Value); } catch (...) { }
-	try { m_PRI_Combination = ParseStringToMatrix<int>(getParameter("PRI_Combination").Value); } catch (...) { }
-	try { m_Bandwidth = ParseStringToMatrix<double>(getParameter("Bandwidth").Value); } catch (...) { }
-	try { m_FM_Offset = ParseStringToMatrix<double>(getParameter("FM_Offset").Value); } catch (...) { }
-	try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+	try { m_Pulsewidth = ParseStringToMatrix<double>(getParameter("Pulsewidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pulsewidth', using default value."); }
+	try { m_PRI = ParseStringToMatrix<double>(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+	try { m_PRI_Combination = ParseStringToMatrix<int>(getParameter("PRI_Combination").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI_Combination', using default value."); }
+	try { m_Bandwidth = ParseStringToMatrix<double>(getParameter("Bandwidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+	try { m_FM_Offset = ParseStringToMatrix<double>(getParameter("FM_Offset").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FM_Offset', using default value."); }
+	try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
 
     SetParameters(m_SampleRate, m_Pulsewidth, m_PRI, m_PRI_Combination, m_Bandwidth, m_FM_Offset);

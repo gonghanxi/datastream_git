@@ -365,16 +365,16 @@ bool RADAR_CFAR_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_cfarType = ConvertStringToCFARType(getParameter("CFARType").Value); } catch (...) { }
-	try { m_cellSize = std::stoi(getParameter("CellSize").Value); } catch (...) { }
-	try { m_referenceCell = std::stoi(getParameter("ReferenceCell").Value); } catch (...) { }
-	try { m_guardCell = std::stoi(getParameter("GuardCell").Value); } catch (...) { }
-	try { m_kOrder = std::stoi(getParameter("kOrder").Value); } catch (...) { }
-	try { m_thresholdScaleFactor = std::stod(getParameter("ThresholdScaleFactor").Value); } catch (...) { }
-	try { m_detectorType = ConvertStringToDetectorType(getParameter("DetectorType").Value); } catch (...) { }
-	try { m_pf = std::stod(getParameter("Pf").Value); } catch (...) { }
-	try { m_alpha = std::stod(getParameter("Alpha").Value); } catch (...) { }
-	try { m_beta = std::stod(getParameter("Beta").Value); } catch (...) { }
+	try { m_cfarType = ConvertStringToCFARType(getParameter("CFARType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CFARType', using default value."); }
+	try { m_cellSize = std::stoi(getParameter("CellSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CellSize', using default value."); }
+	try { m_referenceCell = std::stoi(getParameter("ReferenceCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ReferenceCell', using default value."); }
+	try { m_guardCell = std::stoi(getParameter("GuardCell").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GuardCell', using default value."); }
+	try { m_kOrder = std::stoi(getParameter("kOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'kOrder', using default value."); }
+	try { m_thresholdScaleFactor = std::stod(getParameter("ThresholdScaleFactor").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ThresholdScaleFactor', using default value."); }
+	try { m_detectorType = ConvertStringToDetectorType(getParameter("DetectorType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DetectorType', using default value."); }
+	try { m_pf = std::stod(getParameter("Pf").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Pf', using default value."); }
+	try { m_alpha = std::stod(getParameter("Alpha").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Alpha', using default value."); }
+	try { m_beta = std::stod(getParameter("Beta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Beta', using default value."); }
 
 	if (!ValidateParameters()) {
 		return false;

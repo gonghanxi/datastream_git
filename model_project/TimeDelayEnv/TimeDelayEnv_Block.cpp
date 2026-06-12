@@ -94,9 +94,9 @@ bool TimeDelayEnv_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_unit = ConvertStringToUnitEnum(getParameter("Unit").Value); } catch (...) { }
-    try { m_T = std::stod(getParameter("T").Value); } catch (...) { }
-    try { m_N = std::stoi(getParameter("N").Value); } catch (...) { }
+    try { m_unit = ConvertStringToUnitEnum(getParameter("Unit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Unit', using default value."); }
+    try { m_T = std::stod(getParameter("T").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'T', using default value."); }
+    try { m_N = std::stoi(getParameter("N").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N', using default value."); }
 
     if (m_T < 0.0) {
         std::cout << "TimeDelayEnv: T must be >= 0." << std::endl;

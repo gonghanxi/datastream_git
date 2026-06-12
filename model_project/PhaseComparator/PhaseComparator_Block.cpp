@@ -223,13 +223,9 @@ bool PhaseComparator_Block::Initialize()
     SetBlockType(Block::BlockType::PROCESSOR);
     m_phase = std::make_unique<PhaseComparator>();
     SetDefaultParameters();
-    try {
-        GainConstant = std::stod(getParameter("GainConstant").Value);
-        MaxAngle = std::stod(getParameter("MaxAngle").Value);
-        PhaseCharacteristicType = ConvertStringToPhaseCharacteristicTypeEnum(getParameter("PhaseCharacteristicType").Value);
-    } catch (...) {
-
-    }
+    try { GainConstant = std::stod(getParameter("GainConstant").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'GainConstant', using default value."); }
+    try { MaxAngle = std::stod(getParameter("MaxAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MaxAngle', using default value."); }
+    try { PhaseCharacteristicType = ConvertStringToPhaseCharacteristicTypeEnum(getParameter("PhaseCharacteristicType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PhaseCharacteristicType', using default value."); }
     SetParameters();
 
     AddInputPort("s1", m_phase->s1, 1, DataType::ENVELOPE_SIGNAL);

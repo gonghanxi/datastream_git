@@ -83,10 +83,10 @@ bool RADAR_BarkerCode_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { }
-    try { m_subPulseWidth = std::stod(getParameter("SubPulseWidth").Value); } catch (...) { }
-    try { m_codeLength = ConvertStringToCodeLength(getParameter("CodeLength").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_pri = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
+    try { m_subPulseWidth = std::stod(getParameter("SubPulseWidth").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SubPulseWidth', using default value."); }
+    try { m_codeLength = ConvertStringToCodeLength(getParameter("CodeLength").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CodeLength', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     SetParameters();
 

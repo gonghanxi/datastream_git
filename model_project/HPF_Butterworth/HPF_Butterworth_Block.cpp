@@ -111,14 +111,14 @@ bool HPF_Butterworth_Block::Initialize()
     SetDefaultParamters();
     simulator_param = getSimu();
 
-    try { m_loss = std::stod(getParameter("Loss").Value); } catch (...) { }
-    try { m_passFreq = std::stod(getParameter("PassFreq").Value); } catch (...) { }
-    try { m_passAtten = std::stod(getParameter("PassAtten").Value); } catch (...) { }
-    try { m_stopFreq = std::stod(getParameter("StopFreq").Value); } catch (...) { }
-    try { m_stopAtten = std::stod(getParameter("StopAtten").Value); } catch (...) { }
-    try { m_orderType = ConvertStringToOrderType(getParameter("OrderType").Value); } catch (...) { }
-    try { m_order = std::stoi(getParameter("Order").Value); } catch (...) { }
-    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { }
+    try { m_loss = std::stod(getParameter("Loss").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Loss', using default value."); }
+    try { m_passFreq = std::stod(getParameter("PassFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PassFreq', using default value."); }
+    try { m_passAtten = std::stod(getParameter("PassAtten").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PassAtten', using default value."); }
+    try { m_stopFreq = std::stod(getParameter("StopFreq").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StopFreq', using default value."); }
+    try { m_stopAtten = std::stod(getParameter("StopAtten").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'StopAtten', using default value."); }
+    try { m_orderType = ConvertStringToOrderType(getParameter("OrderType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'OrderType', using default value."); }
+    try { m_order = std::stoi(getParameter("Order").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Order', using default value."); }
+    try { m_sampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
 
     if (m_sampleRate <= 0.0) {
         m_sampleRate = simulator_param.samplingRate;

@@ -45,15 +45,15 @@ bool IntegratorCx_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Top = std::stod(getParameter("Top").Value); } catch (...) { }
-    try { m_Bottom = std::stod(getParameter("Bottom").Value); } catch (...) { }
-    try { m_InitialState = std::stod(getParameter("InitialState").Value); } catch (...) { }
-    try { m_FeedbackGain = std::stod(getParameter("FeedbackGain").Value); } catch (...) { }
-    try { m_IntegrationTime = std::stod(getParameter("IntegrationTime").Value); } catch (...) { }
-    try { m_IntegrationSamples = std::stod(getParameter("IntegrationSamples").Value); } catch (...) { }
-    try { m_IntegrationMethod = ConvertStringToIntegrationMethodEnum(getParameter("IntegrationMethod").Value); } catch (...) { }
-    try { m_LimitOutput = ConvertStringToLimitOutputEnum(getParameter("LimitOutput").Value); } catch (...) { }
-    try { m_UseIntegrationWindow = ConvertStringToWindowEnum(getParameter("UseIntegrationWindow").Value); } catch (...) { }
+    try { m_Top = std::stod(getParameter("Top").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Top', using default value."); }
+    try { m_Bottom = std::stod(getParameter("Bottom").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Bottom', using default value."); }
+    try { m_InitialState = std::stod(getParameter("InitialState").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'InitialState', using default value."); }
+    try { m_FeedbackGain = std::stod(getParameter("FeedbackGain").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FeedbackGain', using default value."); }
+    try { m_IntegrationTime = std::stod(getParameter("IntegrationTime").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IntegrationTime', using default value."); }
+    try { m_IntegrationSamples = std::stod(getParameter("IntegrationSamples").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IntegrationSamples', using default value."); }
+    try { m_IntegrationMethod = ConvertStringToIntegrationMethodEnum(getParameter("IntegrationMethod").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'IntegrationMethod', using default value."); }
+    try { m_LimitOutput = ConvertStringToLimitOutputEnum(getParameter("LimitOutput").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LimitOutput', using default value."); }
+    try { m_UseIntegrationWindow = ConvertStringToWindowEnum(getParameter("UseIntegrationWindow").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'UseIntegrationWindow', using default value."); }
     simulator_param = getSimu();
 
     SetParameters();

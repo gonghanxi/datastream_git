@@ -201,14 +201,14 @@ bool RADAR_Rx_DBS_2D_Block::Initialize()
     m_algo = std::make_unique<RADAR_Rx_DBS_2D>();
 
     // 解析参数
-    try { m_NumOfAntx = std::stoi(getParameter("NumOfAntx").Value); } catch (...) {}
-    try { m_NumOfAnty = std::stoi(getParameter("NumOfAnty").Value); } catch (...) {}
-    try { m_Dx = std::stod(getParameter("Dx").Value); } catch (...) {}
-    try { m_Dy = std::stod(getParameter("Dy").Value); } catch (...) {}
-    try { m_Theta = std::stod(getParameter("Theta").Value); } catch (...) {}
-    try { m_Phi = std::stod(getParameter("Phi").Value); } catch (...) {}
-    try { m_Window_Type = ConvertStringToWindowType(getParameter("Window_Type").Value); } catch (...) {}
-    try { m_WindowParameters = std::stod(getParameter("WindowParameters").Value); } catch (...) {}
+    try { m_NumOfAntx = std::stoi(getParameter("NumOfAntx").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfAntx', using default value."); }
+    try { m_NumOfAnty = std::stoi(getParameter("NumOfAnty").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumOfAnty', using default value."); }
+    try { m_Dx = std::stod(getParameter("Dx").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Dx', using default value."); }
+    try { m_Dy = std::stod(getParameter("Dy").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Dy', using default value."); }
+    try { m_Theta = std::stod(getParameter("Theta").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Theta', using default value."); }
+    try { m_Phi = std::stod(getParameter("Phi").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Phi', using default value."); }
+    try { m_Window_Type = ConvertStringToWindowType(getParameter("Window_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Window_Type', using default value."); }
+    try { m_WindowParameters = std::stod(getParameter("WindowParameters").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'WindowParameters', using default value."); }
 
     if (m_NumOfAntx < 1 || m_NumOfAnty < 1)
     {

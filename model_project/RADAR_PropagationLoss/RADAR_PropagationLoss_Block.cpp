@@ -179,19 +179,19 @@ bool RADAR_PropagationLoss_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_OutputUnit          = ConvertStringToOutputUnit(getParameter("OutputUnit").Value);                     } catch (...) {}
-    try { m_PropagationLossType = ConvertStringToPropagationLossType(getParameter("PropagationLossType").Value);   } catch (...) {}
-    try { m_RainLoss77GHzType   = ConvertStringToRainLoss77GHzType(getParameter("RainLoss77GHzType").Value);       } catch (...) {}
-    try { m_Frequency           = std::stod(getParameter("Frequency").Value);                                      } catch (...) {}
-    try { m_RainfallRate        = std::stod(getParameter("RainfallRate").Value);                                   } catch (...) {}
-    try { m_AntTheta            = std::stod(getParameter("AntTheta").Value);                                       } catch (...) {}
-    try { m_AntPhi              = std::stod(getParameter("AntPhi").Value);                                         } catch (...) {}
-    try { m_AntHeight           = std::stod(getParameter("AntHeight").Value);                                      } catch (...) {}
-    try { m_Bandwidth           = std::stod(getParameter("Bandwidth").Value);                                      } catch (...) {}
-    try { m_TarRCS              = std::stod(getParameter("TarRCS").Value);                                         } catch (...) {}
-    try { m_TempAntWtLyLoss     = ConvertStringToTempAntWtLyLoss(getParameter("TempAntWtLyLoss").Value);           } catch (...) {}
-    try { m_dw                  = std::stod(getParameter("dw").Value);                                             } catch (...) {}
-    try { m_SnowfallRate        = std::stod(getParameter("SnowfallRate").Value);                                   } catch (...) {}
+    try { m_OutputUnit          = ConvertStringToOutputUnit(getParameter("OutputUnit").Value);                     } catch (...) { LOG_WARN("Failed to parse parameter 'OutputUnit', using default value."); }
+    try { m_PropagationLossType = ConvertStringToPropagationLossType(getParameter("PropagationLossType").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'PropagationLossType', using default value."); }
+    try { m_RainLoss77GHzType   = ConvertStringToRainLoss77GHzType(getParameter("RainLoss77GHzType").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'RainLoss77GHzType', using default value."); }
+    try { m_Frequency           = std::stod(getParameter("Frequency").Value);                                      } catch (...) { LOG_WARN("Failed to parse parameter 'Frequency', using default value."); }
+    try { m_RainfallRate        = std::stod(getParameter("RainfallRate").Value);                                   } catch (...) { LOG_WARN("Failed to parse parameter 'RainfallRate', using default value."); }
+    try { m_AntTheta            = std::stod(getParameter("AntTheta").Value);                                       } catch (...) { LOG_WARN("Failed to parse parameter 'AntTheta', using default value."); }
+    try { m_AntPhi              = std::stod(getParameter("AntPhi").Value);                                         } catch (...) { LOG_WARN("Failed to parse parameter 'AntPhi', using default value."); }
+    try { m_AntHeight           = std::stod(getParameter("AntHeight").Value);                                      } catch (...) { LOG_WARN("Failed to parse parameter 'AntHeight', using default value."); }
+    try { m_Bandwidth           = std::stod(getParameter("Bandwidth").Value);                                      } catch (...) { LOG_WARN("Failed to parse parameter 'Bandwidth', using default value."); }
+    try { m_TarRCS              = std::stod(getParameter("TarRCS").Value);                                         } catch (...) { LOG_WARN("Failed to parse parameter 'TarRCS', using default value."); }
+    try { m_TempAntWtLyLoss     = ConvertStringToTempAntWtLyLoss(getParameter("TempAntWtLyLoss").Value);           } catch (...) { LOG_WARN("Failed to parse parameter 'TempAntWtLyLoss', using default value."); }
+    try { m_dw                  = std::stod(getParameter("dw").Value);                                             } catch (...) { LOG_WARN("Failed to parse parameter 'dw', using default value."); }
+    try { m_SnowfallRate        = std::stod(getParameter("SnowfallRate").Value);                                   } catch (...) { LOG_WARN("Failed to parse parameter 'SnowfallRate', using default value."); }
 
     SetParameters();
 

@@ -164,45 +164,45 @@ bool RADAR_AntennaPolarizationTx_Block::Initialize()
 
     // ---- 读取参数 ----
     try { m_RadarWorkMode = ConvertStringToRadarWorkMode(
-              getParameter("RadarWorkMode").Value); } catch (...) {}
+              getParameter("RadarWorkMode").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'RadarWorkMode', using default value."); }
 
     try { m_ElementPatternFileType = ConvertStringToElementPatternFileType(
-              getParameter("ElementPatternFileType").Value); } catch (...) {}
+              getParameter("ElementPatternFileType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ElementPatternFileType', using default value."); }
 
     try {
         std::string scaleStr = getParameter("ElementPatternFileScaleFactor").Value;
         parseArrayString(scaleStr, m_ElementPatternFileScaleFactor_data);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'ElementPatternFileScaleFactor', using default value."); }
 
     try { m_UserDefinedAntennaPattern = ConvertStringToUserDefinedAntennaPattern(
-              getParameter("UserDefinedAntennaPattern").Value); } catch (...) {}
+              getParameter("UserDefinedAntennaPattern").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'UserDefinedAntennaPattern', using default value."); }
 
     try { m_TxAntennaPatternFileName1 =
-              TrimCopy(getParameter("TxAntennaPatternFileName1").Value); } catch (...) {}
+              TrimCopy(getParameter("TxAntennaPatternFileName1").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TxAntennaPatternFileName1', using default value."); }
 
     try { m_AntennaScanPattern = ConvertStringToAntennaScanPattern(
-              getParameter("AntennaScanPattern").Value); } catch (...) {}
+              getParameter("AntennaScanPattern").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntennaScanPattern', using default value."); }
 
-    try { m_ScanRate             = std::stod(getParameter("ScanRate").Value);             } catch (...) {}
-    try { m_ElevationAngle       = std::stod(getParameter("ElevationAngle").Value);       } catch (...) {}
-    try { m_SectorScanStartAngle = std::stod(getParameter("SectorScanStartAngle").Value); } catch (...) {}
-    try { m_SectorScanEndAngle   = std::stod(getParameter("SectorScanEndAngle").Value);   } catch (...) {}
-    try { m_FlybackTime          = std::stod(getParameter("FlybackTime").Value);          } catch (...) {}
-    try { m_NumberOfRasterBars   = std::stoi(getParameter("NumberOfRasterBars").Value);   } catch (...) {}
-    try { m_RasterBarWidth       = std::stod(getParameter("RasterBarWidth").Value);       } catch (...) {}
+    try { m_ScanRate             = std::stod(getParameter("ScanRate").Value);             } catch (...) { LOG_WARN("Failed to parse parameter 'ScanRate', using default value."); }
+    try { m_ElevationAngle       = std::stod(getParameter("ElevationAngle").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'ElevationAngle', using default value."); }
+    try { m_SectorScanStartAngle = std::stod(getParameter("SectorScanStartAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SectorScanStartAngle', using default value."); }
+    try { m_SectorScanEndAngle   = std::stod(getParameter("SectorScanEndAngle").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'SectorScanEndAngle', using default value."); }
+    try { m_FlybackTime          = std::stod(getParameter("FlybackTime").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'FlybackTime', using default value."); }
+    try { m_NumberOfRasterBars   = std::stoi(getParameter("NumberOfRasterBars").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'NumberOfRasterBars', using default value."); }
+    try { m_RasterBarWidth       = std::stod(getParameter("RasterBarWidth").Value);       } catch (...) { LOG_WARN("Failed to parse parameter 'RasterBarWidth', using default value."); }
 
     try {
         std::string azStr = getParameter("TargetAzimuthAngle").Value;
         parseArrayString(azStr, m_TargetAzimuthAngle_data);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'TargetAzimuthAngle', using default value."); }
 
     try {
         std::string elStr = getParameter("TargetElevationAngle").Value;
         parseArrayString(elStr, m_TargetElevationAngle_data);
-    } catch (...) {}
+    } catch (...) { LOG_WARN("Failed to parse parameter 'TargetElevationAngle', using default value."); }
 
-    try { m_BeamAzimuthAngle   = std::stod(getParameter("BeamAzimuthAngle").Value);   } catch (...) {}
-    try { m_BeamElevationAngle = std::stod(getParameter("BeamElevationAngle").Value); } catch (...) {}
+    try { m_BeamAzimuthAngle   = std::stod(getParameter("BeamAzimuthAngle").Value);   } catch (...) { LOG_WARN("Failed to parse parameter 'BeamAzimuthAngle', using default value."); }
+    try { m_BeamElevationAngle = std::stod(getParameter("BeamElevationAngle").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BeamElevationAngle', using default value."); }
 
     SetParameters();
     loadPatternFile();

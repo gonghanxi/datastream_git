@@ -139,8 +139,8 @@ bool MpyEnv_Block::Initialize()
 
 	simulator_param = getSimu();
 
-	try { m_FcOut = ConvertStringToSelectedFcOut(getParameter("FcOut").Value); } catch (...) { }
-	try { m_UserDefinedFc = std::stod(getParameter("UserDefinedFc").Value); } catch (...) { }
+	try { m_FcOut = ConvertStringToSelectedFcOut(getParameter("FcOut").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FcOut', using default value."); }
+	try { m_UserDefinedFc = std::stod(getParameter("UserDefinedFc").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'UserDefinedFc', using default value."); }
 
     SetParameters(m_UserDefinedFc, m_FcOut);
 	return true;

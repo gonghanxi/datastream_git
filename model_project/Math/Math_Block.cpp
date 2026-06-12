@@ -60,7 +60,7 @@ bool Math_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_functionType = ConvertStringToFunctionType(getParameter("FunctionType").Value); } catch (...) { }
+    try { m_functionType = ConvertStringToFunctionType(getParameter("FunctionType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'FunctionType', using default value."); }
 
     SetParameters(m_functionType);
 

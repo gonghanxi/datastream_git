@@ -185,8 +185,8 @@ bool PattMatch_Block::Initialize()
     m_PattMatch = std::make_unique<PattMatch>();
 
     SetDefaultParameters();
-    try { m_tempSize = std::stoi(getParameter("TempSize").Value); } catch (...) {}
-    try { m_winSize  = std::stoi(getParameter("WinSize").Value);  } catch (...) {}
+    try { m_tempSize = std::stoi(getParameter("TempSize").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TempSize', using default value."); }
+    try { m_winSize  = std::stoi(getParameter("WinSize").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'WinSize', using default value."); }
     SetParameters();
 
     if (m_tempSize <= 0)

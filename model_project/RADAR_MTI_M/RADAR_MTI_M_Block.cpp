@@ -232,7 +232,7 @@ bool RADAR_MTI_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_MTI_Type = ConvertStringToMTIType(getParameter("MTI_Type").Value); } catch (...) {}
+    try { m_MTI_Type = ConvertStringToMTIType(getParameter("MTI_Type").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'MTI_Type', using default value."); }
 
     SetParameters();
 

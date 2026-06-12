@@ -26,7 +26,7 @@ bool AsyncDistributorCx_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_BlockSizes = ParseStringToMatrix<int>(getParameter("BlockSizes").Value); } catch (...) { }
+    try { m_BlockSizes = ParseStringToMatrix<int>(getParameter("BlockSizes").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'BlockSizes', using default value."); }
 
     SetParameters();
 

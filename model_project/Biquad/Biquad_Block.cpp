@@ -80,11 +80,11 @@ bool Biquad_Block::Initialize()
 
 	SetDefaultParamters();
 
-	try { m_dD1 = std::stod(getParameter("D1").Value); } catch (...) {}
-	try { m_dD2 = std::stod(getParameter("D2").Value); } catch (...) {}
-	try { m_dN0 = std::stod(getParameter("N0").Value); } catch (...) {}
-	try { m_dN1 = std::stod(getParameter("N1").Value); } catch (...) {}
-	try { m_dN2 = std::stod(getParameter("N2").Value); } catch (...) {}
+	try { m_dD1 = std::stod(getParameter("D1").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D1', using default value."); }
+	try { m_dD2 = std::stod(getParameter("D2").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'D2', using default value."); }
+	try { m_dN0 = std::stod(getParameter("N0").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N0', using default value."); }
+	try { m_dN1 = std::stod(getParameter("N1").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N1', using default value."); }
+	try { m_dN2 = std::stod(getParameter("N2").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'N2', using default value."); }
 
 	SetParameters();
 

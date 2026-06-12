@@ -287,6 +287,7 @@ RADAR_PULSE \
     RADAR_PropagationLoss \
 RADAR_PulseCompression \
     RADAR_PulseCompression_M \
+    RADAR_RaisedCosineFilter \
 RADAR_RangeMeas\
 RADAR_RCS\
     RADAR_Rx_DBS_2D \
@@ -299,6 +300,7 @@ RADAR_Switch\
     RADAR_TargetTrack \
     RADAR_TargetTrajectory \
     RADAR_Tx_DBS_2D \
+    RADAR_Tx_DBS_Measurement \
 RADAR_UnAmbRange\
 RADAR_UnAmbVelocity\
 RADAR_VelocityMeas\

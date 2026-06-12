@@ -126,18 +126,18 @@ bool Demapper_Block::Initialize()
     SetDefaultParameters();
 
     // ---- 读取参数 ----
-    try { m_ModType      = ConvertStringToModTypeEnum(getParameter("ModType").Value);    } catch (...) {}
-    try { m_BitOrder     = ConvertStringToBitOrderEnum(getParameter("BitOrder").Value);  } catch (...) {}
-    try { m_Ratio_R2_R1  = std::stod(getParameter("Ratio_R2_R1").Value);                } catch (...) {}
-    try { m_Ratio_R3_R1  = std::stod(getParameter("Ratio_R3_R1").Value);                } catch (...) {}
-    try { m_Ratio_R4_R1  = std::stod(getParameter("Ratio_R4_R1").Value);                } catch (...) {}
-    try { m_DefaultState = ConvertStringToDefaultStateEnum(getParameter("DefaultState").Value); } catch (...) {}
+    try { m_ModType      = ConvertStringToModTypeEnum(getParameter("ModType").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'ModType', using default value."); }
+    try { m_BitOrder     = ConvertStringToBitOrderEnum(getParameter("BitOrder").Value);  } catch (...) { LOG_WARN("Failed to parse parameter 'BitOrder', using default value."); }
+    try { m_Ratio_R2_R1  = std::stod(getParameter("Ratio_R2_R1").Value);                } catch (...) { LOG_WARN("Failed to parse parameter 'Ratio_R2_R1', using default value."); }
+    try { m_Ratio_R3_R1  = std::stod(getParameter("Ratio_R3_R1").Value);                } catch (...) { LOG_WARN("Failed to parse parameter 'Ratio_R3_R1', using default value."); }
+    try { m_Ratio_R4_R1  = std::stod(getParameter("Ratio_R4_R1").Value);                } catch (...) { LOG_WARN("Failed to parse parameter 'Ratio_R4_R1', using default value."); }
+    try { m_DefaultState = ConvertStringToDefaultStateEnum(getParameter("DefaultState").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DefaultState', using default value."); }
 
-    try { m_MappingTable   = ParseStringToMatrix<std::complex<double>>(getParameter("MappingTable").Value);    } catch (...) {}
-    try { m_RingStates     = ParseStringToMatrix<int>(getParameter("RingStates").Value);                       } catch (...) {}
-    try { m_RingMagnitudes = ParseStringToMatrix<double>(getParameter("RingMagnitudes").Value);                } catch (...) {}
-    try { m_RinginitialPhases = ParseStringToMatrix<double>(getParameter("RinginitialPhases").Value);          } catch (...) {}
-    try { m_States         = ParseStringToMatrix<int>(getParameter("States").Value);                           } catch (...) {}
+    try { m_MappingTable   = ParseStringToMatrix<std::complex<double>>(getParameter("MappingTable").Value);    } catch (...) { LOG_WARN("Failed to parse parameter 'MappingTable', using default value."); }
+    try { m_RingStates     = ParseStringToMatrix<int>(getParameter("RingStates").Value);                       } catch (...) { LOG_WARN("Failed to parse parameter 'RingStates', using default value."); }
+    try { m_RingMagnitudes = ParseStringToMatrix<double>(getParameter("RingMagnitudes").Value);                } catch (...) { LOG_WARN("Failed to parse parameter 'RingMagnitudes', using default value."); }
+    try { m_RinginitialPhases = ParseStringToMatrix<double>(getParameter("RinginitialPhases").Value);          } catch (...) { LOG_WARN("Failed to parse parameter 'RinginitialPhases', using default value."); }
+    try { m_States         = ParseStringToMatrix<int>(getParameter("States").Value);                           } catch (...) { LOG_WARN("Failed to parse parameter 'States', using default value."); }
 
     SetParameters();
 

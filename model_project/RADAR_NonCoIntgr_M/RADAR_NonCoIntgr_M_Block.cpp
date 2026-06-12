@@ -156,7 +156,7 @@ bool RADAR_NonCoIntgr_M_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_Number = std::stoi(getParameter("Number").Value); } catch (...) {}
+    try { m_Number = std::stoi(getParameter("Number").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Number', using default value."); }
 
     SetParameters();
 

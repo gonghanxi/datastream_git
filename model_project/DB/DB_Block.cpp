@@ -69,8 +69,8 @@ bool DB_Block::Initialize()
 
     SetDefaultParamters();
 
-    try { m_Min = std::stod(getParameter("NumRows").Value); } catch (...) { }
-    try { m_DbType = ConvertStringToDbTypeEnum(getParameter("DbType").Value); } catch (...) { }
+    try { m_Min = std::stod(getParameter("NumRows").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'NumRows', using default value."); }
+    try { m_DbType = ConvertStringToDbTypeEnum(getParameter("DbType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'DbType', using default value."); }
 
     SetParameters();
 

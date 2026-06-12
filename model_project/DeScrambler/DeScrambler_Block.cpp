@@ -87,10 +87,8 @@ bool DeScrambler_Block::Initialize()
 
     SetDefaultParameters();
 
-    try {
-        Polynomial = std::stoi(getParameter("Polynomial").Value);
-        ShiftReg = std::stoi(getParameter("ShiftReg").Value);
-    } catch (...) {}
+    try { Polynomial = std::stoi(getParameter("Polynomial").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Polynomial', using default value."); }
+    try { ShiftReg = std::stoi(getParameter("ShiftReg").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ShiftReg', using default value."); }
 
     SetParameters();
 

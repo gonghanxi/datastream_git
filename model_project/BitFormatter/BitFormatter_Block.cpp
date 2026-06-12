@@ -30,10 +30,10 @@ bool BitFormatter_Block::Initialize()
 
     SetDefaultParameters();
 
-    try { m_SamplesPerBit = std::stoi(getParameter("SamplesPerBit").Value); } catch (...) {}
-    try { m_Format = ConvertStringToSelectedFormat(getParameter("Format").Value); } catch (...) {}
-    try { m_LogicZeroLevel = std::stod(getParameter("LogicZeroLevel").Value); } catch (...) {}
-    try { m_LogicOneLevel = std::stod(getParameter("LogicOneLevel").Value); } catch (...) {}
+    try { m_SamplesPerBit = std::stoi(getParameter("SamplesPerBit").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SamplesPerBit', using default value."); }
+    try { m_Format = ConvertStringToSelectedFormat(getParameter("Format").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'Format', using default value."); }
+    try { m_LogicZeroLevel = std::stod(getParameter("LogicZeroLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LogicZeroLevel', using default value."); }
+    try { m_LogicOneLevel = std::stod(getParameter("LogicOneLevel").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'LogicOneLevel', using default value."); }
 
 
     SetParameters(m_SamplesPerBit, m_Format, m_LogicZeroLevel, m_LogicOneLevel);

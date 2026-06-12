@@ -317,10 +317,10 @@ bool RADAR_LocInAntennaFrame_Block::Initialize()
 
     // 解析参数
     SetDefaultParameters();
-    try { m_TimeStep         = std::stod(getParameter("TimeStep").Value); } catch (...) {}
-    try { m_XYZFrameType     = ConvertStringToXYZFrameType(getParameter("XYZFrameType").Value); } catch (...) {}
-    try { m_AntennaPlaneType = ConvertStringToAntennaPlaneType(getParameter("AntennaPlaneType").Value); } catch (...) {}
-    try { m_CoordinateType   = ConvertStringToCoordinateType(getParameter("CoordinateType").Value); } catch (...) {}
+    try { m_TimeStep         = std::stod(getParameter("TimeStep").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'TimeStep', using default value."); }
+    try { m_XYZFrameType     = ConvertStringToXYZFrameType(getParameter("XYZFrameType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'XYZFrameType', using default value."); }
+    try { m_AntennaPlaneType = ConvertStringToAntennaPlaneType(getParameter("AntennaPlaneType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntennaPlaneType', using default value."); }
+    try { m_CoordinateType   = ConvertStringToCoordinateType(getParameter("CoordinateType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'CoordinateType', using default value."); }
 
     SetParameters();
 
