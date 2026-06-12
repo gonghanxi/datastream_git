@@ -242,6 +242,8 @@ RADAR_BarkerCode\
     RADAR_BinaryDetector \
 RADAR_CFAR\
     RADAR_CFAR_M \
+    RADAR_CICDecimate \
+    RADAR_CICInterp \
     RADAR_Clutter_H \
 RADAR_CoIntgr\
 RADAR_CW \
@@ -264,6 +266,7 @@ RADAR_GainCtrl\
 RADAR_LFM \
     RADAR_LFMRef \
     RADAR_LocInAntennaFrame \
+    RADAR_MNDetector \
     RADAR_MTD_M \
     RADAR_MTI_M \
 RADAR_MatchedFilter\
@@ -275,11 +278,15 @@ RADAR_NLFM\
     RADAR_NonCoIntgr \
     RADAR_NonCoIntgr_M \
 RADAR_PULSE \
+    RADAR_PdMeasure \
     RADAR_Pd_Measurement \
     RADAR_Pf_Measurement \
     RADAR_PhasedArrayRx \
     RADAR_PhasedArrayTx \
+    RADAR_PlotsCentroid \
+    RADAR_PropagationLoss \
 RADAR_PulseCompression \
+    RADAR_PulseCompression_M \
 RADAR_RangeMeas\
 RADAR_RCS\
     RADAR_Rx_DBS_2D \
