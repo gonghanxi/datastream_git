@@ -4,73 +4,73 @@
 #include "MatrixCircularBuffer.h"
 #include "EnvelopeSignal.h"
 
-// Ìí¼ÓEigen¿âÖ§³Ö - ÓÃÓÚ¾ØÕóÔËËã
+// æ·»åŠ Eigenåº“æ”¯æŒ - ç”¨äºçŸ©é˜µè¿ç®—
 #include "Eigen/Dense"
 #include <vector>
 #include <complex>
 #include <cmath>
 
-// RADAR_DOAÀà¶¨Òå - ²¨´ï·½Ïò¹À¼ÆËã·¨Ä£ĞÍ
+// RADAR_DOAç±»å®šä¹‰ - æ³¢è¾¾æ–¹å‘ä¼°è®¡ç®—æ³•æ¨¡å‹
 class SYSTEMVUEMODELBUILDER_API RADAR_DOA : public SystemVueModelBuilder::DFModel
 {
 public:
-	// Ã¶¾ÙÀàĞÍ - ¶¨ÒåDOAËã·¨ÀàĞÍ
-	enum SelectedMTI_Type {
-		MUSIC,      // MUSICËã·¨
-		ESPRIT,     // ESPRITËã·¨
-		MUSIC_2D    // ¶şÎ¬MUSICËã·¨
-	};
-
-public:
-	// Õâ¸öºêÊÇËùÓĞ´ÓDFModelÅÉÉúµÄÀà±ØĞëµÄ
-	DECLARE_MODEL_INTERFACE(RADAR_DOA);
-
-	// ¹¹Ôìº¯Êı
-	RADAR_DOA();
-
-	//-------- º¯ÊıÖØÔØ --------
-	virtual bool	Run();		// Ö÷ÔËĞĞº¯Êı
-	virtual bool    Setup();	// ³õÊ¼»¯º¯Êı
-
-	// ¶Ë¿Ú¶¨Òå
-	SystemVueModelBuilder::DComplexCircularBufferBus input;	// ÊäÈë¶Ë¿Ú£º½ÓÊÕ¸´ÊıÊı¾İ
-	SystemVueModelBuilder::IntCircularBuffer number;			// Êä³ö¶Ë¿Ú£ºĞÅºÅÔ´ÊıÁ¿
-	SystemVueModelBuilder::DoubleMatrixCircularBuffer elevation;	// Êä³ö¶Ë¿Ú£º¸©Ñö½Ç¾ØÕó
-	SystemVueModelBuilder::DoubleMatrixCircularBuffer azimuth;		// Êä³ö¶Ë¿Ú£º·½Î»½Ç¾ØÕó
-
-	// ²ÎÊı¶¨Òå
-	double Fc;		// ÖĞĞÄÆµÂÊ
-	double D;		// ÕóÔª¼ä¾à
-	int NumOfCh;		// Í¨µÀÊı/ÕóÔªÊı
-	int SnapShotLen;	// ¿ìÅÄ³¤¶È
-	SelectedMTI_Type MTI_Type;		// Ëã·¨ÀàĞÍ
-
-    // DOA½á¹û½á¹¹Ìå - ´æ´¢DOA¹À¼Æ½á¹û
-    struct DOAResult {
-        int number;			// ¼ì²âµ½µÄĞÅºÅÔ´ÊıÁ¿
-        std::vector<double> azimuth;		// ·½Î»½ÇÊı×é
-        std::vector<double> elevation;		// ¸©Ñö½ÇÊı×é
+    // æšä¸¾ç±»å‹ - å®šä¹‰DOAç®—æ³•ç±»å‹
+    enum SelectedMTI_Type {
+        MUSIC,      // MUSICç®—æ³•
+        ESPRIT,     // ESPRITç®—æ³•
+        MUSIC_2D    // äºŒç»´MUSICç®—æ³•
     };
 
-    // DOAËã·¨ÊµÏÖº¯Êı
+public:
+    // è¿™ä¸ªå®æ˜¯æ‰€æœ‰ä»DFModelæ´¾ç”Ÿçš„ç±»å¿…é¡»çš„
+    DECLARE_MODEL_INTERFACE(RADAR_DOA);
+
+    // æ„é€ å‡½æ•°
+    RADAR_DOA();
+
+    //-------- å‡½æ•°é‡è½½ --------
+    virtual bool	Run();		// ä¸»è¿è¡Œå‡½æ•°
+    virtual bool    Setup();	// åˆå§‹åŒ–å‡½æ•°
+
+    // ç«¯å£å®šä¹‰
+    SystemVueModelBuilder::DComplexCircularBufferBus input;	// è¾“å…¥ç«¯å£ï¼šæ¥æ”¶å¤æ•°æ•°æ®
+    SystemVueModelBuilder::IntCircularBuffer number;			// è¾“å‡ºç«¯å£ï¼šä¿¡å·æºæ•°é‡
+    SystemVueModelBuilder::DoubleMatrixCircularBuffer elevation;	// è¾“å‡ºç«¯å£ï¼šä¿¯ä»°è§’çŸ©é˜µ
+    SystemVueModelBuilder::DoubleMatrixCircularBuffer azimuth;		// è¾“å‡ºç«¯å£ï¼šæ–¹ä½è§’çŸ©é˜µ
+
+    // å‚æ•°å®šä¹‰
+    double Fc;		// ä¸­å¿ƒé¢‘ç‡
+    double D;		// é˜µå…ƒé—´è·
+    int NumOfCh;		// é€šé“æ•°/é˜µå…ƒæ•°
+    int SnapShotLen;	// å¿«æ‹é•¿åº¦
+    SelectedMTI_Type MTI_Type;		// ç®—æ³•ç±»å‹
+
+    // DOAç»“æœç»“æ„ä½“ - å­˜å‚¨DOAä¼°è®¡ç»“æœ
+    struct DOAResult {
+        int number;			// æ£€æµ‹åˆ°çš„ä¿¡å·æºæ•°é‡
+        std::vector<double> azimuth;		// æ–¹ä½è§’æ•°ç»„
+        std::vector<double> elevation;		// ä¿¯ä»°è§’æ•°ç»„
+    };
+
+    // DOAç®—æ³•å®ç°å‡½æ•°
     DOAResult DOA_MUSIC_1D(const Eigen::MatrixXcd& X, int M, double d, double lambda, int L);
     //DOAResult DOA_ESPRIT_1D(const Eigen::MatrixXcd& X, int M, double d, double lambda, int L);
     //DOAResult DOA_MUSIC_2D(const Eigen::MatrixXcd& X, int M, int N, double d_h, double d_v, double lambda, int L);
-    double lambda_;		// ²¨³¤£¨ÓÉFc¼ÆËãµÃ³ö£©
+    double lambda_;		// æ³¢é•¿ï¼ˆç”±Fcè®¡ç®—å¾—å‡ºï¼‰
 private:
-	// DOA¹À¼ÆÏà¹ØµÄË½ÓĞ³ÉÔ±
+    // DOAä¼°è®¡ç›¸å…³çš„ç§æœ‰æˆå‘˜
 
-	// ¸¨Öúº¯Êı
-	Eigen::VectorXcd steering_vector_1D(double theta, int M, double d, double lambda);	// Éú³ÉÒ»Î¬µ¼ÏòÊ¸Á¿
-	//Eigen::VectorXcd steering_vector_2D(double az, double el, int M, int N, double d_h, double d_v, double lambda);
-	int estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, int L);		// ¹À¼ÆĞÅºÅÔ´ÊıÁ¿
-	std::pair<std::vector<double>, std::vector<double>> find_2d_peaks(
-		const Eigen::MatrixXd& P_2d,
-		const std::vector<double>& az_scan,
-		const std::vector<double>& el_scan,
-		int num_peaks);
+    // è¾…åŠ©å‡½æ•°
+    Eigen::VectorXcd steering_vector_1D(double theta, int M, double d, double lambda);	// ç”Ÿæˆä¸€ç»´å¯¼å‘çŸ¢é‡
+    //Eigen::VectorXcd steering_vector_2D(double az, double el, int M, int N, double d_h, double d_v, double lambda);
+    int estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, int L);		// ä¼°è®¡ä¿¡å·æºæ•°é‡
+    std::pair<std::vector<double>, std::vector<double>> find_2d_peaks(
+        const Eigen::MatrixXd& P_2d,
+        const std::vector<double>& az_scan,
+        const std::vector<double>& el_scan,
+        int num_peaks);
 
-	// ¹¤¾ßº¯Êı
-	std::vector<int> findpeaks(const Eigen::VectorXd& signal, int n_peaks, int min_distance);	// ²éÕÒÒ»Î¬·åÖµ
-	std::vector<double> arange(double start, double end, double step);				// Éú³ÉµÈ²îÊı×é
+    // å·¥å…·å‡½æ•°
+    std::vector<int> findpeaks(const Eigen::VectorXd& signal, int n_peaks, int min_distance);	// æŸ¥æ‰¾ä¸€ç»´å³°å€¼
+    std::vector<double> arange(double start, double end, double step);				// ç”Ÿæˆç­‰å·®æ•°ç»„
 };

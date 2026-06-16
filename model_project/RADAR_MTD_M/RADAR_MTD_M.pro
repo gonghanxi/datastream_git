@@ -6,12 +6,6 @@ TEMPLATE = lib
 # 定义DLL导出宏
 DEFINES += SYSTEMVUEMODELBUILDER_EXPORTS
 
-# ------------------- FFTW 配置 -------------------
-# 定义FFTW根路径
-FFTW_ROOT = $$clean_path($$PWD/fftw-3.3.5)
-# 包含FFTW的pri文件
-include($$FFTW_ROOT/fftw.pri)
-# -------------------------------------------------
 DESTDIR = $$PWD/../../bin/models
 INCLUDEPATH += $$PWD/../../ModelDesign/
 include($$PWD/../../ModelDesign/openBlas/openBlas.pri)

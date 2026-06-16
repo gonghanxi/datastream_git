@@ -249,6 +249,7 @@ RADAR_CoIntgr\
 RADAR_CW \
     RADAR_CoIntgr_M \
     RADAR_CornerReflectorLocation \
+    RADAR_DDC \
 RADAR_Detector\
 RADAR_DOA\
     RADAR_Detector_M \
@@ -296,8 +297,10 @@ RADAR_RCS\
     RADAR_SignalAnalyzer \
     RADAR_SummerBusRF \
 RADAR_Switch\
+    RADAR_TargetClassifier \
     RADAR_TargetDetect \
     RADAR_TargetTrack \
+    RADAR_TargetTrack_M \
     RADAR_TargetTrajectory \
     RADAR_Tx_DBS_2D \
     RADAR_Tx_DBS_Measurement \

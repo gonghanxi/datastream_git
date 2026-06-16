@@ -1,6 +1,7 @@
 // LinkParser.cpp
 #include "LinkParser.h"
 #include "FMUModelInfo.h"
+#include "CFunctionModelInfo.h"
 #include <QFile>
 #include <QDebug>
 
@@ -627,6 +628,46 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
                  << "GUID:" << blockInfo.guid
                  << "端口数:" << blockInfo.portsMsg.size()
                  << "参数数:" << blockInfo.parameters.size();
+
+        return true;
+    }
+
+    // 判断是否为CFunction模型
+    if (cmpType == "CFunction") {
+        CFunctionModelParser cfuncParser;
+        CFunctionModelInfo cfuncModelInfo;
+
+        if (!cfuncParser.parseCFunctionModel(currentLinkKey, cmpObj,
+                                             currentVars, simuPara,
+                                             scopeMgr, resolver, cfuncModelInfo)) {
+            LOG_ERROR("CFunction模型解析失败:", cfuncModelInfo.instanceName.toStdString());
+            return false;
+        }
+
+        // 生成cfunction.json文件：存储到 appPath/{linkkey}/ 目录下
+        // 文件名使用instanceName，即 {instanceName}.json
+        QString cfunctionOutputDir = appPath + "/" + currentLinkKey;
+        QString generatedPath = cfuncParser.generateCFunctionJson(cfuncModelInfo, cfunctionOutputDir);
+        if (generatedPath.isEmpty()) {
+            LOG_ERROR("CFunction JSON生成失败:", cfuncModelInfo.instanceName.toStdString());
+            return false;
+        }
+        cfuncModelInfo.generatedJsonPath = generatedPath;
+
+        // 转换为BlockInfo并添加到结果
+        BlockInfo blockInfo = cfuncModelInfo.toBlockInfo();
+
+        // 设置子系统路径
+        if (!m_subsystemPathStack.isEmpty()) {
+            blockInfo.subsystemPath = m_subsystemPathStack.join("/");
+        }
+
+        blocksInfo.append(blockInfo);
+
+        qDebug() << "CFunction模型添加成功:" << blockInfo.instanceName
+                 << "端口数:" << blockInfo.portsMsg.size()
+                 << "参数数:" << blockInfo.parameters.size()
+                 << "JSON路径:" << generatedPath;
 
         return true;
     }

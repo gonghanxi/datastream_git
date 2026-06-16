@@ -8,7 +8,7 @@ DEFINES += SYSTEMVUEMODELBUILDER_EXPORTS
 
 # ------------------- Eigen核心配置（跨平台） -------------------
 # 1. 定义Eigen根路径（基于当前.pro文件所在目录，适配跨平台路径）
-EIGEN_ROOT = $$clean_path($$PWD/eigen-3.4.1)
+EIGEN_ROOT = $$clean_path($$PWD/../../third-party/eigen-3.4.1)
 # 2. 将Eigen根目录加入头文件包含路径（核心：让编译器找到Eigen头文件）
 INCLUDEPATH += $$EIGEN_ROOT
 # 3. 可选：Eigen编译优化/警告抑制（跨平台通用）

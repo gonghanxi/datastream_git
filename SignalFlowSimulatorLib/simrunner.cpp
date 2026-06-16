@@ -7,6 +7,8 @@
 
 #include "VariableAnalysis/LinkParser.h"
 #include "FMUManager.h"
+#include "cfunction/CFunctionBlock.h"
+#include "cfunction/CFunctionModelInfo.h"
 
 #include <QTextCodec>
 #include <QVariant>
@@ -98,16 +100,18 @@ bool SimRunner::start()
 bool SimRunner::run()
 {
     //    LOG_INFO("数据流引擎调度开始.");
-    if(RunBlocks())
-    {
-        return true;
+    bool result = RunBlocks();
+
+    // 仿真结束后，清理CFunction引擎生成的临时文件夹（以链路值命名的目录）
+    QDir appDir(m_appPath);
+    for (const QString& linkKey : m_simuParamsCache.keys()) {
+        QDir cfuncDir(appDir.absoluteFilePath(linkKey));
+        if (cfuncDir.exists()) {
+            cfuncDir.removeRecursively();
+        }
     }
-    else
-    {
-        return false;
-    }
-    //    LOG_INFO("数据流引擎调度结束.");
-    return true;
+
+    return result;
 }
 
 void SimRunner::setWriter(ILogWriter *write)
@@ -749,7 +753,7 @@ void SimRunner::recursiveReadBlock(QVector<BlockInfo> &blocksInfo, QVector<Block
 
     for (BlockInfo& blockInfo : blocksInfo)
     {
-//        qDebug() << "before current blockInfo block '"<< blockInfo.instanceName <<"' ptr: " << (blockInfo.block ? "true" : "false");
+        //        qDebug() << "before current blockInfo block '"<< blockInfo.instanceName <<"' ptr: " << (blockInfo.block ? "true" : "false");
         if (blockInfo.isSubSystem)
         {
             auto subBlocks = AlgorithmManager::createInstance()->getBlocksInfo().value(blockInfo.childTopoId);
@@ -821,6 +825,46 @@ void SimRunner::recursiveReadBlock(QVector<BlockInfo> &blocksInfo, QVector<Block
                     blockInfo.block = block;
                     qDebug() << "创建FMUBlock:" << QString::fromStdString(blockInfo.block->GetName())
                              << "GUID:" << blockInfo.guid;
+                } else if (blockInfo.isCFunctionModel) {
+                    // 从blockInfo重建CFunctionBlock
+                    CFunctionBlock* cfuncBlock = new CFunctionBlock(blockInfo.instanceName.toStdString());
+                    cfuncBlock->setCFunctionConfig(blockInfo.instanceName, blockInfo.cmpId);
+
+                    // 重建configData
+                    CFunctionConfigData configData;
+                    configData.language = blockInfo.cfunctionLanguage;
+                    for (int i = 0; i < blockInfo.cfunctionLibFileNames.size() && i < blockInfo.cfunctionLibFilePaths.size(); ++i) {
+                        configData.libFiles.append({blockInfo.cfunctionLibFilePaths[i], blockInfo.cfunctionLibFileNames[i]});
+                    }
+                    for (int i = 0; i < blockInfo.cfunctionHeaderFileNames.size() && i < blockInfo.cfunctionHeaderFilePaths.size(); ++i) {
+                        configData.headerFiles.append({blockInfo.cfunctionHeaderFilePaths[i], blockInfo.cfunctionHeaderFileNames[i]});
+                    }
+                    for (int i = 0; i < blockInfo.cfunctionCFileNames.size() && i < blockInfo.cfunctionCFilePaths.size(); ++i) {
+                        configData.cFiles.append({blockInfo.cfunctionCFilePaths[i], blockInfo.cfunctionCFileNames[i]});
+                    }
+                    cfuncBlock->setConfigData(configData);
+                    cfuncBlock->setEquations(blockInfo.cfunctionEquations);
+                    cfuncBlock->setGeneratedJsonPath(blockInfo.cfunctionGeneratedJsonPath);
+                    cfuncBlock->setSimuParams(getSimulationParameters());
+
+                    // 设置端口信息
+                    for (auto portIt = blockInfo.portsMsg.begin();
+                         portIt != blockInfo.portsMsg.end(); ++portIt) {
+                        cfuncBlock->addPortInfo(portIt.value());
+                    }
+
+                    // 设置参数信息（attribute参数）
+                    for (auto paramIt = blockInfo.parameters.begin();
+                         paramIt != blockInfo.parameters.end(); ++paramIt) {
+                        cfuncBlock->addParameterInfo(
+                            QString::fromStdString(paramIt->first),
+                            QString::fromStdString(paramIt->second.Value));
+                    }
+
+                    block = cfuncBlock;
+                    blockInfo.block = block;
+                    qDebug() << "创建CFunctionBlock:" << blockInfo.instanceName
+                             << "JSON路径:" << blockInfo.cfunctionGeneratedJsonPath;
                 } else {
                     // 普通模型，使用AlgorithmManager创建
                     block = blockInfo.block;

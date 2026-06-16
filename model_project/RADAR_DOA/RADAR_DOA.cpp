@@ -2,12 +2,13 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-const double SPEED_OF_LIGHT = 3e8;  // ¹âËÙ m/s
+const double SPEED_OF_LIGHT = 3e8;  // å…‰é€Ÿ m/s
 
 #ifndef SV_CODE_GEN
 DEFINE_MODEL_INTERFACE(RADAR_DOA)
@@ -47,15 +48,15 @@ DEFINE_MODEL_INTERFACE(RADAR_DOA)
 
 RADAR_DOA::RADAR_DOA()
 {
-	lambda_ = 0.0;  // ³õÊ¼»¯²¨³¤Îª0
+	lambda_ = 0.0;  // åˆå§‹åŒ–æ³¢é•¿ä¸º0
 }
 
 bool RADAR_DOA::Setup()
 {
-	// ¼ÆËã²¨³¤
-	lambda_ = SPEED_OF_LIGHT / Fc;  // ¸ù¾İÖĞĞÄÆµÂÊ¼ÆËã²¨³¤ ¦Ë = c/f
+	// è®¡ç®—æ³¢é•¿
+	lambda_ = SPEED_OF_LIGHT / Fc;  // æ ¹æ®ä¸­å¿ƒé¢‘ç‡è®¡ç®—æ³¢é•¿ Î» = c/f
 	for (int i = 0; i < NumOfCh; i++) {
-		input[i].SetRate(SnapShotLen);  // ÉèÖÃÃ¿¸öÊäÈëÍ¨µÀµÄ²ÉÑùÂÊ
+		input[i].SetRate(SnapShotLen);  // è®¾ç½®æ¯ä¸ªè¾“å…¥é€šé“çš„é‡‡æ ·ç‡
 	}
 	return true;
 }
@@ -66,27 +67,27 @@ bool RADAR_DOA::Setup()
 //-----------------------------------------------------------------------------------
 bool RADAR_DOA::Run()
 {
-	// 1. ´ÓÊäÈë¶Ë¿Ú¶ÁÈ¡Êı¾İ²¢×ª»»ÎªEigen¾ØÕó
-	int M = NumOfCh;  // ÌìÏßÕóÔªÊıÁ¿
-	int L = SnapShotLen;  // ¿ìÅÄÊı
+	// 1. ä»è¾“å…¥ç«¯å£è¯»å–æ•°æ®å¹¶è½¬æ¢ä¸ºEigençŸ©é˜µ
+	int M = NumOfCh;  // å¤©çº¿é˜µå…ƒæ•°é‡
+	int L = SnapShotLen;  // å¿«æ‹æ•°
 
-	Eigen::MatrixXcd X(M, L);  // ´´½¨M¡ÁL¸´Êı¾ØÕó´æ´¢ÊäÈëÊı¾İ
+	Eigen::MatrixXcd X(M, L);  // åˆ›å»ºMÃ—Lå¤æ•°çŸ©é˜µå­˜å‚¨è¾“å…¥æ•°æ®
 
-	// ¶ÁÈ¡ÊäÈëÊı¾İ
+	// è¯»å–è¾“å…¥æ•°æ®
 	for (int i = 0; i < M; i++) {
 		for (int j = 0; j < L; j++) {
-			// ´ÓCircularBuffer¶ÁÈ¡¸´ÊıÊı¾İ
+			// ä»CircularBufferè¯»å–å¤æ•°æ•°æ®
 			std::complex<double> sample = input[i][j];
-			X(i, j) = sample;  // ½«Êı¾İ´æÈë¾ØÕó
+			X(i, j) = sample;  // å°†æ•°æ®å­˜å…¥çŸ©é˜µ
 		}
 	}
 
-	// 2. Ö´ĞĞDOA¹À¼Æ
-	DOAResult result;  // ´æ´¢DOA¹À¼Æ½á¹ûµÄ½á¹¹Ìå
+	// 2. æ‰§è¡ŒDOAä¼°è®¡
+	DOAResult result;  // å­˜å‚¨DOAä¼°è®¡ç»“æœçš„ç»“æ„ä½“
 
 	switch (MTI_Type) {
 	case MUSIC:
-		result = DOA_MUSIC_1D(X, M, D, lambda_, L);  // µ÷ÓÃMUSICËã·¨
+		result = DOA_MUSIC_1D(X, M, D, lambda_, L);  // è°ƒç”¨MUSICç®—æ³•
 		break;
 
 	case ESPRIT:
@@ -94,168 +95,168 @@ bool RADAR_DOA::Run()
 		break;
 
 	case MUSIC_2D:
-		// ¼ÙÉèÊÇ·½Õó
+		// å‡è®¾æ˜¯æ–¹é˜µ
 	//	int N = (int)sqrt((double)M);
 	//	result = DOA_MUSIC_2D(X, N, N, D, D, lambda_, L);
 		break;
 	}
 
-	// 3. Êä³ö½á¹ûµ½¶Ë¿Ú
-	number[0] = result.number;  // Êä³öĞÅºÅÔ´ÊıÁ¿
+	// 3. è¾“å‡ºç»“æœåˆ°ç«¯å£
+	number[0] = result.number;  // è¾“å‡ºä¿¡å·æºæ•°é‡
 
-	// Êä³ö·½Î»½Ç
+	// è¾“å‡ºæ–¹ä½è§’
 	if (!result.azimuth.empty()) {
-		SystemVueModelBuilder::DoubleMatrix azMatrix(1, result.azimuth.size());  // ´´½¨1ĞĞ¡ÁNÁĞ¾ØÕó
+		SystemVueModelBuilder::DoubleMatrix azMatrix(1, result.azimuth.size());  // åˆ›å»º1è¡ŒÃ—Nåˆ—çŸ©é˜µ
 		for (size_t i = 0; i < result.azimuth.size(); i++) {
-			azMatrix(0, i) = result.azimuth[i];  // Ìî³ä·½Î»½ÇÊı¾İ
+			azMatrix(0, i) = result.azimuth[i];  // å¡«å……æ–¹ä½è§’æ•°æ®
 		}
-		azimuth[0] = azMatrix;  // Êä³öµ½·½Î»½Ç¶Ë¿Ú
+		azimuth[0] = azMatrix;  // è¾“å‡ºåˆ°æ–¹ä½è§’ç«¯å£
 	}
 
-	// Êä³ö¸©Ñö½Ç£¨Èç¹ûÓĞ£©
+	// è¾“å‡ºä¿¯ä»°è§’ï¼ˆå¦‚æœæœ‰ï¼‰
 	if (!result.elevation.empty()) {
 		SystemVueModelBuilder::DoubleMatrix elMatrix(1, result.elevation.size());
 		for (size_t i = 0; i < result.elevation.size(); i++) {
 			elMatrix(0, i) = result.elevation[i];
 		}
-		elevation[0] = elMatrix;  // Êä³öµ½¸©Ñö½Ç¶Ë¿Ú
+		elevation[0] = elMatrix;  // è¾“å‡ºåˆ°ä¿¯ä»°è§’ç«¯å£
 	}
 
-	return true;  // ÔËĞĞ³É¹¦
+	return true;  // è¿è¡ŒæˆåŠŸ
 }
 
 //-----------------------------------------------------------------------------------
-// DOAËã·¨ÊµÏÖ
+// DOAç®—æ³•å®ç°
 //-----------------------------------------------------------------------------------
 
 RADAR_DOA::DOAResult RADAR_DOA::DOA_MUSIC_1D(const Eigen::MatrixXcd& X, int M, double d,
 	double lambda, int L) {
-	DOAResult result;  // ´´½¨½á¹û½á¹¹Ìå
+	DOAResult result;  // åˆ›å»ºç»“æœç»“æ„ä½“
 
-	// ¼ÆËãĞ­·½²î¾ØÕó
+	// è®¡ç®—åæ–¹å·®çŸ©é˜µ
 	Eigen::MatrixXcd Rxx = (X * X.adjoint()) / (double)L;  // Rxx = (X*X^H)/L
 
-	// ÌØÕ÷Öµ·Ö½â
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcd> es(Rxx);  // ¶ÔĞ­·½²î¾ØÕó½øĞĞÌØÕ÷Öµ·Ö½â
-	Eigen::VectorXd eigenvalues = es.eigenvalues().real();  // »ñÈ¡Êµ²¿ÌØÕ÷Öµ
-	Eigen::MatrixXcd V = es.eigenvectors();  // »ñÈ¡ÌØÕ÷ÏòÁ¿
+	// ç‰¹å¾å€¼åˆ†è§£
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcd> es(Rxx);  // å¯¹åæ–¹å·®çŸ©é˜µè¿›è¡Œç‰¹å¾å€¼åˆ†è§£
+	Eigen::VectorXd eigenvalues = es.eigenvalues().real();  // è·å–å®éƒ¨ç‰¹å¾å€¼
+	Eigen::MatrixXcd V = es.eigenvectors();  // è·å–ç‰¹å¾å‘é‡
 
-	// °´½µĞòÅÅÁĞÌØÕ÷Öµ
+	// æŒ‰é™åºæ’åˆ—ç‰¹å¾å€¼
 	std::vector<std::pair<double, int>> eigen_pairs;
 	for (int i = 0; i < eigenvalues.size(); i++) {
-		eigen_pairs.push_back(std::make_pair(eigenvalues(i), i));  // ´æ´¢(ÌØÕ÷Öµ, Ë÷Òı)¶Ô
+		eigen_pairs.push_back(std::make_pair(eigenvalues(i), i));  // å­˜å‚¨(ç‰¹å¾å€¼, ç´¢å¼•)å¯¹
 	}
 	std::sort(eigen_pairs.begin(), eigen_pairs.end(),
 		[](const std::pair<double, int>& a, const std::pair<double, int>& b) {
-			return a.first > b.first;  // °´ÌØÕ÷Öµ½µĞòÅÅÁĞ
+			return a.first > b.first;  // æŒ‰ç‰¹å¾å€¼é™åºæ’åˆ—
 		});
 
 	Eigen::VectorXd sorted_eigenvalues(M);
 	Eigen::MatrixXcd sorted_V(M, M);
 	for (int i = 0; i < M; i++) {
-		sorted_eigenvalues(i) = eigen_pairs[i].first;  // ´æ´¢ÅÅĞòºóµÄÌØÕ÷Öµ
-		sorted_V.col(i) = V.col(eigen_pairs[i].second);  // ´æ´¢ÅÅĞòºóµÄÌØÕ÷ÏòÁ¿
+		sorted_eigenvalues(i) = eigen_pairs[i].first;  // å­˜å‚¨æ’åºåçš„ç‰¹å¾å€¼
+		sorted_V.col(i) = V.col(eigen_pairs[i].second);  // å­˜å‚¨æ’åºåçš„ç‰¹å¾å‘é‡
 	}
 
-	// ¹À¼ÆĞÅºÅÔ´ÊıÁ¿
-	int number = estimate_num_sources(sorted_eigenvalues, M, L);  // ¹À¼ÆĞÅºÅÔ´ÊıÁ¿
+	// ä¼°è®¡ä¿¡å·æºæ•°é‡
+	int number = estimate_num_sources(sorted_eigenvalues, M, L);  // ä¼°è®¡ä¿¡å·æºæ•°é‡
 
-	// ÔëÉù×Ó¿Õ¼ä
-	Eigen::MatrixXcd Un = sorted_V.rightCols(M - number);  // È¡ºó(M-number)¸öÌØÕ÷ÏòÁ¿×÷ÎªÔëÉù×Ó¿Õ¼ä
-	Eigen::MatrixXcd UnUn_H = Un * Un.adjoint();  // ¼ÆËãÔëÉù×Ó¿Õ¼äÍ¶Ó°¾ØÕó
+	// å™ªå£°å­ç©ºé—´
+	Eigen::MatrixXcd Un = sorted_V.rightCols(M - number);  // å–å(M-number)ä¸ªç‰¹å¾å‘é‡ä½œä¸ºå™ªå£°å­ç©ºé—´
+	Eigen::MatrixXcd UnUn_H = Un * Un.adjoint();  // è®¡ç®—å™ªå£°å­ç©ºé—´æŠ•å½±çŸ©é˜µ
 
-	// MUSICÆ×¼ÆËã
-	std::vector<double> theta_scan = arange(-90.0, 90.5, 0.5);  // Éú³ÉÉ¨Ãè½Ç¶È -90¡ãµ½90¡ã£¬²½³¤0.5¡ã
-	Eigen::VectorXd P_music(theta_scan.size());  // ´æ´¢MUSICÆ×
+	// MUSICè°±è®¡ç®—
+	std::vector<double> theta_scan = arange(-90.0, 90.5, 0.5);  // ç”Ÿæˆæ‰«æè§’åº¦ -90Â°åˆ°90Â°ï¼Œæ­¥é•¿0.5Â°
+	Eigen::VectorXd P_music(theta_scan.size());  // å­˜å‚¨MUSICè°±
 
 	for (size_t i = 0; i < theta_scan.size(); i++) {
-		Eigen::VectorXcd a = steering_vector_1D(theta_scan[i], M, d, lambda);  // ¼ÆËãµ¼ÏòÊ¸Á¿
-		std::complex<double> denominator = (a.adjoint() * UnUn_H * a)(0, 0);  // ¼ÆËã·ÖÄ¸ a^H * Un * Un^H * a
-		P_music(i) = 1.0 / std::abs(denominator);  // MUSICÆ×£ºP(¦È) = 1/|a^H * Un * Un^H * a|
+		Eigen::VectorXcd a = steering_vector_1D(theta_scan[i], M, d, lambda);  // è®¡ç®—å¯¼å‘çŸ¢é‡
+		std::complex<double> denominator = (a.adjoint() * UnUn_H * a)(0, 0);  // è®¡ç®—åˆ†æ¯ a^H * Un * Un^H * a
+		P_music(i) = 1.0 / std::abs(denominator);  // MUSICè°±ï¼šP(Î¸) = 1/|a^H * Un * Un^H * a|
 	}
 
-	// ×ª»»ÎªdB
+	// è½¬æ¢ä¸ºdB
 	Eigen::VectorXd P_music_db(P_music.size());
 	for (int i = 0; i < P_music.size(); i++) {
-		P_music_db(i) = 10.0 * log10(std::abs(P_music(i)));  // ×ª»»Îª·Ö±´µ¥Î»
+		P_music_db(i) = 10.0 * log10(std::abs(P_music(i)));  // è½¬æ¢ä¸ºåˆ†è´å•ä½
 	}
 
-	// ²éÕÒ·åÖµ
-	std::vector<int> locs = findpeaks(P_music_db, number, 3);  // ²éÕÒnumber¸ö·åÖµ£¬×îĞ¡¼ä¸ô3¸öµã
+	// æŸ¥æ‰¾å³°å€¼
+	std::vector<int> locs = findpeaks(P_music_db, number, 3);  // æŸ¥æ‰¾numberä¸ªå³°å€¼ï¼Œæœ€å°é—´éš”3ä¸ªç‚¹
 
-	// Èç¹ûÃ»ÓĞÕÒµ½×ã¹»µÄ·åÖµ£¬Ñ¡Ôñ×îĞ¡¾àÀëÔ¼ÊøÏÂµÄ×î¸ßÖµ
+	// å¦‚æœæ²¡æœ‰æ‰¾åˆ°è¶³å¤Ÿçš„å³°å€¼ï¼Œé€‰æ‹©æœ€å°è·ç¦»çº¦æŸä¸‹çš„æœ€é«˜å€¼
 	if ((int)locs.size() < number) {
 		std::vector<std::pair<double, int>> peak_pairs;
 		for (int i = 0; i < P_music_db.size(); i++) {
-			peak_pairs.push_back(std::make_pair(P_music_db(i), i));  // ´æ´¢(Æ×Öµ, Ë÷Òı)¶Ô
+			peak_pairs.push_back(std::make_pair(P_music_db(i), i));  // å­˜å‚¨(è°±å€¼, ç´¢å¼•)å¯¹
 		}
 		std::sort(peak_pairs.begin(), peak_pairs.end(),
 			[](const std::pair<double, int>& a, const std::pair<double, int>& b) {
-				return a.first > b.first;  // °´Æ×Öµ½µĞòÅÅÁĞ
+				return a.first > b.first;  // æŒ‰è°±å€¼é™åºæ’åˆ—
 			});
 
 		std::vector<int> selected_locs;
-		selected_locs.push_back(peak_pairs[0].second);  // Ìí¼Ó×î¸ß·åÖµ
+		selected_locs.push_back(peak_pairs[0].second);  // æ·»åŠ æœ€é«˜å³°å€¼
 
 		for (size_t i = 1; i < peak_pairs.size() && (int)selected_locs.size() < number; i++) {
 			int current_loc = peak_pairs[i].second;
 			bool valid = true;
 
 			for (int sel_loc : selected_locs) {
-				if (std::abs(theta_scan[current_loc] - theta_scan[sel_loc]) <= 1.5) {  // ¼ì²é½Ç¶È¼ä¸ôÊÇ·ñ´óÓÚ1.5¡ã
-					valid = false;  // ¼ä¸ôÌ«Ğ¡£¬ÅÅ³ı
+				if (std::abs(theta_scan[current_loc] - theta_scan[sel_loc]) <= 1.5) {  // æ£€æŸ¥è§’åº¦é—´éš”æ˜¯å¦å¤§äº1.5Â°
+					valid = false;  // é—´éš”å¤ªå°ï¼Œæ’é™¤
 					break;
 				}
 			}
 
 			if (valid) {
-				selected_locs.push_back(current_loc);  // Âú×ã¼ä¸ôÒªÇó£¬Ìí¼Óµ½Ñ¡ÖĞÁĞ±í
+				selected_locs.push_back(current_loc);  // æ»¡è¶³é—´éš”è¦æ±‚ï¼Œæ·»åŠ åˆ°é€‰ä¸­åˆ—è¡¨
 			}
 		}
 
-		locs = selected_locs;  // ¸üĞÂ·åÖµÎ»ÖÃ
-		number = locs.size();  // ¸üĞÂĞÅºÅÔ´ÊıÁ¿
+		locs = selected_locs;  // æ›´æ–°å³°å€¼ä½ç½®
+		number = locs.size();  // æ›´æ–°ä¿¡å·æºæ•°é‡
 	}
 
-	// ÌáÈ¡·½Î»½Ç²¢ÅÅĞò
-	result.number = number;  // ÉèÖÃĞÅºÅÔ´ÊıÁ¿
+	// æå–æ–¹ä½è§’å¹¶æ’åº
+	result.number = number;  // è®¾ç½®ä¿¡å·æºæ•°é‡
 	for (int i = 0; i < number && i < (int)locs.size(); i++) {
-		result.azimuth.push_back(theta_scan[locs[i]]);  // ´ÓÉ¨Ãè½Ç¶ÈÖĞÌáÈ¡·½Î»½Ç
+		result.azimuth.push_back(theta_scan[locs[i]]);  // ä»æ‰«æè§’åº¦ä¸­æå–æ–¹ä½è§’
 	}
-	std::sort(result.azimuth.begin(), result.azimuth.end());  // ÉıĞòÅÅÁĞ·½Î»½Ç
+	std::sort(result.azimuth.begin(), result.azimuth.end());  // å‡åºæ’åˆ—æ–¹ä½è§’
 
-	return result;  // ·µ»ØDOA¹À¼Æ½á¹û
+	return result;  // è¿”å›DOAä¼°è®¡ç»“æœ
 }
 
 
 
 //-----------------------------------------------------------------------------------
-// ¸¨Öúº¯ÊıÊµÏÖ
+// è¾…åŠ©å‡½æ•°å®ç°
 //-----------------------------------------------------------------------------------
 
 Eigen::VectorXcd RADAR_DOA::steering_vector_1D(double theta, int M, double d, double lambda) {
-	double k = 2.0 * M_PI / lambda;  // ²¨Êı k = 2¦Ğ/¦Ë
+	double k = 2.0 * M_PI / lambda;  // æ³¢æ•° k = 2Ï€/Î»
 	Eigen::VectorXcd a(M);
 
 	for (int i = 0; i < M; i++) {
-		double phase = k * d * lambda * i * sin(theta * M_PI / 180.0);  // ¼ÆËãµÚi¸öÕóÔªµÄÏàÎ»
-		a(i) = std::complex<double>(cos(phase), sin(phase));  // µ¼ÏòÊ¸Á¿ÔªËØ£ºexp(j*phase)
+		double phase = k * d * lambda * i * sin(theta * M_PI / 180.0);  // è®¡ç®—ç¬¬iä¸ªé˜µå…ƒçš„ç›¸ä½
+		a(i) = std::complex<double>(cos(phase), sin(phase));  // å¯¼å‘çŸ¢é‡å…ƒç´ ï¼šexp(j*phase)
 	}
 
-	return a;  // ·µ»Øµ¼ÏòÊ¸Á¿
+	return a;  // è¿”å›å¯¼å‘çŸ¢é‡
 }
 
 
 
 int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, int L) {
-	int K_max = std::min(M - 1, M / 2);  // ×î´ó¿ÉÄÜĞÅºÅÔ´ÊıÁ¿
+	int K_max = std::min(M - 1, M / 2);  // æœ€å¤§å¯èƒ½ä¿¡å·æºæ•°é‡
 
-	// ·½·¨1: ÌØÕ÷Öµ¼äÏ¶·¨£¨×î¿É¿¿£©
+	// æ–¹æ³•1: ç‰¹å¾å€¼é—´éš™æ³•ï¼ˆæœ€å¯é ï¼‰
 	int K_gap = 1;
 	if (M > 1) {
 		Eigen::VectorXd eigen_ratios(M - 1);
 		for (int i = 0; i < M - 1; i++) {
-			eigen_ratios(i) = eigenvalues(i) / (eigenvalues(i + 1) + 1e-10);  // ¼ÆËãÏàÁÚÌØÕ÷Öµ±ÈÖµ
+			eigen_ratios(i) = eigenvalues(i) / (eigenvalues(i + 1) + 1e-10);  // è®¡ç®—ç›¸é‚»ç‰¹å¾å€¼æ¯”å€¼
 		}
 
 		int max_idx = 0;
@@ -268,11 +269,11 @@ int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, i
 		}
 
 		if (max_ratio > 10.0) {
-			K_gap = max_idx + 1;  // Èç¹û×î´ó±ÈÖµ>10£¬ĞÅºÅÔ´ÊıÎª×î´ó±ÈÖµÎ»ÖÃ+1
+			K_gap = max_idx + 1;  // å¦‚æœæœ€å¤§æ¯”å€¼>10ï¼Œä¿¡å·æºæ•°ä¸ºæœ€å¤§æ¯”å€¼ä½ç½®+1
 		}
 		else {
 			for (int i = M - 2; i >= 0; i--) {
-				if (eigen_ratios(i) > 3.0) {  // ´ÓºóÏòÇ°ÕÒµÚÒ»¸ö±ÈÖµ>3µÄÎ»ÖÃ
+				if (eigen_ratios(i) > 3.0) {  // ä»åå‘å‰æ‰¾ç¬¬ä¸€ä¸ªæ¯”å€¼>3çš„ä½ç½®
 					K_gap = i + 1;
 					break;
 				}
@@ -280,23 +281,23 @@ int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, i
 		}
 	}
 
-	// ·½·¨2: ÔëÉùË®Æ½·¨£¨GDE£©
-	int start_idx = (int)ceil(M * 0.7);  // ¼ÙÉèºó30%µÄÌØÕ÷Öµ´ú±íÔëÉù
+	// æ–¹æ³•2: å™ªå£°æ°´å¹³æ³•ï¼ˆGDEï¼‰
+	int start_idx = (int)ceil(M * 0.7);  // å‡è®¾å30%çš„ç‰¹å¾å€¼ä»£è¡¨å™ªå£°
 	double noise_sum = 0.0;
 	int noise_count = M - start_idx;
 	for (int i = start_idx; i < M; i++) {
-		noise_sum += eigenvalues(i);  // ¼ÆËãÔëÉùÌØÕ÷ÖµÖ®ºÍ
+		noise_sum += eigenvalues(i);  // è®¡ç®—å™ªå£°ç‰¹å¾å€¼ä¹‹å’Œ
 	}
-	double noise_level = noise_sum / noise_count;  // ¼ÆËãÔëÉùË®Æ½
+	double noise_level = noise_sum / noise_count;  // è®¡ç®—å™ªå£°æ°´å¹³
 
 	int K_gde = 0;
 	for (int i = 0; i < M; i++) {
-		if (eigenvalues(i) > 5.0 * noise_level) {  // ÌØÕ÷Öµ>5±¶ÔëÉùË®Æ½£¬ÈÏÎªÊÇĞÅºÅ
+		if (eigenvalues(i) > 5.0 * noise_level) {  // ç‰¹å¾å€¼>5å€å™ªå£°æ°´å¹³ï¼Œè®¤ä¸ºæ˜¯ä¿¡å·
 			K_gde++;
 		}
 	}
 
-	// ·½·¨3: MDL×¼Ôò
+	// æ–¹æ³•3: MDLå‡†åˆ™
 	Eigen::VectorXd mdl(K_max + 1);
 	for (int k = 0; k <= K_max; k++) {
 		if (k < M && M - k > 0) {
@@ -304,20 +305,20 @@ int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, i
 			for (int i = k; i < M; i++) {
 				lambda_noise += eigenvalues(i);
 			}
-			lambda_noise /= (M - k);  // ÔëÉùÌØÕ÷ÖµËãÊõÆ½¾ù
+			lambda_noise /= (M - k);  // å™ªå£°ç‰¹å¾å€¼ç®—æœ¯å¹³å‡
 
 			double lambda_geo_log = 0.0;
 			for (int i = k; i < M; i++) {
 				lambda_geo_log += log(eigenvalues(i) + 1e-10);
 			}
 			lambda_geo_log /= (M - k);
-			double lambda_geo = exp(lambda_geo_log);  // ÔëÉùÌØÕ÷Öµ¼¸ºÎÆ½¾ù
+			double lambda_geo = exp(lambda_geo_log);  // å™ªå£°ç‰¹å¾å€¼å‡ ä½•å¹³å‡
 
 			mdl(k) = -(double)L * (M - k) * log(lambda_noise / (lambda_geo + 1e-10) + 1e-10) +
-				0.5 * k * (2 * M - k) * log((double)L);  // MDL×¼Ôò¹«Ê½
+				0.5 * k * (2 * M - k) * log((double)L);  // MDLå‡†åˆ™å…¬å¼
 		}
 		else {
-			mdl(k) = 1e10;  // ÎŞĞ§Öµ
+			mdl(k) = 1e10;  // æ— æ•ˆå€¼
 		}
 	}
 
@@ -326,23 +327,23 @@ int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, i
 	for (int k = 1; k <= K_max; k++) {
 		if (mdl(k) < min_mdl) {
 			min_mdl = mdl(k);
-			K_mdl = k;  // ÕÒµ½Ê¹MDL×îĞ¡µÄk
+			K_mdl = k;  // æ‰¾åˆ°ä½¿MDLæœ€å°çš„k
 		}
 	}
 
-	// ·½·¨4: ¼òµ¥ãĞÖµ
-	double min_eigen = eigenvalues.minCoeff();  // ×îĞ¡ÌØÕ÷Öµ
+	// æ–¹æ³•4: ç®€å•é˜ˆå€¼
+	double min_eigen = eigenvalues.minCoeff();  // æœ€å°ç‰¹å¾å€¼
 	int K_simple = 0;
 	for (int i = 0; i < M; i++) {
-		if (eigenvalues(i) > 100.0 * min_eigen) {  // ÌØÕ÷Öµ>100±¶×îĞ¡ÌØÕ÷Öµ
+		if (eigenvalues(i) > 100.0 * min_eigen) {  // ç‰¹å¾å€¼>100å€æœ€å°ç‰¹å¾å€¼
 			K_simple++;
 		}
 	}
 
-	// ×ÛºÏ¶àÖÖ·½·¨
+	// ç»¼åˆå¤šç§æ–¹æ³•
 	int K;
 	if (K_gap >= 1 && K_gap <= K_max) {
-		K = K_gap;  // ÓÅÏÈÊ¹ÓÃÌØÕ÷Öµ¼äÏ¶·¨
+		K = K_gap;  // ä¼˜å…ˆä½¿ç”¨ç‰¹å¾å€¼é—´éš™æ³•
 	}
 	else {
 		std::vector<int> K_estimates = { K_gde, K_mdl, K_simple };
@@ -355,62 +356,62 @@ int RADAR_DOA::estimate_num_sources(const Eigen::VectorXd& eigenvalues, int M, i
 
 		if (!valid_estimates.empty()) {
 			std::sort(valid_estimates.begin(), valid_estimates.end());
-			K = valid_estimates[valid_estimates.size() / 2];  // È¡ÖĞÎ»Êı
+			K = valid_estimates[valid_estimates.size() / 2];  // å–ä¸­ä½æ•°
 		}
 		else {
-			K = 1;  // Ä¬ÈÏÖµ
+			K = 1;  // é»˜è®¤å€¼
 		}
 	}
 
-	K = std::max(1, std::min(K, M / 2));  // È·±£KÔÚ[1, M/2]·¶Î§ÄÚ
+	K = std::max(1, std::min(K, M / 2));  // ç¡®ä¿Kåœ¨[1, M/2]èŒƒå›´å†…
 
-	return K;  // ·µ»Ø¹À¼ÆµÄĞÅºÅÔ´ÊıÁ¿
+	return K;  // è¿”å›ä¼°è®¡çš„ä¿¡å·æºæ•°é‡
 }
 
 
 std::vector<int> RADAR_DOA::findpeaks(const Eigen::VectorXd& signal, int n_peaks, int min_distance) {
-	std::vector<std::pair<double, int>> peaks;  // ´æ´¢(·åÖµ¸ß¶È, Î»ÖÃË÷Òı)¶Ô
+	std::vector<std::pair<double, int>> peaks;  // å­˜å‚¨(å³°å€¼é«˜åº¦, ä½ç½®ç´¢å¼•)å¯¹
 
 	for (int i = 1; i < signal.size() - 1; i++) {
-		if (signal(i) > signal(i - 1) && signal(i) > signal(i + 1)) {  // ¼ì²â¾Ö²¿¼«´óÖµ
+		if (signal(i) > signal(i - 1) && signal(i) > signal(i + 1)) {  // æ£€æµ‹å±€éƒ¨æå¤§å€¼
 			peaks.push_back(std::make_pair(signal(i), i));
 		}
 	}
 
-	// °´·åÖµ¸ß¶È½µĞòÅÅĞò
+	// æŒ‰å³°å€¼é«˜åº¦é™åºæ’åº
 	std::sort(peaks.begin(), peaks.end(),
 		[](const std::pair<double, int>& a, const std::pair<double, int>& b) {
-			return a.first > b.first;  // ½µĞòÅÅÁĞ
+			return a.first > b.first;  // é™åºæ’åˆ—
 		});
 
-	std::vector<int> selected_locs;  // Ñ¡ÖĞµÄ·åÖµÎ»ÖÃ
+	std::vector<int> selected_locs;  // é€‰ä¸­çš„å³°å€¼ä½ç½®
 	for (const auto& peak : peaks) {
 		bool valid = true;
 		for (int loc : selected_locs) {
-			if (std::abs(peak.second - loc) < min_distance) {  // ¼ì²éÓëÒÑÓĞ·åÖµµÄ×îĞ¡¾àÀë
-				valid = false;  // ¾àÀëÌ«Ğ¡£¬ÅÅ³ı
+			if (std::abs(peak.second - loc) < min_distance) {  // æ£€æŸ¥ä¸å·²æœ‰å³°å€¼çš„æœ€å°è·ç¦»
+				valid = false;  // è·ç¦»å¤ªå°ï¼Œæ’é™¤
 				break;
 			}
 		}
 
 		if (valid) {
-			selected_locs.push_back(peak.second);  // Ìí¼ÓÂú×ã¾àÀëÔ¼ÊøµÄ·åÖµ
-			if ((int)selected_locs.size() >= n_peaks) {  // ´ïµ½ËùĞè·åÖµÊıÁ¿
+			selected_locs.push_back(peak.second);  // æ·»åŠ æ»¡è¶³è·ç¦»çº¦æŸçš„å³°å€¼
+			if ((int)selected_locs.size() >= n_peaks) {  // è¾¾åˆ°æ‰€éœ€å³°å€¼æ•°é‡
 				break;
 			}
 		}
 	}
 
-	return selected_locs;  // ·µ»Ø·åÖµÎ»ÖÃË÷Òı
+	return selected_locs;  // è¿”å›å³°å€¼ä½ç½®ç´¢å¼•
 }
 
 std::vector<double> RADAR_DOA::arange(double start, double end, double step) {
-	std::vector<double> result;  // ½á¹ûÏòÁ¿
+	std::vector<double> result;  // ç»“æœå‘é‡
 
-	// Éú³É´Óstartµ½endµÄĞòÁĞ£¬²½³¤Îªstep
-	for (double val = start; val < end; val += step) {  // ×¢Òâ£º²»°üº¬endÖµ
+	// ç”Ÿæˆä»startåˆ°endçš„åºåˆ—ï¼Œæ­¥é•¿ä¸ºstep
+	for (double val = start; val < end; val += step) {  // æ³¨æ„ï¼šä¸åŒ…å«endå€¼
 		result.push_back(val);
 	}
 
-	return result;  // ·µ»ØµÈ²îÊıÁĞ
+	return result;  // è¿”å›ç­‰å·®æ•°åˆ—
 }

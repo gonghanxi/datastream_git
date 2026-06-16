@@ -17,7 +17,7 @@ bool Abs_M_Block::Setup()
     return true;
 }
 
-// Run — 仅支持数据流模式，直接分发到 DataStreamRun
+// Run — 单输入输出且速率为1，直接分发到 DataStreamRun
 bool Abs_M_Block::Run()
 {
     return DataStreamRun();

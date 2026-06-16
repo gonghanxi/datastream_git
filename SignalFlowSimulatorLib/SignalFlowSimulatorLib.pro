@@ -73,6 +73,7 @@ INCLUDEPATH += $$PWD/VariableAnalysis
 INCLUDEPATH += $$PWD/DataFlowScheduler
 INCLUDEPATH += $$PWD/ConnectionCondition
 INCLUDEPATH += $$PWD/DDS
+INCLUDEPATH += $$PWD/cfunction
 
 SOURCES +=\
     ConnectionCondition/ShortOpenProcessor.cpp \
@@ -94,6 +95,8 @@ SOURCES +=\
     dataflowcheck.cpp \
     fmu/FMUBlock.cpp \
     fmu/FMUModelInfo.cpp \
+    cfunction/CFunctionModelInfo.cpp \
+    cfunction/CFunctionBlock.cpp \
     libraryhelper.cpp \
     signalflowlinksort.cpp \
     simrunner.cpp \
@@ -122,6 +125,8 @@ HEADERS  += \
     dataflowcheck.h \
     fmu/FMUBlock.h \
     fmu/FMUModelInfo.h \
+    cfunction/CFunctionModelInfo.h \
+    cfunction/CFunctionBlock.h \
     libraryhelper.h \
     signalflowlinksort.h \
     simrunner.h \

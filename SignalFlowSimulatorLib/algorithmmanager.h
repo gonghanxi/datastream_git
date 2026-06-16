@@ -3,6 +3,7 @@
 
 #include <qlibrary.h>
 #include <QString>
+#include <QStringList>
 #include <QMap>
 #include "Block.h"
 #include "connection.h"
@@ -77,6 +78,18 @@ struct BlockInfo
     QMap<QString, int> paramValueReferences; // 参数名 -> valueReference
     // 标志位
     bool isFmuModel = false;                 // 是否为FMU模型
+
+    // CFunction相关字段
+    bool isCFunctionModel = false;           // 是否为CFunction模型
+    QString cfunctionLanguage;               // 编译语言 "c" 或 "cpp"
+    QStringList cfunctionLibFilePaths;       // 库文件路径列表
+    QStringList cfunctionLibFileNames;       // 库文件名列表
+    QStringList cfunctionHeaderFilePaths;    // 头文件路径列表
+    QStringList cfunctionHeaderFileNames;    // 头文件名列表
+    QStringList cfunctionCFilePaths;         // 源文件路径列表
+    QStringList cfunctionCFileNames;         // 源文件名列表
+    QString cfunctionEquations;              // Equations代码
+    QString cfunctionGeneratedJsonPath;      // 生成的cfunction.json绝对路径
 
     //短路开路
     QString cmpCondition;
