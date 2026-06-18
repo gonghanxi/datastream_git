@@ -13,7 +13,7 @@ DEFINE_MODEL_INTERFACE(RADAR_FSK)
 	{
 		SystemVueModelBuilder::DFParam enumParam = ADD_MODEL_ENUM_PARAM(Type, Types);
 		enumParam.SetUnit(SystemVueModelBuilder::Units::NONE);
-		enumParam.AddEnumeration("FSK", FSK); // ÒýºÅÄÚÏÔÊ¾Ãû³Æ
+		enumParam.AddEnumeration("FSK", FSK); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
 		enumParam.AddEnumeration("FSK_PSK", FSK_PSK);
 		enumParam.SetDefaultValue("FSK");
 		enumParam.SetDescription("FSK code type");
@@ -61,7 +61,7 @@ DEFINE_MODEL_INTERFACE(RADAR_FSK)
 	{
 		SystemVueModelBuilder::DFParam enumParam = ADD_MODEL_ENUM_PARAM(CodeLength, CodeLengthEnum);
 		enumParam.SetUnit(SystemVueModelBuilder::Units::NONE);
-		enumParam.AddEnumeration("Length_2_a", Length_2_a); // ÒýºÅÄÚÏÔÊ¾Ãû³Æ
+		enumParam.AddEnumeration("Length_2_a", Length_2_a); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
 		enumParam.AddEnumeration("Length_2_b", Length_2_b);
 		enumParam.AddEnumeration("Length_3", Length_3);
 		enumParam.AddEnumeration("Length_4_a", Length_4_a);
@@ -102,7 +102,7 @@ bool RADAR_FSK::Setup()
 		// Use TimedCircularBuffer::SetSampleRate method to set the output sample rate
 		//output.SetSampleRate(SampleRate);
 
-		// ³õÊ¼»¯°Í¿ËÂëÐòÁÐ
+		// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (barkerCodes.empty()) {
 			InitializeBarkerCodes(barkerCodes);
 		}
@@ -121,20 +121,20 @@ bool RADAR_FSK::Setup()
 //-----------------------------------------------------------------------------------
 bool RADAR_FSK::Initialize()
 {   
-	// ±¾º¯Êý×¼±¸Ò»¸öÂö¿íÄÚµÄÊý¾Ýµã£¬¹©Runº¯Êý°´½ÚÅÄÖð¸ö·¢Éä
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½Ýµã£¬ï¿½ï¿½Runï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	bool bStatus = true;
 	const double PI = 3.14159265358979323846;
 
 	switch (Type){
-	case FSK: // ¸Ã±àÂë·½Ê½½«Ò»¸öÂö³å·ÖÎª¶à¸öÆµµã½øÐÐµ÷ÖÆ£¬Ã¿¸öÆµµãµÄ³ÖÐøÊ±¼ä¿ÉÖ¸¶¨
+	case FSK: // ï¿½Ã±ï¿½ï¿½ë·½Ê½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½Æ£ï¿½Ã¿ï¿½ï¿½Æµï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½
 	{
-		// ÂöÄÚÆµµãÊý¡¢ÆµµãÊ±¼äÊý±ØÐëÏàµÈ
+		// ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (FHSequence.NumElements() != TimeIntervals.NumElements()) {
 			POST_ERROR("The size of FHSequence should be the same as TimeIntervals");
 			return false;
 		}
 
-		// ÂöÄÚÆµµãµÄ³ÖÐøÊ±¼ä±ØÐëÐ¡ÓÚµÈÓÚPRI
+		// ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½Úµï¿½ï¿½ï¿½PRI
 		double pulseWidth = 0;
 		for (int i = 0; i < TimeIntervals.NumElements(); ++i) {
 			pulseWidth += TimeIntervals(i);
@@ -144,9 +144,9 @@ bool RADAR_FSK::Initialize()
 			return false;
 		}
 
-		// ¶¨ÒåÒ»¸öÂö¿íµÄÐÅºÅÊý¾Ý
-		int N_samples = static_cast<int>(pulseWidth * SampleRate); // ÂöÄÚ×Ü²ÉÑùµãÊý
-		signal.resize(N_samples); // ÅäÖÃÐÅºÅ»º´æµÄ´óÐ¡
+		// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½
+		int N_samples = static_cast<int>(pulseWidth * SampleRate); // ï¿½ï¿½ï¿½ï¿½ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		signal.resize(N_samples); // ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ»ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
 
 		int sampleIndex = 0;
 		for (int i = 0; i < FHSequence.NumElements(); i++) {
@@ -166,22 +166,22 @@ bool RADAR_FSK::Initialize()
 		break;
 	}
 		
-	case FSK_PSK: // ÔÚFSKµ÷ÖÆ»ù´¡ÉÏ£¬½«µ÷Æµ×ÓÂö³å°´°Í¿ËÂëÐòÁÐ½øÒ»²½·Ö½âÎª¶à¸ö×Ó×ÓÂö³å½øÐÐÏàÎ»µ÷ÖÆ
+	case FSK_PSK: // ï¿½ï¿½FSKï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½å°´ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½Ò»ï¿½ï¿½ï¿½Ö½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
 	{
-		// ÂöÄÚÆµµãµÄ³ÖÐøÊ±¼ä±ØÐëÐ¡ÓÚµÈÓÚPRI
+		// ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½Úµï¿½ï¿½ï¿½PRI
 		double pulseWidth = FSKPSKSequence.NumElements() * FSKPSKSubTimePeriod;		
 		if (pulseWidth + 1e-17 > PRI) {
 			POST_ERROR("total time of FSKPSKSequence should not larger than PRI");
 			return false;
 		}
 		
-		// ¶¨ÒåÒ»¸öÂö¿íµÄÐÅºÅÊý¾Ý
-		int N_samples = static_cast<int>(pulseWidth * SampleRate); // ÂöÄÚ×Ü²ÉÑùµãÊý
-		signal.resize(N_samples); // ÅäÖÃÐÅºÅ»º´æµÄ´óÐ¡
+		// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½
+		int N_samples = static_cast<int>(pulseWidth * SampleRate); // ï¿½ï¿½ï¿½ï¿½ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		signal.resize(N_samples); // ï¿½ï¿½ï¿½ï¿½ï¿½ÅºÅ»ï¿½ï¿½ï¿½Ä´ï¿½Ð¡
 		
 		int sampleIndex = 0;
 
-		// ÏÈ°´Ã¿¸öÆµµã×¼±¸×ÓÂö³åÊý¾Ý
+		// ï¿½È°ï¿½Ã¿ï¿½ï¿½Æµï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		for (int i = 0; i < FSKPSKSequence.NumElements(); i++) {
 			double freq = FSKPSKSequence(i);
 			double subPulseDuration = FSKPSKSubTimePeriod;
@@ -190,7 +190,7 @@ bool RADAR_FSK::Initialize()
 			// Get the corresponding Barker code for this sub-pulse
 			std::vector<int> barkerCode = barkerCodes[CodeLength];
 
-			// ÔÙÕë¶ÔÃ¿¸öÆµµã×ÓÂö³å£¬°´°Í¿ËÂëÊýÇÐ·ÖÎª×Ó×ÓÂö³å
+			// ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å£¬ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð·ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			int samplesPerBarkerElement = subFreqNumSamples / barkerCode.size();
 
 			for (int j = 0; j < barkerCode.size(); j++) {
@@ -205,7 +205,7 @@ bool RADAR_FSK::Initialize()
 				}
 			}
 
-			// Èç¹ûÆµµã×ÓÂö³å²»ÄÜÕû³ý°Í¿ËÂëÊýÄ¿£¬Ðè²¹³ä¿ÕÈ±µÄÆµµã×ÓÂö³åÊý¾ÝÎ²
+			// ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å²»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½è²¹ï¿½ï¿½ï¿½È±ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²
 			int pointGenerated = samplesPerBarkerElement * barkerCode.size();
 			if (pointGenerated < subFreqNumSamples) {
 				for (int k = pointGenerated; k < subFreqNumSamples; k++) {
@@ -221,6 +221,7 @@ bool RADAR_FSK::Initialize()
 		break;
 	}
 	}
+	return bStatus;
 }
 
 //-----------------------------------------------------------------------------------
