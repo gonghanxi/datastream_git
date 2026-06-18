@@ -29,6 +29,7 @@
 #include "ReadyQueueScheduler.h"
 #include "SimpleScheduler.h"
 #include "TimeDrivenScheduler.h"
+#include "EventDrivenScheduler.h"
 
 #ifdef _WIN32
     #ifdef SignalFlowSimulatorLib_EXPORTS
@@ -100,6 +101,7 @@ private:
     bool NewScheduler();
     bool OldScheduler();
     bool TimeScheduler();
+    bool EventScheduler();
 
     QString m_appPath;//程序所在路径
     QStringList m_linkFiles;//链路文件名
@@ -132,11 +134,12 @@ private:
     // =========== DDS 服务成员 ===========
     SimEngineController m_dds;
 
-    //调度器（数据流、时间）
-    enum class ActiveScheduler { NONE, DATA_STREAM, TIME_DRIVEN };//调度器类型标识
+    //调度器（数据流、时间、事件）
+    enum class ActiveScheduler { NONE, DATA_STREAM, TIME_DRIVEN, EVENT_DRIVEN };//调度器类型标识
     ActiveScheduler m_activeScheduler;
     SimpleScheduler m_simpleScheduler;
     TimeDrivenScheduler m_timeDrivenScheduler;
+    EventDrivenScheduler m_eventDrivenScheduler;
 };
 
 #ifdef __cplusplus

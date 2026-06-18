@@ -95,6 +95,8 @@ private:
     struct InputSnapshot {
         double release, platX, platY, platZ;
         double platVx, platVy, platVz, carrierFreqIn;
+        bool hasRelease, hasPlatX, hasPlatY, hasPlatZ;
+        bool hasPlatVx, hasPlatVy, hasPlatVz, hasCarrierFreqIn;
     };
     std::vector<InputSnapshot> m_inputBuffer;
 

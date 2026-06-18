@@ -253,6 +253,17 @@ public:
     }
     // 查询是否为变步长模式
     bool IsVariableStepMode() const { return m_isVariableStepMode; }
+
+    // ========== 事件驱动模式（ZeroCross） ==========
+    void SetEventDrivenMode(bool enabled) { m_isEventDrivenMode = enabled; }
+    bool IsEventDrivenMode() const { return m_isEventDrivenMode; }
+
+    void SetCurrentIteration(unsigned long long iteration) { m_currentIteration = iteration; }
+    unsigned long long GetCurrentIteration() const { return m_currentIteration; }
+
+    // 调度器设置：本次迭代是否跳过数据输出（ZeroCross触发时）
+    void SetSkipDataOutput(bool skip) { m_skipDataOutput = skip; }
+    bool ShouldSkipDataOutput() const { return m_skipDataOutput; }
     //--------------------------------------------------------------
     Block();
     Block(const std::string& name);
@@ -552,7 +563,7 @@ public:
         if (success) {
 //            qDebug() << "Successfully read " << data.size() << " samples";
         } else {
-            LOG_INFO("Failed to read data");
+            //LOG_INFO("Failed to read data");
         }
 
         return data;
@@ -653,6 +664,14 @@ public:
     bool IsBackpressured() const;
     void SetBackpressured(bool backpressured);
 
+    // ========== 过零检测标志 ==========
+    bool IsZeroCrossTriggered() const;
+    void SetZeroCrossTriggered(bool triggered);
+
+    // ========== 过零检测类型标识（非虚函数，Initialize时设置） ==========
+    void SetIsZeroCrossType(bool isZC) { m_isZeroCrossType = isZC; }
+    bool IsZeroCrossType() const { return m_isZeroCrossType; }
+
     // 获取下游Buffer使用率（用于动态批量调整）
     float GetDownstreamBufferUsage() const;
 
@@ -743,6 +762,10 @@ private:
 
     //背压
     bool m_isBackpressured = false;
+    //过零检测触发标志
+    bool m_isZeroCrossTriggered = false;
+    //过零检测类型标识（Initialize时由ZeroCross_Block设置）
+    bool m_isZeroCrossType = false;
     // ========== 模型 ==========
     bool m_IsBitShiftRegister;
     int m_NumBits;
@@ -761,6 +784,9 @@ private:
     double m_samplePeriod = 0.0;          // 模型采样周期
     int m_decimationFactor = 1;           // 抽取/插值因子
     bool m_isVariableStepMode = false;  // 默认不是变步长模式
+    bool m_isEventDrivenMode = false;   // 默认不是事件驱动模式
+    unsigned long long m_currentIteration = 0; // 当前迭代计数（事件驱动模式）
+    bool m_skipDataOutput = false;      // 本次迭代是否跳过数据输出（ZeroCross触发）
 
 public:
     //---------------------解析矩阵参数----------------

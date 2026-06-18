@@ -17,6 +17,9 @@ Block::Block()
     ,m_dataType(DataType::INT)
     ,m_isDone(false)
     ,m_state(BlockState::IDLE)
+    ,m_isBackpressured(false)
+    ,m_isZeroCrossTriggered(false)
+    ,m_isZeroCrossType(false)
     ,m_IsBitShiftRegister(false)
     ,m_NumBits(1)
     ,id(0)
@@ -35,6 +38,9 @@ Block::Block(const std::string &name)
     ,m_dataType(DataType::INT)
     ,m_isDone(false)
     ,m_state(BlockState::IDLE)
+    ,m_isBackpressured(false)
+    ,m_isZeroCrossTriggered(false)
+    ,m_isZeroCrossType(false)
     ,m_IsBitShiftRegister(false)
     ,m_NumBits(1)
     ,id(0)
@@ -1162,6 +1168,10 @@ int Block::RunBatch(int maxCount) {
 bool Block::IsBackpressured() const { return m_isBackpressured; }
 
 void Block::SetBackpressured(bool backpressured) { m_isBackpressured = backpressured; }
+
+bool Block::IsZeroCrossTriggered() const { return m_isZeroCrossTriggered; }
+
+void Block::SetZeroCrossTriggered(bool triggered) { m_isZeroCrossTriggered = triggered; }
 
 float Block::GetDownstreamBufferUsage() const
 {

@@ -2,6 +2,7 @@
 #define EVENTDRIVENSCHEDULER_H
 
 #include <QMap>
+#include <QSet>
 #include <QMutex>
 #include <QWaitCondition>
 #include <QAtomicInt>
@@ -10,11 +11,12 @@
 #include <memory>
 #include <functional>
 #include <cmath>
+#include <map>
+#include <set>
 
 #include "Block.h"
 #include "signalflowlinksort.h"
-
-using namespace SystemVueModelBuilder;
+#include "DataStreamVerification.h"
 
 class EventDrivenScheduler {
 public:
@@ -47,16 +49,14 @@ public:
     // 单个模型的事件状态
     struct BlockEventState {
         Block* block = nullptr;
-        double eventThreshold = 0.0;            // 事件触发阈值
+        double eventThreshold = 0.0;
         EventDetectionMode detectionMode = EventDetectionMode::ZERO_CROSSING;
-        double lastOutputValue = 0.0;           // 上一步的输出值
-        bool hasOutputHistory = false;          // 是否有历史输出
-        bool eventTriggered = false;            // 本步是否触发了事件
-        bool isDone = false;                    // 是否已完成
-
-        // 事件统计
-        int totalEventsTriggered = 0;           // 累计触发事件次数
-        int totalStepsExecuted = 0;             // 累计执行步数
+        double lastOutputValue = 0.0;
+        bool hasOutputHistory = false;
+        bool eventTriggered = false;
+        bool isDone = false;
+        int totalEventsTriggered = 0;
+        int totalStepsExecuted = 0;
     };
 
     // 调度器上下文
@@ -70,10 +70,19 @@ public:
         double timeStep = 0.001;
         int currentStep = 0;
 
+        // 数据流调度相关
+        unsigned long long currentIteration = 0;
+        int sourceCount = 0;
+        int sinkCount = 0;
+        int OutputBusCount = 0;
+        std::map<std::string, int> sinkProcessCount;
+
+        // ZeroCross 下游映射
+        QMap<Block*, QSet<Block*>> zeroCrossDownstreamMap;
+        QVector<Block*> zeroCrossBlocks;
+
         // 模型事件状态
         QMap<Block*, BlockEventState> blockStates;
-
-        // 事件触发的模型队列（本步需要执行的模型）
         QVector<Block*> triggeredBlocks;
 
         // 统计信息
@@ -94,24 +103,31 @@ public:
     EventDrivenScheduler();
     ~EventDrivenScheduler();
 
-    // ========== 核心接口 ==========
+    // ========== 数据流调度接口（类似 SimpleScheduler） ==========
 
-    // 初始化调度器
+    bool schedule(const QString& linkKey,
+                  QVector<Block*> blocks,
+                  std::shared_ptr<DataStreamVerification> verificationSystem,
+                  const SimuParameter& simuParams = SimuParameter());
+
+    void setPauseControls(QAtomicInt* paused,
+                          QAtomicInt* stopRequested,
+                          QMutex* pauseMutex,
+                          QWaitCondition* pauseCond);
+
+    // ========== 时间驱动接口（保留） ==========
+
     bool InitializeScheduler(const QString& linkKey,
                              QVector<Block*> blocks,
                              SignalFlowLinkSort* topologySorter = nullptr);
 
-    // 运行仿真（完整循环）
     bool RunSimulation(const QString& linkKey,
                        QAtomicInt* pausedFlag = nullptr,
                        QAtomicInt* stopRequestedFlag = nullptr,
                        QMutex* pauseMutex = nullptr,
                        QWaitCondition* pauseCond = nullptr);
 
-    // 推进单个时间步
     bool ProcessOneTimeStep(const QString& linkKey);
-
-    // 控制命令
     void SendCommand(Command cmd, const QString& linkKey = QString());
 
     // ========== 状态查询接口 ==========
@@ -124,84 +140,63 @@ public:
 
     // ========== 配置接口 ==========
 
-    // 设置指定模型的事件阈值
     void SetEventThreshold(const QString& linkKey, Block* block, double threshold);
-
-    // 设置指定模型的事件检测模式
     void SetEventDetectionMode(const QString& linkKey, Block* block, EventDetectionMode mode);
-
-    // 停止信号
     void SetStopSignal(bool stopSignal);
     bool GetStopSignal() const;
 
 private:
-    // ========== 核心私有方法 ==========
+    // ========== 数据流调度核心方法 ==========
 
-    // 构建执行顺序
+    bool eventDrivenSchedulerImpl(const QString& linkKey,
+                                  QVector<Block*> blocks,
+                                  std::shared_ptr<DataStreamVerification> verificationSystem,
+                                  const SimuParameter& simuParams);
+
+    void precomputeDownstreamSets(SchedulerContext& ctx);
+    bool isDownstreamOfTriggeredZeroCross(const SchedulerContext& ctx, Block* block) const;
+    int generalWork(Block* currentBlock);
+    int calculateMaxProcessCount(QVector<Block*> blocks, const QString& linkKey, int sourceCount);
+
+    // ========== 时间驱动核心方法（保留） ==========
+
     QVector<Block*> buildExecutionOrder(const QVector<Block*>& blocks,
                                         SignalFlowLinkSort* sorter,
                                         const QString& linkKey);
-
-    // 初始化模型事件状态
     void initializeBlockEventStates(SchedulerContext& ctx);
-
-    // 解析时间配置
     void initializeTimeConfig(SchedulerContext& ctx);
-
-    // 从模型参数读取 EventThreshold
     double readEventThreshold(Block* block);
 
-    // ========== 事件检测 ==========
-
-    // 检测单个模型是否产生事件
     bool detectEvent(BlockEventState& state, double currentOutput);
-
-    // 过零检测
     bool detectZeroCrossing(double prevValue, double currentValue);
-
-    // 阈值穿越检测
     bool detectThresholdCrossing(double prevValue, double currentValue,
                                  double threshold, EventDetectionMode mode);
 
-    // ========== 执行逻辑 ==========
-
-    // 处理单个时间步
     bool processTimeStepForContext(SchedulerContext& ctx);
-
-    // 执行事件触发的模型
     bool executeTriggeredBlocks(SchedulerContext& ctx);
-
-    // 执行单个模型
     bool executeBlock(SchedulerContext& ctx, Block* block);
-
-    // 收集事件触发的模型列表
     void collectTriggeredBlocks(SchedulerContext& ctx);
-
-    // 传播事件到下游
     void propagateEventToDownstream(SchedulerContext& ctx, Block* source);
-
-    // 检查是否所有Sink完成
     bool areAllSinksComplete(const SchedulerContext& ctx) const;
-
-    // 停止已完成的Sink
     void stopCompletedSinks(SchedulerContext& ctx);
-
-    // 刷新所有Sink
     void flushAllSinks(SchedulerContext& ctx);
-
-    // 所有模型执行Done
     void DoneAllModels(SchedulerContext& ctx);
-
-    // 应用控制命令
     void applyCommand(SchedulerContext& ctx, Command cmd);
-
-    // 重置调度器上下文
     void resetSchedulerContext(SchedulerContext& ctx);
 
     // ========== 成员变量 ==========
 
     QMap<QString, SchedulerContext> m_schedulers;
     bool m_stopSignal = false;
+
+    // 暂停控制（数据流调度用）
+    QAtomicInt* m_paused = nullptr;
+    QAtomicInt* m_stopRequested = nullptr;
+    QMutex* m_pauseMutex = nullptr;
+    QWaitCondition* m_pauseCond = nullptr;
+
+    // 拓扑排序器
+    SignalFlowLinkSort m_topologySorter;
 };
 
 #endif // EVENTDRIVENSCHEDULER_H

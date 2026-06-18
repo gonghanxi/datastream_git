@@ -36,34 +36,33 @@ linux {
     CONFIG += unversioned_libname unversioned_soname
     QMAKE_CXXFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
 
-    # MATLAB Runtime 安装路径
-#    MATLAB_ROOT = /usr/local/MATLAB/MATLAB_Runtime/R2023a
-    MATLAB_ROOT = /usr/local/MATLAB/R2023a
+    # Octave 9.4.0 配置
+    OCTAVE_ROOT = /usr/local/octave-9.4.0
 
     # 包含头文件
-    INCLUDEPATH += $$MATLAB_ROOT/extern/include
+    INCLUDEPATH += $$OCTAVE_ROOT/include/octave-9.4.0
 
-    # 链接库路径
-    LIBS += -L$$MATLAB_ROOT/runtime/glnxa64
-    LIBS += -L$$MATLAB_ROOT/bin/glnxa64
+#    INCLUDEPATH +=  /usr/local/octave/include/octave-9.4.0
 
     # 链接库
-    LIBS += -leng -lmx -lmex -lmat -lmwmclmcrrt
+    LIBS += -L$$OCTAVE_ROOT/lib/octave/9.4.0 -loctinterp -loctave
 
-    # 设置运行时库路径 - 顺序很重要！
-    # 将 MATLAB 的 sys/os 路径放在最前面，优先使用 MATLAB 的 libstdc++
-    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/sys/os/glnxa64
-    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/runtime/glnxa64
-    QMAKE_LFLAGS += -Wl,-rpath,$$MATLAB_ROOT/bin/glnxa64
+    # 设置运行时库路径
+    QMAKE_LFLAGS += -Wl,-rpath,$$OCTAVE_ROOT/lib/octave/9.4.0
+    QMAKE_LFLAGS += -Wl,-rpath,$$OCTAVE_ROOT/lib
 }
 win32{
+    # Octave 9.4.0 配置
+    OCTAVE_DIR = "D:\Program Files\GNU Octave\Octave-9.4.0"
+   INCLUDEPATH += $$quote($$OCTAVE_DIR/mingw64/include/octave-9.4.0)
+#   INCLUDEPATH += $$quote($$OCTAVE_DIR/mingw64/include/octave-9.4.0/octave)
 
-#    MAT_DIR = "D:/Program Files/MATLAB/R2023a"
-    MAT_DIR = "C:/Program Files/MATLAB/R2023a"
-    INCLUDEPATH += $$MAT_DIR/extern/include
-    LIBS += -L$$MAT_DIR/extern/lib/win64/microsoft -llibmx -llibeng
+# 如果需要，还要添加库路径
+    LIBS += -L$$quote($$OCTAVE_DIR/mingw64/lib/octave/9.4.0/)
 
-    LIBS += -L$$MAT_DIR/bin/win64
+    LIBS += -loctave \
+            -loctgui \
+            -loctinterp
 }
 
 # You can make your code fail to compile if it uses deprecated APIs.

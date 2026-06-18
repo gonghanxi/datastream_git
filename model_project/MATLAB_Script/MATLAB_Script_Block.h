@@ -3,8 +3,11 @@
 
 #include "MATLAB_Script.h"
 #include "Block.h"
-#include "engine.h"
-using namespace SystemVueModelBuilder;
+#include <octave/interpreter.h>
+#include <octave/ov.h>
+#include <octave/Matrix.h>
+//#include <octave/ComplexMatrix.h>
+#include <octave/Cell.h>
 
 class SYSTEMVUEMODELBUILDER_API MATLAB_Script_Block : public SystemVueModelBuilder::Block
 {
@@ -21,11 +24,19 @@ private:
     void SetDefaultParameters();
 
     std::unique_ptr<MATLAB_Script> m_addCx;
+
+    // Octave 数据转换辅助方法
+    octave_value vectorToOctave(const std::vector<double>& data);
+    octave_value vectorToOctave(const std::vector<std::complex<double>>& data);
+    octave_value matrixToOctave(const std::vector<SystemVueModelBuilder::DoubleMatrix>& data);
+    octave_value complexMatrixToOctave(const std::vector<SystemVueModelBuilder::DComplexMatrix>& data);
 private:
-     Engine *ep ;
-     QString callStr;
+    octave::interpreter *m_interp;
+    QString callStr;
 };
 
+namespace SystemVueModelBuilder {
+    RegAlgo(MATLAB_Script_Block);
+}
 
-RegAlgo(MATLAB_Script_Block);
 #endif // ADDCX_BLOCK_H

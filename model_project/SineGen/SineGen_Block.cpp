@@ -131,6 +131,7 @@ bool SineGen_Block::Run()
 
     std::vector<double> outputData;
     outputData.push_back(y);
+    qDebug()<<"outputData:y"<<y;
     WriteOutputData(GetOutputPortName(0), outputData);
 
     m_sineGen->Advance();

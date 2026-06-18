@@ -45,6 +45,15 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.SetDescription("Reference voltage, -VRef<=input<=VRef");
 	}
 	{
+		SystemVueModelBuilder::DFParam p = ADD_MODEL_ENUM_PARAM(ADCType, ADCTypeEnum);
+		p.AddEnumeration("Current AtoD", AtoD::Current_AtoD);
+		p.AddEnumeration("Flash", AtoD::Flash_ADC);
+		p.AddEnumeration("Pipeline", AtoD::Pipeline_ADC);
+		p.AddEnumeration("SigmaDelta", AtoD::SigmaDelta_ADC);
+		p.SetDefaultValue("Current AtoD");
+		p.SetDescription("ADC architecture type: Current AtoD, Flash, Pipeline, SigmaDelta");
+	}
+	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_ENUM_PARAM(OutputDigitalFormat, OutputDigitalFormatEnum);
 		p.AddEnumeration("Offset binary", AtoD::Offset_binary);
 		p.AddEnumeration("Twos-complement", AtoD::Twos_complement);
@@ -60,6 +69,7 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.AddEnumeration("SINAD and SFDR", AtoD::SINAD_and_SFDR);
 		p.SetDefaultValue("Jitter/INL/DNL");
 		p.SetDescription("Distortion model: None, Jitter/INL/DNL, ENOB value, SNR and Harmonics, SINAD and SFDR");
+		p.SetHideCondition("ADCType ~= 0");
 	}
 
 	// --------- Jitter / INL / DNL 参数 ---------
@@ -70,20 +80,20 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.AddEnumeration("Frequency Domain", AtoD::Frequency_Domain);
 		p.SetDefaultValue("No");
 		p.SetDescription("Enable jitter: No, Time Domain, Frequency Domain");
-		p.SetHideCondition("DistortionModel ~= 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(RJrms);
 		p.SetDefaultValue("0.0");
 		p.SetUnit(SystemVueModelBuilder::Units::TIME);
 		p.SetDescription("Random jitter standard deviation");
-		p.SetHideCondition("DistortionModel ~= 1 || EnableJitter ~= 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1 || EnableJitter ~= 1");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_ARRAY_PARAM(PhaseNoiseData, PhaseNoiseDataSize);
 		p.SetDefaultValue("");
 		p.SetDescription("Phase noise specification - pairs of offset freq (Hz) and SSB phase noise level (dBc/Hz)");
-		p.SetHideCondition("DistortionModel ~= 1 || EnableJitter ~= 2");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1 || EnableJitter ~= 2");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_ENUM_PARAM(PN_Type, PN_TypeEnum);
@@ -92,19 +102,19 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.AddEnumeration("Fixed freq offset and amplitude", AtoD::Fixed_freq_offset_and_amplitude);
 		p.SetDefaultValue("Random PN");
 		p.SetDescription("Phase noise model type with random or fixed offset freq spacing and amplitude: Random PN, Fixed freq offset, Fixed freq offset and amplitude");
-		p.SetHideCondition("DistortionModel ~= 1 || EnableJitter ~= 2");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1 || EnableJitter ~= 2");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(INL);
 		p.SetDefaultValue("0.0");
 		p.SetDescription("Integral nonlinearity relative to least significant bit (LSB)");
-		p.SetHideCondition("DistortionModel ~= 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(DNL);
 		p.SetDefaultValue("0.0");
 		p.SetDescription("Differential nonlinearity relative to least significant bit (LSB)");
-		p.SetHideCondition("DistortionModel ~= 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 1");
 	}
 
 	// --------- ENOB 参数 ---------
@@ -112,7 +122,7 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(ENOB);
 		p.SetDefaultValue("7");
 		p.SetDescription("Equivalent number of bits (based on INL and DNL)");
-		p.SetHideCondition("DistortionModel ~= 2");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 2");
 	}
 
 	// --------- SNR and Harmonics 参数 ---------
@@ -120,31 +130,31 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(SNR_dB);
 		p.SetDefaultValue("60.0");
 		p.SetDescription("SNR output in dB for analog input");
-		p.SetHideCondition("DistortionModel ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 3");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(H2_dBc);
 		p.SetDefaultValue("-400.0");
 		p.SetDescription("2nd harmonic output level in dBc relative to fundamental output");
-		p.SetHideCondition("DistortionModel ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 3");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(H3_dBc);
 		p.SetDefaultValue("-400.0");
 		p.SetDescription("3rd harmonic output level in dBc relative to fundamental output");
-		p.SetHideCondition("DistortionModel ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 3");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(H4_dBc);
 		p.SetDefaultValue("-400.0");
 		p.SetDescription("4th harmonic output level in dBc relative to fundamental output");
-		p.SetHideCondition("DistortionModel ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 3");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(H5_dBc);
 		p.SetDefaultValue("-400.0");
 		p.SetDescription("5th harmonic output level in dBc relative to fundamental output");
-		p.SetHideCondition("DistortionModel ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 3");
 	}
 
 	// --------- SINAD and SFDR 参数 ---------
@@ -152,13 +162,13 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(SINAD_dB);
 		p.SetDefaultValue("60.0");
 		p.SetDescription("Output signal to (noise plus harmonic distortion) ratio in dB");
-		p.SetHideCondition("DistortionModel ~= 4");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 4");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(SFDR_dBc);
 		p.SetDefaultValue("70.0");
 		p.SetDescription("Output spurious free dynamic range in dBc relative to fundamental output level");
-		p.SetHideCondition("DistortionModel ~= 4");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 4");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_ENUM_PARAM(FFT_Size, FFT_SizeEnum);
@@ -169,7 +179,7 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.AddEnumeration("2^16", AtoD::FFT_2_16);
 		p.SetDefaultValue("2^14");
 		p.SetDescription("FFT size as power of 2: 2^12, 2^13, 2^14, 2^15, 2^16");
-		p.SetHideCondition("DistortionModel ~= 4");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel ~= 4");
 	}
 
 	// --------- SNR_Model 及其相关参数 ---------
@@ -181,26 +191,26 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.AddEnumeration("Quantization_Jitter_and_Thermal_Noise", AtoD::Quantization_Jitter_and_Thermal_Noise);
 		p.SetDefaultValue("Quantization_and_Jitter");
 		p.SetDescription("SNR model: Quantization_and_Jitter, Quantization_and_INL_DNL, Quantization_and_Jitter_or_INL_DNL, Quantization_Jitter_and_Thermal_Noise");
-		p.SetHideCondition("DistortionModel == 0 || DistortionModel == 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel == 0 || DistortionModel == 1");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(ThermalNoise_SNR_dBFS);
 		p.SetDefaultValue("63");
 		p.SetDescription("Thermal noise level in dBFS");
-		p.SetHideCondition("(DistortionModel == 0 || DistortionModel == 1) || SNR_Model ~= 3");
+		p.SetHideCondition("ADCType ~= 0 || (DistortionModel == 0 || DistortionModel == 1) || SNR_Model ~= 3");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(CenterFreq);
 		p.SetDefaultValue("100.0e6");
 		p.SetUnit(SystemVueModelBuilder::Units::FREQUENCY);
 		p.SetDescription("Spectral center frequency for analog input");
-		p.SetHideCondition("(DistortionModel == 0 || DistortionModel == 1) || SNR_Model == 1");
+		p.SetHideCondition("ADCType ~= 0 || (DistortionModel == 0 || DistortionModel == 1) || SNR_Model == 1");
 	}
 	{
 		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(Level_dBFS);
 		p.SetDefaultValue("0.0");
 		p.SetDescription("Signal level in dBFS for analog input");
-		p.SetHideCondition("DistortionModel == 0 || DistortionModel == 1");
+		p.SetHideCondition("ADCType ~= 0 || DistortionModel == 0 || DistortionModel == 1");
 	}
 
 	// --------- 转换方式参数 ---------
@@ -252,62 +262,101 @@ DEFINE_MODEL_INTERFACE(AtoD)
 		p.SetHideCondition("ConversionType ~= 1 || AntiAliasingFilter ~= 1");
 	}
 
+	// --------- 新增 ADC 架构基础参数 ---------
+	{
+		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(PipelineStageBits);
+		p.SetDefaultValue("1");
+		p.SetDescription("Pipeline ADC stage bits for basic architecture model");
+		p.SetHideCondition("ADCType ~= 2");
+	}
+	{
+		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(PipelineLatency);
+		p.SetDefaultValue("0");
+		p.SetDescription("Pipeline ADC output latency in samples");
+		p.SetHideCondition("ADCType ~= 2");
+	}
+	{
+		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(SigmaDeltaOrder);
+		p.SetDefaultValue("1");
+		p.SetDescription("SigmaDelta ADC order; this basic model implements first-order behavior");
+		p.SetHideCondition("ADCType ~= 3");
+	}
+	{
+		SystemVueModelBuilder::DFParam p = ADD_MODEL_PARAM(SigmaDeltaOSR);
+		p.SetDefaultValue("16");
+		p.SetDescription("SigmaDelta ADC oversampling ratio for moving-average decimation approximation");
+		p.SetHideCondition("ADCType ~= 3");
+	}
+
 	return true;
 }
 #endif
 
 
-AtoD::AtoD(): NBits(8),
-	VRef(1.0),
-	OutputDigitalFormat(Offset_binary),
-	DistortionModel(Jitter_INL_DNL),
-	EnableJitter(Jitter_No),
-	RJrms(0.0),
-	PhaseNoiseData(nullptr),
-	PhaseNoiseDataSize(0),
-	PN_Type(Random_PN),
-	INL(0.0),
-	DNL(0.0),
-	ENOB(7.0),
-	SNR_dB(60.0),
-	H2_dBc(-400.0),
-	H3_dBc(-400.0),
-	H4_dBc(-400.0),
-	H5_dBc(-400.0),
-	SINAD_dB(60.0),
-	SFDR_dBc(70.0),
-	FFT_Size(FFT_2_14),
-	SNR_Model(Quantization_and_Jitter),
-	ThermalNoise_SNR_dBFS(63.0),
-	CenterFreq(100.0e6),
-	Level_dBFS(0.0),
-	ConversionType(Clocked),
-	Clock(0.2e6),
-	Phase(0.0),
-	DownsampleFactor(1),
-	DownsamplePhase(0),
-	AntiAliasingFilter(AA_OFF),
-	ExcessBW(0.5),
-	nbits_(8),
-	codeCount_(256),
-	midCode_(128),
-	vref_(1.0),
-	lsb_(2.0 / 256.0),
-	sampleIndex_(0ULL),
-	hasClockState_(false),
-	lastClockValue_(0.0),
-	heldSample_(0.0, 0.0),
-	hasPendingClockSample_(false),
-	pendingClockSample_(0.0, 0.0),
-	hasRawInputState_(false),
-	prevRawInputTime_(0.0),
-	prevRawInput_(0.0, 0.0),
-	hasNextClockCrossing_(false),
-	nextClockCrossingTime_(0.0),
-	hasLastInput_(false),
-	lastInputTime_(0.0),
-	lastInput_(0.0, 0.0),
-	rngState_(0x12345678U)
+AtoD::AtoD() : NBits(8),
+VRef(1.0),
+ADCType(Current_AtoD),
+OutputDigitalFormat(Offset_binary),
+DistortionModel(Jitter_INL_DNL),
+EnableJitter(Jitter_No),
+RJrms(0.0),
+PhaseNoiseData(nullptr),
+PhaseNoiseDataSize(0),
+PN_Type(Random_PN),
+INL(0.0),
+DNL(0.0),
+ENOB(7.0),
+SNR_dB(60.0),
+H2_dBc(-400.0),
+H3_dBc(-400.0),
+H4_dBc(-400.0),
+H5_dBc(-400.0),
+SINAD_dB(60.0),
+SFDR_dBc(70.0),
+FFT_Size(FFT_2_14),
+SNR_Model(Quantization_and_Jitter),
+ThermalNoise_SNR_dBFS(63.0),
+CenterFreq(100.0e6),
+Level_dBFS(0.0),
+ConversionType(Clocked),
+Clock(0.2e6),
+Phase(0.0),
+DownsampleFactor(1),
+DownsamplePhase(0),
+AntiAliasingFilter(AA_OFF),
+ExcessBW(0.5),
+PipelineStageBits(1),
+PipelineLatency(0),
+SigmaDeltaOrder(1),
+SigmaDeltaOSR(16),
+nbits_(8),
+codeCount_(256),
+midCode_(128),
+vref_(1.0),
+lsb_(2.0 / 256.0),
+sampleIndex_(0ULL),
+hasClockState_(false),
+lastClockValue_(0.0),
+heldSample_(0.0, 0.0),
+hasPendingClockSample_(false),
+pendingClockSample_(0.0, 0.0),
+hasRawInputState_(false),
+prevRawInputTime_(0.0),
+prevRawInput_(0.0, 0.0),
+hasNextClockCrossing_(false),
+nextClockCrossingTime_(0.0),
+hasLastInput_(false),
+lastInputTime_(0.0),
+lastInput_(0.0, 0.0),
+rngState_(0x12345678U),
+sdIIntegrator_(0.0),
+sdQIntegrator_(0.0),
+sdIFeedback_(0.0),
+sdQFeedback_(0.0),
+sdIAccum_(0.0),
+sdQAccum_(0.0),
+sdAccumCount_(0),
+sdHeldOutput_(0.0, 0.0)
 {
 }
 
@@ -326,11 +375,11 @@ bool AtoD::Setup()
 	// Downsampled 模式下，一次 Run 读取 DownsampleFactor 个输入样本，输出 1 个样本。
 	if (ConversionType == Downsampled)
 	{
-        try_set_rate_(A_in, DownsampleFactor, 0);
+		try_set_rate_(A_in, DownsampleFactor, 0);
 	}
 	else
 	{
-        try_set_rate_(A_in, 1, 0);
+		try_set_rate_(A_in, 1, 0);
 	}
 
 	try_set_rate_(A_out, 1, 0);
@@ -360,7 +409,18 @@ bool AtoD::Setup()
 	// 这更接近内置随机模型，但不保证逐点一致。
 	rngState_ = static_cast<unsigned int>(std::time(nullptr)) ^ 0x9E3779B9U;
 
-    A_out.SetCharacterizationFrequency(A_in.GetCharacterizationFrequency());
+	pipelineFifo_.clear();
+
+	sdIIntegrator_ = 0.0;
+	sdQIntegrator_ = 0.0;
+	sdIFeedback_ = 0.0;
+	sdQFeedback_ = 0.0;
+	sdIAccum_ = 0.0;
+	sdQAccum_ = 0.0;
+	sdAccumCount_ = 0;
+	sdHeldOutput_ = std::complex<double>(0.0, 0.0);
+
+	A_out.SetCharacterizationFrequency(A_in.GetCharacterizationFrequency());
 
 	return true;
 }
@@ -382,10 +442,36 @@ bool AtoD::Run()
 		x = get_clocked_input_(xin, t);
 	}
 
-	std::complex<double> xd = apply_distortion_(x, t);
+	QuantResult qi;
+	QuantResult qq;
 
-	QuantResult qi = quantize_(xd.real());
-	QuantResult qq = quantize_(xd.imag());
+	if (ADCType == Flash_ADC)
+	{
+		// Flash 型：基础比较器阵列量化，不叠加 Current AtoD 的随机/频谱失真。
+		qi = quantize_flash_(x.real());
+		qq = quantize_flash_(x.imag());
+	}
+	else if (ADCType == Pipeline_ADC)
+	{
+		// Pipeline 型：基础模型为采样后经流水延迟，再进入理想 NBit 量化。
+		std::complex<double> xp = process_pipeline_(x);
+		qi = quantize_(xp.real());
+		qq = quantize_(xp.imag());
+	}
+	else if (ADCType == SigmaDelta_ADC)
+	{
+		// SigmaDelta 型：基础模型为一阶 1-bit 调制器 + OSR 移动平均近似，再映射到 NBit 码。
+		std::complex<double> xs = process_sigma_delta_(x);
+		qi = quantize_(xs.real());
+		qq = quantize_(xs.imag());
+	}
+	else
+	{
+		// Current AtoD：完全保留原有最接近 SystemVue 内置 AtoD 的路径。
+		std::complex<double> xd = apply_distortion_(x, t);
+		qi = quantize_(xd.real());
+		qq = quantize_(xd.imag());
+	}
 
 	A_out[0] = std::complex<double>(qi.analog, qq.analog);
 	D_I[0] = qi.codeDigital;
@@ -447,7 +533,18 @@ void AtoD::clamp_params_()
 	if (ENOB > 16.0) ENOB = 16.0;
 
 	ExcessBW = clip_(ExcessBW, 0.0, 1.0);
+
+	PipelineStageBits = clamp_int_(PipelineStageBits, 1, std::max(1, nbits_));
+	if (PipelineLatency < 0)
+		PipelineLatency = 0;
+
+	// 当前基础 SigmaDelta 只实现一阶行为；参数保留是为了后续扩展。
+	if (SigmaDeltaOrder < 1)
+		SigmaDeltaOrder = 1;
+	if (SigmaDeltaOSR < 1)
+		SigmaDeltaOSR = 1;
 }
+
 
 
 void AtoD::build_transfer_table_()
@@ -459,6 +556,7 @@ void AtoD::build_transfer_table_()
 	thresholds_[codeCount_] = vref_;
 
 	const bool useNonlinear =
+		(ADCType == Current_AtoD) &&
 		(DistortionModel == Jitter_INL_DNL) &&
 		(DNL > 0.0 || INL > 0.0);
 
@@ -529,7 +627,7 @@ std::complex<double> AtoD::read_input_sample_(int idx)
 	// 因此本函数不能声明为 const。
 	// EnvelopeSignal 提供 complex()/real()/imag() 访问包络 I/Q 值。
 	const unsigned int uidx = static_cast<unsigned int>(idx < 0 ? 0 : idx);
-    return A_Input[uidx].complex();
+	return A_in[uidx].complex();
 }
 
 
@@ -910,6 +1008,7 @@ AtoD::QuantResult AtoD::quantize_(double x) const
 	// 不处理门限上方，也不在 INL/DNL 非线性表中启用，避免破坏已对齐的 C1、D1/D2、J0、PN0。
 	// ---------------------------------------------------------------------
 	const bool idealUniformTable =
+		(ADCType != Current_AtoD) ||
 		!(DistortionModel == Jitter_INL_DNL && (DNL > 0.0 || INL > 0.0));
 
 	if (idealUniformTable && !thresholds_.empty())
@@ -970,6 +1069,97 @@ AtoD::QuantResult AtoD::quantize_(double x) const
 		r.codeDigital = code;
 
 	return r;
+}
+
+
+
+AtoD::QuantResult AtoD::quantize_flash_(double x) const
+{
+	QuantResult r;
+
+	double xc = clip_(x, -vref_, vref_);
+	int code = 0;
+
+	// Flash ADC 基础模型：并行比较器阵列。
+	// 第 k 个比较器阈值为 -VRef + k*LSB，输入高于或等于该阈值则计数加 1。
+	for (int k = 1; k < codeCount_; ++k)
+	{
+		double th = -vref_ + static_cast<double>(k) * lsb_;
+		if (xc >= th)
+			++code;
+		else
+			break;
+	}
+
+	code = clamp_int_(code, 0, codeCount_ - 1);
+	r.codeOffset = code;
+	r.analog = -vref_ + (static_cast<double>(code) + 0.5) * lsb_;
+
+	if (OutputDigitalFormat == Twos_complement)
+		r.codeDigital = code - midCode_;
+	else
+		r.codeDigital = code;
+
+	return r;
+}
+
+
+std::complex<double> AtoD::process_pipeline_(const std::complex<double>& x)
+{
+	// Pipeline ADC 基础模型：不改变幅度，仅模拟流水线输出延迟。
+	// PipelineStageBits 作为架构参数保留，当前基础模型仍由最终 NBits 量化决定输出码。
+	if (PipelineLatency <= 0)
+		return x;
+
+	pipelineFifo_.push_back(x);
+
+	if (static_cast<int>(pipelineFifo_.size()) <= PipelineLatency)
+		return std::complex<double>(0.0, 0.0);
+
+	std::complex<double> y = pipelineFifo_.front();
+	pipelineFifo_.erase(pipelineFifo_.begin());
+	return y;
+}
+
+
+std::complex<double> AtoD::process_sigma_delta_(const std::complex<double>& x)
+{
+	// SigmaDelta ADC 基础模型：一阶 1-bit 调制器。
+	// 输入先归一化到 [-1, 1]，调制输出 ±1，经 OSR 移动平均后恢复到电压域。
+	double ui = clip_(x.real() / std::max(vref_, kTiny), -1.0, 1.0);
+	double uq = clip_(x.imag() / std::max(vref_, kTiny), -1.0, 1.0);
+
+	sdIIntegrator_ += ui - sdIFeedback_;
+	double bi = (sdIIntegrator_ >= 0.0) ? 1.0 : -1.0;
+	sdIFeedback_ = bi;
+
+	sdQIntegrator_ += uq - sdQFeedback_;
+	double bq = (sdQIntegrator_ >= 0.0) ? 1.0 : -1.0;
+	sdQFeedback_ = bq;
+
+	sdIAccum_ += bi;
+	sdQAccum_ += bq;
+	++sdAccumCount_;
+
+	if (sdAccumCount_ >= std::max(1, SigmaDeltaOSR))
+	{
+		double ai = sdIAccum_ / static_cast<double>(sdAccumCount_);
+		double aq = sdQAccum_ / static_cast<double>(sdAccumCount_);
+
+		sdHeldOutput_ = std::complex<double>(clip_(ai * vref_, -vref_, vref_),
+			clip_(aq * vref_, -vref_, vref_));
+
+		sdIAccum_ = 0.0;
+		sdQAccum_ = 0.0;
+		sdAccumCount_ = 0;
+	}
+	else if (sampleIndex_ == 0ULL)
+	{
+		// 首帧给出当前累计平均，避免输出长期保持全 0 的误解。
+		sdHeldOutput_ = std::complex<double>(bi * vref_, bq * vref_);
+	}
+
+	return sdHeldOutput_;
 }
 
 

@@ -352,15 +352,15 @@ double RADAR_EWChaff_Block::m_get_carrier_freq()
 
 RADAR_EWChaff_Block::Vec3 RADAR_EWChaff_Block::m_get_platform_position()
 {
-    Vec3 p = m_get_release_position_param();
-    // 由 Run 中的 m_platformX/Y/Z 提供
-    return p;
+    // 返回参数默认值；实际端口读取在 DataStreamRun 开头一次性完成，
+    // 释放锁存处使用缓存值+hasPort标记覆盖，避免二次消费输入数据。
+    return m_get_release_position_param();
 }
 
 RADAR_EWChaff_Block::Vec3 RADAR_EWChaff_Block::m_get_platform_velocity()
 {
-    Vec3 v = m_get_initial_velocity_param();
-    return v;
+    // 同上，返回参数默认值。
+    return m_get_initial_velocity_param();
 }
 
 void RADAR_EWChaff_Block::m_compute_cloud(double age, Vec3& center, Vec3& centerVel, Vec3& radius, Vec3& radiusRate) const
@@ -566,34 +566,37 @@ bool RADAR_EWChaff_Block::DataStreamRun()
     double platX = 0, platY = 0, platZ = 0;
     double platVx = 0, platVy = 0, platVz = 0;
     double carrierFreqIn = m_CarrierFreq;
+    bool hasPortX = false, hasPortY = false, hasPortZ = false;
+    bool hasPortVx = false, hasPortVy = false, hasPortVz = false;
+    bool hasPortRelease = false;
 
     {
         auto d = ReadInputData<double>(GetInputPortName(0));
-        if (!d.empty()) releaseVal = d[0];
+        if (!d.empty()) { releaseVal = d[0]; hasPortRelease = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(1));
-        if (!d.empty()) platX = d[0];
+        if (!d.empty()) { platX = d[0]; hasPortX = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(2));
-        if (!d.empty()) platY = d[0];
+        if (!d.empty()) { platY = d[0]; hasPortY = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(3));
-        if (!d.empty()) platZ = d[0];
+        if (!d.empty()) { platZ = d[0]; hasPortZ = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(4));
-        if (!d.empty()) platVx = d[0];
+        if (!d.empty()) { platVx = d[0]; hasPortVx = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(5));
-        if (!d.empty()) platVy = d[0];
+        if (!d.empty()) { platVy = d[0]; hasPortVy = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(6));
-        if (!d.empty()) platVz = d[0];
+        if (!d.empty()) { platVz = d[0]; hasPortVz = true; }
     }
     {
         auto d = ReadInputData<double>(GetInputPortName(7));
@@ -644,12 +647,22 @@ bool RADAR_EWChaff_Block::DataStreamRun()
 
     // ReleasedCloud / FixedCloud 模式
     if (m_Chaff_Mode == RADAR_EWChaff::ReleasedCloud) {
-        const bool releaseSignal = (releaseVal > 0.0);
+        // 与原始算法一致：Release端口未连接时默认视为已触发释放
+        const bool releaseSignal = hasPortRelease ? (releaseVal > 0.0) : true;
         if (!m_released && releaseSignal) {
             m_released = true;
             m_releaseSampleIndex = m_sampleIndex;
-            m_releasePosLatched = m_make_vec(platX, platY, platZ);
-            m_releaseVelLatched = m_make_vec(platVx, platVy, platVz);
+            // 与原始算法一致：参数默认值为基础，端口有数据时覆盖
+            Vec3 relPos = m_get_release_position_param();
+            if (hasPortX) relPos.x = platX;
+            if (hasPortY) relPos.y = platY;
+            if (hasPortZ) relPos.z = platZ;
+            m_releasePosLatched = relPos;
+            Vec3 relVel = m_get_initial_velocity_param();
+            if (hasPortVx) relVel.x = platVx;
+            if (hasPortVy) relVel.y = platVy;
+            if (hasPortVz) relVel.z = platVz;
+            m_releaseVelLatched = relVel;
         }
     } else {
         // FixedCloud
@@ -779,7 +792,8 @@ bool RADAR_EWChaff_Block::TimeDrivenRun()
         if (!d0.empty() || !d1.empty() || !d2.empty() || !d3.empty() ||
             !d4.empty() || !d5.empty() || !d6.empty() || !d7.empty()) {
             InputSnapshot in;
-            in.release       = d0.empty() ? 0.0 : d0[0];
+            // -1 表示 Release 端口无数据（未连接），与原始算法一致默认触发释放
+            in.release       = d0.empty() ? -1.0 : d0[0];
             in.platX         = d1.empty() ? 0.0 : d1[0];
             in.platY         = d2.empty() ? 0.0 : d2[0];
             in.platZ         = d3.empty() ? 0.0 : d3[0];
@@ -787,6 +801,14 @@ bool RADAR_EWChaff_Block::TimeDrivenRun()
             in.platVy        = d5.empty() ? 0.0 : d5[0];
             in.platVz        = d6.empty() ? 0.0 : d6[0];
             in.carrierFreqIn = d7.empty() ? m_CarrierFreq : d7[0];
+            in.hasRelease    = !d0.empty();
+            in.hasPlatX      = !d1.empty();
+            in.hasPlatY      = !d2.empty();
+            in.hasPlatZ      = !d3.empty();
+            in.hasPlatVx     = !d4.empty();
+            in.hasPlatVy     = !d5.empty();
+            in.hasPlatVz     = !d6.empty();
+            in.hasCarrierFreqIn = !d7.empty();
             m_inputBuffer.push_back(in);
         }
     }
@@ -837,12 +859,22 @@ bool RADAR_EWChaff_Block::TimeDrivenRun()
 
         // --- ReleasedCloud / FixedCloud 模式 ---
         if (m_Chaff_Mode == RADAR_EWChaff::ReleasedCloud) {
-            const bool releaseSignal = (in.release > 0.0);
+            // 与原始算法一致：Release端口未连接时(in.release<0)默认视为已触发释放
+            const bool releaseSignal = (in.release < 0.0) || (in.release > 0.0);
             if (!m_released && releaseSignal) {
                 m_released = true;
                 m_releaseSampleIndex = m_sampleIndex;
-                m_releasePosLatched = m_make_vec(in.platX, in.platY, in.platZ);
-                m_releaseVelLatched = m_make_vec(in.platVx, in.platVy, in.platVz);
+                // 与原始算法一致：参数默认值为基础，输入端口有数据时覆盖
+                Vec3 relPos = m_get_release_position_param();
+                if (in.hasPlatX) relPos.x = in.platX;
+                if (in.hasPlatY) relPos.y = in.platY;
+                if (in.hasPlatZ) relPos.z = in.platZ;
+                m_releasePosLatched = relPos;
+                Vec3 relVel = m_get_initial_velocity_param();
+                if (in.hasPlatVx) relVel.x = in.platVx;
+                if (in.hasPlatVy) relVel.y = in.platVy;
+                if (in.hasPlatVz) relVel.z = in.platVz;
+                m_releaseVelLatched = relVel;
             }
         } else {
             m_released = true;

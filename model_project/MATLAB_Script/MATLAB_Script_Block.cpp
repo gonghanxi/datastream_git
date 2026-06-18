@@ -2,17 +2,107 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QRegularExpression>
+
+#include "octave/dMatrix.h"
+#include "octave/CMatrix.h"
+
+namespace SV = SystemVueModelBuilder;
+
+// ===================== Octave 数据转换辅助方法 =====================
+
+octave_value MATLAB_Script_Block::vectorToOctave(const std::vector<double>& data)
+{
+    ::Matrix mat(static_cast<octave_idx_type>(data.size()), 1);
+    for (size_t i = 0; i < data.size(); i++) {
+        mat(static_cast<octave_idx_type>(i), 0) = data[i];
+    }
+    return octave_value(mat);
+}
+
+octave_value MATLAB_Script_Block::vectorToOctave(const std::vector<std::complex<double>>& data)
+{
+    ComplexMatrix mat(static_cast<octave_idx_type>(data.size()), 1);
+    for (size_t i = 0; i < data.size(); i++) {
+        mat(static_cast<octave_idx_type>(i), 0) = Complex(data[i].real(), data[i].imag());
+    }
+    return octave_value(mat);
+}
+
+octave_value MATLAB_Script_Block::matrixToOctave(const std::vector<SV::DoubleMatrix>& data)
+{
+    if (data.size() == 1) {
+        // 单个矩阵，直接返回 Matrix
+        SV::Matrix<double> matVue = data[0];
+        int rows = matVue.NumRows();
+        int cols = matVue.NumColumns();
+        ::Matrix mat(rows, cols);
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                mat(r, c) = matVue(r, c);
+            }
+        }
+        return octave_value(mat);
+    }
+    // 多个矩阵，使用 Cell 数组
+    Cell cell(static_cast<octave_idx_type>(data.size()), 1);
+    for (size_t i = 0; i < data.size(); i++) {
+        SV::Matrix<double> matVue = data[i];
+        int rows = matVue.NumRows();
+        int cols = matVue.NumColumns();
+        ::Matrix mat(rows, cols);
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                mat(r, c) = matVue(r, c);
+            }
+        }
+        cell(static_cast<octave_idx_type>(i), 0) = octave_value(mat);
+    }
+    return octave_value(cell);
+}
+
+octave_value MATLAB_Script_Block::complexMatrixToOctave(const std::vector<SV::DComplexMatrix>& data)
+{
+    if (data.size() == 1) {
+        SV::DComplexMatrix matVue = data[0];
+        int rows = matVue.NumRows();
+        int cols = matVue.NumColumns();
+        ComplexMatrix mat(rows, cols);
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                mat(r, c) = Complex(matVue(r, c).real(), matVue(r, c).imag());
+            }
+        }
+        return octave_value(mat);
+    }
+    Cell cell(static_cast<octave_idx_type>(data.size()), 1);
+    for (size_t i = 0; i < data.size(); i++) {
+        SV::DComplexMatrix matVue = data[i];
+        int rows = matVue.NumRows();
+        int cols = matVue.NumColumns();
+        ComplexMatrix mat(rows, cols);
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                mat(r, c) = Complex(matVue(r, c).real(), matVue(r, c).imag());
+            }
+        }
+        cell(static_cast<octave_idx_type>(i), 0) = octave_value(mat);
+    }
+    return octave_value(cell);
+}
+
+// ===================== 构造 / 析构 =====================
 
 MATLAB_Script_Block::MATLAB_Script_Block(const std::string& name)
-    :Block(name)
+    : Block(name)
 {
-    ep =engOpen(NULL);
-
+    m_interp = new octave::interpreter();
+    m_interp->execute();
 }
 
 MATLAB_Script_Block::~MATLAB_Script_Block()
 {
-    engClose(ep);
+    delete m_interp;
 }
 
 bool MATLAB_Script_Block::Setup()
@@ -21,224 +111,165 @@ bool MATLAB_Script_Block::Setup()
     return true;
 }
 
-// MATLAB_Script_Block.cpp
+// ===================== Run =====================
+
 bool MATLAB_Script_Block::Run()
 {
-
-    std::cout << "MATLAB_Script_Block Run start"<<std::endl;
-    if(!ep)
+    qDebug()<<"MATLAB_Script_Block Run start";
+    if (!m_interp)
         return false;
 
-    QMap<int, PortMsg> ports=Block::getPortsMsg();
+    QMap<int, SV::PortMsg> ports = Block::getPortsMsg();
 
-    QMap<QString,mxArray *> inputs;
-    for(auto port : ports) {
-        if(port.putType == "in") {
-            QString portName=QString("%1_%2").arg(getInstanceName().c_str()).arg(port.name);
-            //portName=port.name;
-            std::cout << "MATLAB_Script_Block Run portName:"<<portName.toStdString()<<std::endl;
+    // 收集输入数据并注入到 Octave 工作区
+    QMap<QString, octave_value> inputs;
+    for (auto port : ports) {
+        if (port.putType == "in") {
+            QString portName = QString("%1_%2").arg(getInstanceName().c_str()).arg(port.name);
 
-            //            auto inputPortData = ReadInputData<std::complex<double>>(portName.toStdString());
-
-            if(port.dataType==PortMsg::REAL||port.dataType==PortMsg::INT)
-            {
+            if (port.dataType == SV::PortMsg::REAL || port.dataType == SV::PortMsg::INT || port.dataType == SV::PortMsg::ANYTYPE) {
                 auto inputPortData = ReadInputData<double>(port.name.toStdString());
-                std::cout << "MATLAB_Script_Block Run inputPortData size:"<<inputPortData.size()<<std::endl;
-                if (!inputPortData.empty())
-                {
-                    mxArray *inputArray = mxCreateDoubleMatrix(inputPortData.size(), 1, mxREAL);
-                    inputs[port.name]=inputArray;
-                    mxDouble *inputData = mxGetDoubles(inputArray);
+                if (!inputPortData.empty()) {
+                    inputs[port.name] = vectorToOctave(inputPortData);
                     qDebug() << QString("MATLAB_Script_Block Run set input double data[%1]:%2").arg(port.name).arg(inputPortData.size());
-                    for (int i = 0; i < inputPortData.size(); i++) {
-                        inputData[i] = inputPortData[i];
-                    }
                 }
-            }else if(port.dataType==PortMsg::COMPLEX)
-            {
+            } else if (port.dataType == SV::PortMsg::COMPLEX) {
                 auto inputPortData = ReadInputData<std::complex<double>>(port.name.toStdString());
-                if (!inputPortData.empty())
-                {
-                    mxArray *inputArray = mxCreateDoubleMatrix(inputPortData.size(), 1, mxCOMPLEX);
-                    inputs[port.name]=inputArray;
-                    mxComplexDouble *inputData = mxGetComplexDoubles(inputArray);
+                if (!inputPortData.empty()) {
+                    inputs[port.name] = vectorToOctave(inputPortData);
                     qDebug() << QString("MATLAB_Script_Block Run set input complex data[%1]:%2").arg(port.name).arg(inputPortData.size());
-                    for (int i = 0; i < inputPortData.size(); i++) {
-                        inputData[i].real = inputPortData[i].real();
-                        inputData[i].imag = inputPortData[i].imag();
-                    }
                 }
-            }else if(port.dataType==PortMsg::INT_MATRIX||port.dataType==PortMsg::REAL_MATRIX)
-            {
-//                inline size_t NumRows() const
-//                {
-//                    return Size(0);
-//                }
-
-//                /// Return the number of columns
-//                inline size_t NumColumns() const
-//                {
-//                    return Size(1);
-//                }
-                auto inputPortData = ReadInputData<DoubleMatrix>(port.name.toStdString());
-                std::cout << "MATLAB_Script_Block Run inputPortData size:"<<inputPortData.size()<<std::endl;
-                if (!inputPortData.empty())
-                {
-                    mxArray *cell = mxCreateCellMatrix(inputPortData.size(), 1);
-                    inputs[port.name]=cell;
-
-                    //mxDouble *inputData = mxGetDoubles(inputArray);
-                    //qDebug() << QString("MATLAB_Script_Block Run set input DoubleMatrix data[%1]:%2").arg(port.name).arg(inputPortData.size());
-                    for (int i = 0; i < inputPortData.size(); i++) {
-                        Matrix<double> matVue = inputPortData[i];
-                        int rows=matVue.NumRows();
-                        int cols=matVue.NumColumns();
-                        mxArray *mat = mxCreateDoubleMatrix(rows, cols, mxREAL);
-
-                        double *p = mxGetPr(mat);
-                        for(int r = 0; r < rows; r++){
-                            for(int c = 0; c < cols; c++){
-                                p[r + c*rows] = matVue(0,0);
-                            }
-                        }
-
-                        mxSetCell(cell, i, mat);
-                    }
+            } else if (port.dataType == SV::PortMsg::INT_MATRIX || port.dataType == SV::PortMsg::REAL_MATRIX) {
+                auto inputPortData = ReadInputData<SV::DoubleMatrix>(port.name.toStdString());
+                if (!inputPortData.empty()) {
+                    inputs[port.name] = matrixToOctave(inputPortData);
+                    qDebug() << QString("MATLAB_Script_Block Run set input DoubleMatrix data[%1]:%2").arg(port.name).arg(inputPortData.size());
                 }
-            }else if(port.dataType==PortMsg::COMPLEX_MATRIX)
-            {
-                auto inputPortData = ReadInputData<DComplexMatrix>(port.name.toStdString());
-                //std::cout << "MATLAB_Script_Block Run inputPortData size:"<<inputPortData.size()<<std::endl;
-                if (!inputPortData.empty())
-                {
-//                    mxArray *inputArray = mxCreateDoubleMatrix(inputPortData.size(), 1, mxREAL);
-//                    inputs[port.name]=inputArray;
-//                    mxDouble *inputData = mxGetDoubles(inputArray);
-//                    qDebug() << QString("MATLAB_Script_Block Run set input DComplexMatrix data[%1]:%2").arg(port.name).arg(inputPortData.size());
-//                    for (int i = 0; i < inputPortData.size(); i++) {
-//                        inputData[i] = inputPortData[i];
-//                    }
+            } else if (port.dataType == SV::PortMsg::COMPLEX_MATRIX) {
+                auto inputPortData = ReadInputData<SV::DComplexMatrix>(port.name.toStdString());
+                if (!inputPortData.empty()) {
+                    inputs[port.name] = complexMatrixToOctave(inputPortData);
+                    qDebug() << QString("MATLAB_Script_Block Run set input DComplexMatrix data[%1]:%2").arg(port.name).arg(inputPortData.size());
                 }
             }
-        }
-        else if(port.putType == "out") {
-
+        } else if (port.putType == "out") {
+            // 输出端口在 Run 后半段处理
         }
     }
+
+    // 添加脚本路径
     QString appPath = QCoreApplication::applicationDirPath();
     QString folderPath = appPath + "/m";
-    engEvalString(ep, QString("addpath('%1')").arg(folderPath).toStdString().c_str());
+    m_interp->eval(QString("addpath('%1');").arg(folderPath).toStdString(), 0);
     qDebug() << QString("MATLAB_Script_Block Run2");
-    for(auto key:inputs.keys())
-    {
-        engPutVariable(ep, key.toStdString().c_str(),inputs[key]);
+
+    // 将输入变量注入 Octave 工作区
+    for (auto key : inputs.keys()) {
+        m_interp->get_evaluator().top_level_assign(key.toStdString(), inputs[key]);
     }
     qDebug() << QString("MATLAB_Script_Block Run3");
-    int ret=engEvalString(ep, QString("%1;").arg(callStr).toStdString().c_str());//output=M1_runfc(1)
-    for(auto port : ports) {
-        if(port.putType == "in") {
 
+    // 执行生成的 MATLAB/Octave 函数
+    qDebug()<<callStr;
+    m_interp->eval(QString("%1;").arg(callStr).toStdString(), 0);
+    qDebug() << QString("MATLAB_Script_Block Run4");
+    // 读取输出变量
+    for (auto port : ports) {
+        qDebug() << QString("MATLAB_Script_Block Run5");
+        if (port.putType == "in") {
+            continue;
         }
-        else if(port.putType == "out") {
+        else if (port.putType == "out") {
+
             qDebug() << QString("MATLAB_Script_Block Run get out value:%1").arg(port.name);
-            //QString portName=QString("%1_%2").arg(getInstanceName().c_str()).arg(port.name);
-            mxArray *outputArray = engGetVariable(ep, port.name.toStdString().c_str());
-            if(outputArray)
-            {
-                qDebug() << QString("MATLAB_Script_Block Run5");
-                if(port.dataType==PortMsg::REAL||port.dataType==PortMsg::INT)
-                {
-                    mxDouble *resultData = mxGetDoubles(outputArray);
-
-                    int resultDataSize = mxGetNumberOfElements(outputArray);
-                    std::cout << "MATLAB_Script_Block Run resultDataSize size:"<<resultDataSize<<std::endl;
+            octave_value outputVal = m_interp->get_evaluator().top_level_varval(port.name.toStdString());
+            if (outputVal.is_defined()) {
+                if (port.dataType == SV::PortMsg::REAL || port.dataType == SV::PortMsg::INT || port.dataType == SV::PortMsg::ANYTYPE) {
+                    ::Matrix resultMat = outputVal.matrix_value();
+                    int resultDataSize = resultMat.numel();
                     std::vector<double> outputData;
-
-                    for (int i = 0; i < resultDataSize; ++i)
-                    {
-                        outputData.push_back(resultData[i]);
+                    outputData.reserve(resultDataSize);
+                    for (int i = 0; i < resultDataSize; ++i) {
+                        outputData.push_back(resultMat.elem(i));
                     }
                     qDebug() << QString("MATLAB_Script_Block Run get output double data[%1]:%2").arg(port.name).arg(outputData.size());
                     WriteOutputData(port.name.toStdString().c_str(), outputData);
-                }else if(port.dataType==PortMsg::COMPLEX)
-                {
-                    mxComplexDouble *resultData = mxGetComplexDoubles(outputArray);
 
-                    int resultDataSize = mxGetNumberOfElements(outputArray);
+                } else if (port.dataType == SV::PortMsg::COMPLEX) {
+                    ComplexMatrix resultMat = outputVal.complex_matrix_value();
+                    int resultDataSize = resultMat.numel();
                     std::vector<std::complex<double>> outputData;
-
-                    for (int i = 0; i < resultDataSize; ++i)
-                    {
-                        outputData.push_back({resultData[i].real,resultData[i].imag});
+                    outputData.reserve(resultDataSize);
+                    for (int i = 0; i < resultDataSize; ++i) {
+                        Complex c = resultMat.elem(i);
+                        outputData.push_back({c.real(), c.imag()});
                     }
                     qDebug() << QString("MATLAB_Script_Block Run get output complex data[%1]:%2").arg(port.name).arg(outputData.size());
                     WriteOutputData(port.name.toStdString().c_str(), outputData);
-                }else if(port.dataType==PortMsg::INT_MATRIX||port.dataType==PortMsg::REAL_MATRIX)
-                {
-                    mxDouble *resultData = mxGetDoubles(outputArray);
 
-                    int resultDataSize = mxGetNumberOfElements(outputArray);
-                    std::cout << "MATLAB_Script_Block Run resultDataSize size:"<<resultDataSize<<std::endl;
-                    std::vector<double> outputData;
-
-                    for (int i = 0; i < resultDataSize; ++i)
-                    {
-                        outputData.push_back(resultData[i]);
+                } else if (port.dataType == SV::PortMsg::INT_MATRIX || port.dataType == SV::PortMsg::REAL_MATRIX) {
+                    if (outputVal.iscell()) {
+                        // Cell 数组：逐个提取矩阵
+                        Cell cellArr = outputVal.cell_value();
+                        int cellCount = cellArr.numel();
+                        std::vector<double> outputData;
+                        for (int ci = 0; ci < cellCount; ci++) {
+                            ::Matrix subMat = cellArr.elem(ci).matrix_value();
+                            int subSize = subMat.numel();
+                            for (int i = 0; i < subSize; i++) {
+                                outputData.push_back(subMat.elem(i));
+                            }
+                        }
+                        qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
+                        WriteOutputData(port.name.toStdString().c_str(), outputData);
+                    } else {
+                        // 普通矩阵
+                        ::Matrix resultMat = outputVal.matrix_value();
+                        int resultDataSize = resultMat.numel();
+                        std::vector<double> outputData;
+                        outputData.reserve(resultDataSize);
+                        for (int i = 0; i < resultDataSize; ++i) {
+                            outputData.push_back(resultMat.elem(i));
+                        }
+                        qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
+                        WriteOutputData(port.name.toStdString().c_str(), outputData);
                     }
-                    qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
-                    WriteOutputData(port.name.toStdString().c_str(), outputData);
-                }else if(port.dataType==PortMsg::COMPLEX_MATRIX)
-                {
-                    mxDouble *resultData = mxGetDoubles(outputArray);
 
-                    int resultDataSize = mxGetNumberOfElements(outputArray);
-                    std::cout << "MATLAB_Script_Block Run resultDataSize size:"<<resultDataSize<<std::endl;
-                    std::vector<double> outputData;
-
-                    for (int i = 0; i < resultDataSize; ++i)
-                    {
-                        outputData.push_back(resultData[i]);
+                } else if (port.dataType == SV::PortMsg::COMPLEX_MATRIX) {
+                    if (outputVal.iscell()) {
+                        Cell cellArr = outputVal.cell_value();
+                        int cellCount = cellArr.numel();
+                        std::vector<std::complex<double>> outputData;
+                        for (int ci = 0; ci < cellCount; ci++) {
+                            ComplexMatrix subMat = cellArr.elem(ci).complex_matrix_value();
+                            int subSize = subMat.numel();
+                            for (int i = 0; i < subSize; i++) {
+                                Complex c = subMat.elem(i);
+                                outputData.push_back({c.real(), c.imag()});
+                            }
+                        }
+                        qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
+                        WriteOutputData(port.name.toStdString().c_str(), outputData);
+                    } else {
+                        ComplexMatrix resultMat = outputVal.complex_matrix_value();
+                        int resultDataSize = resultMat.numel();
+                        std::vector<std::complex<double>> outputData;
+                        outputData.reserve(resultDataSize);
+                        for (int i = 0; i < resultDataSize; ++i) {
+                            Complex c = resultMat.elem(i);
+                            outputData.push_back({c.real(), c.imag()});
+                        }
+                        qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
+                        WriteOutputData(port.name.toStdString().c_str(), outputData);
                     }
-                    qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
-                    WriteOutputData(port.name.toStdString().c_str(), outputData);
                 }
-                qDebug() << QString("MATLAB_Script_Block Run7");
-                //                WriteOutputData(portName.toStdString().c_str(), outputData);
-
-                mxDestroyArray(outputArray);
             }
         }
     }
-    qDebug() << QString("MATLAB_Script_Block Run8");
-    for(auto v:inputs.values())
-    {
-        mxDestroyArray(v);
-    }
-    std::cout << "MATLAB_Script_Block Run end"<<std::endl;
-
-    //    std::string inputPortName = GetInputPortName(0);
-    //    inputData = ReadInputData<double>(inputPortName);
-
-    //    if (inputData.empty()) {
-    //        return false;
-    //    }
-
-    //    double m_gain;
-    //    m_gain = std::stod(getParameter("Gain").Value);
-    //    for(size_t i = 0; i < inputData.size(); i++) {
-    //        double outputSample = m_gain * inputData[i];
-    //        outputData.push_back(outputSample);
-    //    }
-
-
-
-    //    qDebug() << "MATLAB_Script_Block: " << outputData.size();
-    //    // 写入输出
-    //    std::string outputPortName = GetOutputPortName(0);
-
-    //    WriteOutputData(outputPortName, outputData);
     return true;
 }
+
+// ===================== Initialize =====================
 
 bool MATLAB_Script_Block::Initialize()
 {
@@ -246,103 +277,103 @@ bool MATLAB_Script_Block::Initialize()
     QString appPath = QCoreApplication::applicationDirPath();
     QString folderPath = appPath + "/m";
     QDir dir(folderPath);
-    if(!dir.exists())
-    {
+    if (!dir.exists()) {
         dir.mkdir(folderPath);
     }
     qDebug() << "appPath: " << appPath;
     std::string Equations = getParameter("Equations").Value;
 
-    if(!Equations.empty())
-    {
-        QMap<int, PortMsg> ports=getPortsMsg();
+    if (!Equations.empty()) {
+        QMap<int, SV::PortMsg> ports = getPortsMsg();
         qDebug() << "MATLAB_Script_Block Initialize ports size: " << ports.size();
         QStringList inputs;
         QStringList outputs;
         int i = 0;
         int j = 0;
-        for(auto port : ports) {
+        for (auto port : ports) {
             qDebug() << "MATLAB_Script_Block Initialize dataType: " << port.dataType;
-            if(port.putType == "in") {
-                if(port.dataType==PortMsg::REAL||port.dataType==PortMsg::INT)
-                {
-                    DoubleCircularBuffer *a=new DoubleCircularBuffer;
-                    AddInputPort(port.name.toStdString(),*a,port.portRate,DataType::CIRCULAR_BUFFER_DOUBLE);
-
-                     qDebug() << "MATLAB_Script_Block Initialize add input double port Name: " << QString::fromStdString(GetInputPortName(i));
-                }else if(port.dataType==PortMsg::COMPLEX)
-                {
-                    DComplexCircularBuffer *a=new DComplexCircularBuffer;
-                    AddInputPort(port.name.toStdString(),*a,port.portRate,DataType::CIRCULAR_BUFFER_DCOMPLEX);
+            if (port.putType == "in") {
+                if (port.dataType == SV::PortMsg::REAL || port.dataType == SV::PortMsg::INT || port.dataType == SV::PortMsg::ANYTYPE) {
+                    SV::DoubleCircularBuffer *a = new SV::DoubleCircularBuffer;
+                    AddInputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::CIRCULAR_BUFFER_DOUBLE);
+                    qDebug() << "MATLAB_Script_Block Initialize add input double port Name: " << QString::fromStdString(GetInputPortName(i));
+                } else if (port.dataType == SV::PortMsg::COMPLEX) {
+                    SV::DComplexCircularBuffer *a = new SV::DComplexCircularBuffer;
+                    AddInputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::CIRCULAR_BUFFER_DCOMPLEX);
                     qDebug() << "MATLAB_Script_Block Initialize add input complex port Name: " << QString::fromStdString(GetInputPortName(i));
-                }else if(port.dataType==PortMsg::INT_MATRIX||port.dataType==PortMsg::REAL_MATRIX)
-                {
-                    DoubleMatrixCircularBuffer *a=new DoubleMatrixCircularBuffer;
-                    AddInputPort(port.name.toStdString(),*a,port.portRate,DataType::MATRIX_DOUBLE);
+                } else if (port.dataType == SV::PortMsg::INT_MATRIX || port.dataType == SV::PortMsg::REAL_MATRIX) {
+                    SV::DoubleMatrixCircularBuffer *a = new SV::DoubleMatrixCircularBuffer;
+                    AddInputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::MATRIX_DOUBLE);
                     qDebug() << "MATLAB_Script_Block Initialize add input MATRIX port Name: " << QString::fromStdString(GetInputPortName(i));
-
-                }else if(port.dataType==PortMsg::COMPLEX_MATRIX)
-                {
-                    DComplexMatrixCircularBuffer *a=new DComplexMatrixCircularBuffer;
-                    AddInputPort(port.name.toStdString(),*a,port.portRate,DataType::MATRIX_DCOMPLEX);
+                } else if (port.dataType == SV::PortMsg::COMPLEX_MATRIX) {
+                    SV::DComplexMatrixCircularBuffer *a = new SV::DComplexMatrixCircularBuffer;
+                    AddInputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::MATRIX_DCOMPLEX);
                     qDebug() << "MATLAB_Script_Block Initialize add input MATRIX_DCOMPLEX port Name: " << QString::fromStdString(GetInputPortName(i));
-
                 }
                 inputs.append(port.name);
-
                 i++;
-            }
-            else if(port.putType == "out") {
-                if(port.dataType==PortMsg::REAL||port.dataType==PortMsg::INT)
-                {
-                    DoubleCircularBuffer *a=new DoubleCircularBuffer;
-                    AddOutputPort(port.name.toStdString(),*a,port.portRate,DataType::CIRCULAR_BUFFER_DOUBLE);
-                   qDebug() << "MATLAB_Script_Block Initialize add output double port Name: " << QString::fromStdString(GetOutputPortName(j));
-                }else if(port.dataType==PortMsg::COMPLEX)
-                {
-                    DComplexCircularBuffer *a=new DComplexCircularBuffer;
-                    AddOutputPort(port.name.toStdString(),*a,port.portRate,DataType::CIRCULAR_BUFFER_DCOMPLEX);
+            } else if (port.putType == "out") {
+                if (port.dataType == SV::PortMsg::REAL || port.dataType == SV::PortMsg::INT || port.dataType == SV::PortMsg::ANYTYPE) {
+                    SV::DoubleCircularBuffer *a = new SV::DoubleCircularBuffer;
+                    AddOutputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::CIRCULAR_BUFFER_DOUBLE);
+                    qDebug() << "MATLAB_Script_Block Initialize add output double port Name: " << QString::fromStdString(GetOutputPortName(j));
+                } else if (port.dataType == SV::PortMsg::COMPLEX) {
+                    SV::DComplexCircularBuffer *a = new SV::DComplexCircularBuffer;
+                    AddOutputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::CIRCULAR_BUFFER_DCOMPLEX);
                     qDebug() << "MATLAB_Script_Block Initialize add output complex port Name: " << QString::fromStdString(GetOutputPortName(j));
-                }else if(port.dataType==PortMsg::INT_MATRIX||port.dataType==PortMsg::REAL_MATRIX)
-                {
-                    DoubleMatrixCircularBuffer *a=new DoubleMatrixCircularBuffer;
-                    AddOutputPort(port.name.toStdString(),*a,port.portRate,DataType::MATRIX_DOUBLE);
-                }else if(port.dataType==PortMsg::COMPLEX_MATRIX)
-                {
-                    DComplexMatrixCircularBuffer *a=new DComplexMatrixCircularBuffer;
-                    AddInputPort(port.name.toStdString(),*a,port.portRate,DataType::MATRIX_DCOMPLEX);
-                    qDebug() << "MATLAB_Script_Block Initialize add output MATRIX_DCOMPLEX port Name: " << QString::fromStdString(GetInputPortName(i));
-
+                } else if (port.dataType == SV::PortMsg::INT_MATRIX || port.dataType == SV::PortMsg::REAL_MATRIX) {
+                    SV::DoubleMatrixCircularBuffer *a = new SV::DoubleMatrixCircularBuffer;
+                    AddOutputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::MATRIX_DOUBLE);
+                    qDebug() << "MATLAB_Script_Block Initialize add output MATRIX port Name: " << QString::fromStdString(GetOutputPortName(j));
+                } else if (port.dataType == SV::PortMsg::COMPLEX_MATRIX) {
+                    // BUG FIX: 原来错误地调用了 AddInputPort + GetInputPortName(i)
+                    SV::DComplexMatrixCircularBuffer *a = new SV::DComplexMatrixCircularBuffer;
+                    AddOutputPort(port.name.toStdString(), *a, port.portRate, DataTypes::Type::MATRIX_DCOMPLEX);
+                    qDebug() << "MATLAB_Script_Block Initialize add output MATRIX_DCOMPLEX port Name: " << QString::fromStdString(GetOutputPortName(j));
                 }
                 outputs.append(port.name);
-                //qDebug() << "MATLAB_Script_Block Initialize outport Name: " << QString::fromStdString(GetOutputPortName(j));
                 j++;
             }
-
         }
-        //qDebug() << "MATLAB_Script_Block Initialize ports size1: " << ports.size();
-        std::map<std::string,Parameter> allparameters=getAllParameter();
-        for(auto e:allparameters)
-        {
-            std::string Name=e.second.Name;
 
-            if(Name!="Equations")
-            {
+        // 将非 Equations 参数注入 Octave 工作区
+        std::map<std::string, SV::Parameter> allparameters = getAllParameter();
+        for (auto e : allparameters) {
+            std::string Name = e.second.Name;
+
+            if (Name != "Equations") {
                 inputs.append(Name.c_str());
-                double value=std::stod(e.second.Value);
-                engPutVariable(ep, Name.c_str(), mxCreateDoubleScalar(value));
-                qDebug() << QString("MATLAB_Script_Block Initialize add param:%1=%2").arg(Name.c_str()).arg(value);
-            }
 
+                QString str = e.second.Value.c_str();
+                if(str.contains(",")){
+                    QStringList list;
+                    QRegularExpression re("\\d+");
+                    QRegularExpressionMatchIterator it = re.globalMatch(str);
+                    while (it.hasNext()) {
+                        list.append(it.next().captured(0));
+                    }
+                    std::complex<double> value;
+                    value.real(list.at(0).toDouble());
+                    value.imag(list.at(1).toDouble());
+
+                    m_interp->get_evaluator().top_level_assign(Name, octave_value(value));
+                } else{
+
+                    double value = std::stod(e.second.Value);
+
+
+                    m_interp->get_evaluator().top_level_assign(Name, octave_value(value));
+                }
+                //qDebug() << QString("MATLAB_Script_Block Initialize add param:%1=%2").arg(Name.c_str()).arg(value);
+            }
         }
-        //qDebug() << "MATLAB_Script_Block Initialize ports size2: " << ports.size();
-        QString mStr="function ";
-        callStr="";
-        if(outputs.size()==1)
-        {
+
+        // 生成 MATLAB/Octave function 文件
+        QString mStr = "function ";
+        callStr = "";
+        if (outputs.size() == 1) {
             callStr.append(outputs[0]);
-        }else if(outputs.size()>1)
-        {
+        } else if (outputs.size() > 1) {
             callStr.append("[");
             callStr.append(outputs.join(","));
             callStr.append("]");
@@ -357,33 +388,22 @@ bool MATLAB_Script_Block::Initialize()
         mStr.append("\n");
         mStr.append("end\n");
 
-        QString filePath=QString("%1/%2_runfc.m").arg(folderPath).arg(getInstanceName().c_str());
-        //qDebug() << "MATLAB_Script_Block ports Initialize filePath: " << filePath;
-        //qDebug() << "MATLAB_Script_Block ports Initialize Script: " << mStr;
+        QString filePath = QString("%1/%2_runfc.m").arg(folderPath).arg(getInstanceName().c_str());
         QFile file(filePath);
-        // 2. 以“只写+文本模式”打开文件（WriteOnly：只写，Text：自动处理换行符）
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qDebug() << "文件打开失败：" << file.errorString();
             return false;
         }
-        //qDebug() << "MATLAB_Script_Block Initialize ports size3: " << ports.size();
-        // 3. 创建 QTextStream 用于文本写入（简化编码和换行处理）
         QTextStream out(&file);
-        // 设置编码（推荐 UTF-8，避免中文乱码）
         out.setCodec("UTF-8");
-        // 写入内容
         out << mStr;
-
-        // 4. 手动关闭文件（也可依赖 QFile 析构自动关闭，建议显式关闭）
         file.close();
-
     }
 
-
     m_addCx = std::make_unique<MATLAB_Script>();
-    SetBlockType(Block::BlockType::PROCESSOR);
+    SetBlockType(SV::Block::BlockType::PROCESSOR);
 
-    qDebug() <<"......................................................................................."<< QString::fromStdString(Equations);
+    qDebug() << "......................................................................................." << QString::fromStdString(Equations);
     SetDefaultParameters();
 
     SetParameters();
@@ -393,10 +413,8 @@ bool MATLAB_Script_Block::Initialize()
 
 void MATLAB_Script_Block::SetParameters()
 {
-
 }
 
 void MATLAB_Script_Block::SetDefaultParameters()
 {
-
 }

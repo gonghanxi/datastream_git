@@ -17,10 +17,24 @@
 //   4. A_out 输出码中心电平；
 //   5. Clocked 采样保持与 Downsampled 抽取；
 //   6. SNR and Harmonics / SINAD and SFDR 的频谱近似。
+//
+// V2 架构升级：
+//   ADCType = Current AtoD 时完全沿用原有最接近内置 AtoD 的逻辑；
+//   ADCType = Flash / Pipeline / SigmaDelta 时仅增加基础架构转换功能，
+//   不改变 Current AtoD 分支中已有的采样、失真、量化和时序实现。
+//
 // 注意：Jitter、Phase Noise、INL/DNL、ENOB 等随机/统计模型无法逐点复现内置随机序列。
-class SYSTEMVUEMODELBUILDER_API AtoD : public SystemVueModelBuilder::TimedDFModel
+class AtoD : public SystemVueModelBuilder::TimedDFModel
 {
 public:
+	enum ADCTypeEnum
+	{
+		Current_AtoD = 0,
+		Flash_ADC = 1,
+		Pipeline_ADC = 2,
+		SigmaDelta_ADC = 3
+	};
+
 	enum OutputDigitalFormatEnum
 	{
 		Offset_binary = 0,
@@ -101,10 +115,11 @@ public:
 	SystemVueModelBuilder::CircularBuffer<int> D_Q;
 
 	// --------- 参数 ---------
-    std::vector<SystemVueModelBuilder::EnvelopeSignal> A_Input;
-
 	int    NBits;
 	double VRef;
+
+	// 新增架构选择。默认 Current_AtoD，不污染原有最接近内置 AtoD 的逻辑。
+	ADCTypeEnum ADCType;
 
 	OutputDigitalFormatEnum OutputDigitalFormat;
 	DistortionModelEnum     DistortionModel;
@@ -143,6 +158,14 @@ public:
 	int DownsamplePhase;
 	AntiAliasingFilterEnum AntiAliasingFilter;
 	double ExcessBW;
+
+	// Pipeline ADC 基础功能参数：默认 0 延迟，避免影响基础转换验证。
+	int PipelineStageBits;
+	int PipelineLatency;
+
+	// Sigma-Delta ADC 基础功能参数：一阶 1-bit 调制器 + OSR 移动平均抽取近似。
+	int SigmaDeltaOrder;
+	int SigmaDeltaOSR;
 
 private:
 	struct QuantResult
@@ -203,6 +226,19 @@ private:
 	std::vector<double> thresholds_;
 	std::vector<double> levels_;
 
+	// Pipeline ADC 基础流水延迟状态。
+	std::vector<std::complex<double> > pipelineFifo_;
+
+	// Sigma-Delta ADC 基础一阶调制器状态。
+	double sdIIntegrator_;
+	double sdQIntegrator_;
+	double sdIFeedback_;
+	double sdQFeedback_;
+	double sdIAccum_;
+	double sdQAccum_;
+	int    sdAccumCount_;
+	std::complex<double> sdHeldOutput_;
+
 private:
 	void clamp_params_();
 	void build_transfer_table_();
@@ -235,7 +271,12 @@ private:
 		double h4_dBc,
 		double h5_dBc) const;
 
+	// Current_AtoD / Pipeline / SigmaDelta 最终使用该量化核心；Flash 使用比较器计数核心。
 	QuantResult quantize_(double x) const;
+	QuantResult quantize_flash_(double x) const;
+
+	std::complex<double> process_pipeline_(const std::complex<double>& x);
+	std::complex<double> process_sigma_delta_(const std::complex<double>& x);
 
 	double target_snr_db_() const;
 	double full_scale_peak_() const;

@@ -84,6 +84,23 @@ void BackupFFT(std::vector<std::complex<double>>& x)
 
 RADAR_MTD_Block::RADAR_MTD_Block(const std::string& name)
     : Block(name)
+    , m_PRI(1e-4)
+    , m_SampleRate(10e6)
+    , m_NumOfPulse(8)
+    , m_WindowType(RADAR_MTD::Rectangle)
+    , m_Freq_Weight(nullptr)
+    , m_Freq_Weight_Size(0)
+    , m_WindowParameters(nullptr)
+    , m_WindowParameters_Size(0)
+    , m_samplesPerPulse(0)
+    , m_totalSamples(0)
+    , m_fft_plan(nullptr)
+    , m_fftw_input(nullptr)
+    , m_fftw_output(nullptr)
+    , m_fftw_initialized(false)
+    , m_inputCount(0)
+    , m_outputCount(0)
+    , m_lastOutput(0.0, 0.0)
 {
 }
 
@@ -299,9 +316,9 @@ bool RADAR_MTD_Block::TimeDrivenRun()
         }
     }
 
-    bool CanProcessData = true;
+    bool CanProcessData = !m_inputBuffer.empty();
     for(auto it = m_inputBuffer.begin(); it != m_inputBuffer.end(); ++it) {
-        if(it->second.size() >= static_cast<size_t>(m_totalSamples)) {
+        if(it->second.size() < static_cast<size_t>(m_totalSamples)) {
             CanProcessData = false;
             break;
         }
@@ -419,6 +436,10 @@ bool RADAR_MTD_Block::Initialize()
 {
     SetBlockType(Block::BlockType::PROCESSOR);
 
+    // 创建算法实例并设置默认参数
+    m_RADAR_MTD = std::make_unique<RADAR_MTD>();
+    SetDefaultParameters();
+
     // 从参数系统获取参数值
     try { m_PRI = std::stod(getParameter("PRI").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PRI', using default value."); }
     try { m_SampleRate = std::stod(getParameter("SampleRate").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SampleRate', using default value."); }
@@ -488,7 +509,8 @@ bool RADAR_MTD_Block::Initialize()
     }
 
     // 添加输入输出端口
-    AddInputPort("input", m_RADAR_MTD->input, static_cast<size_t>(m_totalSamples),
+    // bus类型输入端口：readSize为单通道速率，不需要乘以通道数
+    AddInputPort("input", m_RADAR_MTD->input, static_cast<size_t>(m_samplesPerPulse),
                  Block::DataType::DCOMPLEX_BUS);
     AddOutputPort("output", m_RADAR_MTD->output, static_cast<size_t>(m_totalSamples),
                   Block::DataType::CIRCULAR_BUFFER_DCOMPLEX);

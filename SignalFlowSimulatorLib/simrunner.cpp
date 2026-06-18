@@ -1453,28 +1453,25 @@ bool SimRunner::isSubSystemEmpty(const QString& subLinkKey)
 
 bool SimRunner::RunBlocks()
 {
-#if 1
-//    return NewScheduler();
-    return OldScheduler();
-//    return TimeScheduler();
-#else
-    for (auto linkKey : mSimuParameters.keys())
-    {
-        int lastProgress = -1;
-        for(int i=1;i<=mSimuParameters[linkKey].num_Samples;++i)
-        {
-            double j = (double)i / mSimuParameters[linkKey].num_Samples * 100;
-            int currentProgress = (int)j;
-
-            if(currentProgress % 10 == 0 && currentProgress != lastProgress)
-            {
-                LOG_INFO("当前进度：",j,"%");
-                lastProgress = currentProgress; // 更新上一次进度
+    // 检测链路中是否存在 ZeroCross 模型
+    for (const QString& linkKey : AlgorithmManager::createInstance()->getRunBlocks().keys()) {
+        QVector<Block*> blocks = AlgorithmManager::createInstance()->getRunBlocks().value(linkKey);
+        bool hasZeroCross = false;
+        for (Block* block : blocks) {
+            // 使用 Initialize 时设置的类型标识，不依赖跨DLL虚函数分发
+            if (block->IsZeroCrossType()) {
+                hasZeroCross = true;
+                qDebug() << "[SimRunner] ZeroCross block detected:" << QString::fromStdString(block->GetName());
             }
         }
+        if (hasZeroCross) {
+            qDebug() << "[SimRunner] ZeroCross detected in link, using EventDrivenScheduler";
+            return EventScheduler();
+        }
     }
-    return true;
-#endif
+
+    // 无 ZeroCross 时使用默认数据流调度器
+    return OldScheduler();
 }
 
 bool SimRunner::NewScheduler()
@@ -1572,6 +1569,36 @@ bool SimRunner::TimeScheduler()
             return false;
         }
         qDebug() << "[SimRunner] 时间驱动仿真结束";
+    }
+
+    m_activeScheduler = ActiveScheduler::NONE;
+    return true;
+}
+
+bool SimRunner::EventScheduler()
+{
+    m_activeScheduler = ActiveScheduler::EVENT_DRIVEN;
+
+    for (const QString& linkKey : AlgorithmManager::createInstance()->getRunBlocks().keys())
+    {
+        QVector<Block*> blocks = AlgorithmManager::createInstance()->getRunBlocks().value(linkKey);
+
+        // 设置暂停控制
+        m_eventDrivenScheduler.setPauseControls(&m_paused, &m_stopRequested, &m_pauseMutex, &m_pauseCond);
+
+        // 获取仿真参数
+        SimuParameter simuParams;
+        auto simuParamsMap = AlgorithmManager::createInstance()->getSimuParameters();
+        if (simuParamsMap.contains(linkKey)) {
+            simuParams = simuParamsMap.value(linkKey);
+        }
+
+        // 调用事件驱动调度器
+        if (!m_eventDrivenScheduler.schedule(linkKey, blocks, m_verificationSystem, simuParams)) {
+            LOG_ERROR("[SimRunner] EventDrivenScheduler 调度失败");
+            m_activeScheduler = ActiveScheduler::NONE;
+            return false;
+        }
     }
 
     m_activeScheduler = ActiveScheduler::NONE;

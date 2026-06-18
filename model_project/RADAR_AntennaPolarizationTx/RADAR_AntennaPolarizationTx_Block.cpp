@@ -236,11 +236,24 @@ bool RADAR_AntennaPolarizationTx_Block::DataStreamRun()
 
     const std::complex<double> x = inputData[0].complex();
 
-    // 读取角度端口
-    auto azData  = ReadInputData<double>(GetInputPortName(0));
-    auto elData  = ReadInputData<double>(GetInputPortName(1));
-    auto bAzData = ReadInputData<double>(GetInputPortName(2));
-    auto bElData = ReadInputData<double>(GetInputPortName(3));
+    // 读取角度端口（可选端口，需先检查连接状态）
+    std::vector<double> azData;
+    std::vector<double> elData;
+    std::vector<double> bAzData;
+    std::vector<double> bElData;
+
+    if (GetInputPort(GetInputPortName(0))->IsConnected()) {
+        azData = ReadInputData<double>(GetInputPortName(0));
+    }
+    if (GetInputPort(GetInputPortName(1))->IsConnected()) {
+        elData = ReadInputData<double>(GetInputPortName(1));
+    }
+    if (GetInputPort(GetInputPortName(2))->IsConnected()) {
+        bAzData = ReadInputData<double>(GetInputPortName(2));
+    }
+    if (GetInputPort(GetInputPortName(3))->IsConnected()) {
+        bElData = ReadInputData<double>(GetInputPortName(3));
+    }
 
     const bool hasTargetAz = !azData.empty();
     const bool hasTargetEl = !elData.empty();
@@ -337,18 +350,25 @@ bool RADAR_AntennaPolarizationTx_Block::TimeDrivenRun()
 {
     SetParameters();
 
-    // ① 累积全部 5 路输入到各自队列
+    // ① 累积输入到各自队列（可选端口需先检查连接状态）
     {
-        auto azData    = ReadInputData<double>(GetInputPortName(0));
-        auto elData    = ReadInputData<double>(GetInputPortName(1));
-        auto bAzData   = ReadInputData<double>(GetInputPortName(2));
-        auto bElData   = ReadInputData<double>(GetInputPortName(3));
+        if (GetInputPort(GetInputPortName(0))->IsConnected()) {
+            auto azData = ReadInputData<double>(GetInputPortName(0));
+            for (auto& v : azData) m_azQueue.push(v);
+        }
+        if (GetInputPort(GetInputPortName(1))->IsConnected()) {
+            auto elData = ReadInputData<double>(GetInputPortName(1));
+            for (auto& v : elData) m_elQueue.push(v);
+        }
+        if (GetInputPort(GetInputPortName(2))->IsConnected()) {
+            auto bAzData = ReadInputData<double>(GetInputPortName(2));
+            for (auto& v : bAzData) m_beamAzQueue.push(v);
+        }
+        if (GetInputPort(GetInputPortName(3))->IsConnected()) {
+            auto bElData = ReadInputData<double>(GetInputPortName(3));
+            for (auto& v : bElData) m_beamElQueue.push(v);
+        }
         auto inputData = ReadInputData<EnvelopeSignal>(GetInputPortName(4));
-
-        for (auto& v : azData)    m_azQueue.push(v);
-        for (auto& v : elData)    m_elQueue.push(v);
-        for (auto& v : bAzData)   m_beamAzQueue.push(v);
-        for (auto& v : bElData)   m_beamElQueue.push(v);
         for (auto& v : inputData) m_inputQueue.push(v);
     }
 

@@ -193,7 +193,7 @@ LPF_ChebyshevII\
     Mapper \
 Math\
 MathCx \
-#MATLAB_Script\
+MATLAB_Script\
     MaxMin \
 Mixer \
     Modulo \
@@ -249,6 +249,7 @@ RADAR_CoIntgr\
 RADAR_CW \
     RADAR_CoIntgr_M \
     RADAR_CornerReflectorLocation \
+    RADAR_DBF \
     RADAR_DDC \
 RADAR_Detector\
 RADAR_DOA\
@@ -299,9 +300,11 @@ RADAR_RCS\
 RADAR_Switch\
     RADAR_TargetClassifier \
     RADAR_TargetDetect \
+    RADAR_TargetScatterLocation \
     RADAR_TargetTrack \
     RADAR_TargetTrack_M \
     RADAR_TargetTrajectory \
+    RADAR_Tx \
     RADAR_Tx_DBS_2D \
     RADAR_Tx_DBS_Measurement \
 RADAR_UnAmbRange\
@@ -385,7 +388,8 @@ UpSampleEnv \
     VarDelayEnv \
     VarDelayInt \
   Variance\
-Window
+Window \
+    ZeroCross
 
 
 

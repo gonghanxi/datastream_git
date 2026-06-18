@@ -114,26 +114,29 @@ bool Sink_Block::Run()
         m_currentSimulationTime = GetCurrentTime();
     }
 
+    // 事件驱动模式：ZeroCross触发时跳过数据输出，只推进时间（由迭代计数器处理）
+    if (IsEventDrivenMode() && ShouldSkipDataOutput()) {
+        return true;
+    }
+
     std::string inputPortName = GetInputPortName(0);
     BufferReader* inputReader = GetInputPort(inputPortName);
 
     // 处理变长数据（TIMED_DOUBLE）或普通 DOUBLE
-    // 读取一个或多个数据点
-    // 对于每个数据点：
-    //   1. 确定时间戳（时间驱动用真实时间，数据流模式根据采样率计算）
-    //   2. 存入缓冲区（DataPoint{time, value}）
-    //   3. 缓冲区满则调用 RunDealData() 批量写入
     if (inputReader->GetConnectedBuffer()->GetDataType() != DataType::DOUBLE) {
         auto inputData = ReadInputData<double>(inputPortName);
         if (inputData.empty()) {
-            return true;  // 无数据，静默跳过
+            // 事件驱动模式下无数据时仍然返回true（时间由迭代计数器推进）
+            return true;
         }
 
         for (size_t i = 0; i < inputData.size(); ++i) {
-            // 计算当前数据点的时间戳（数据流模式）或使用真实时间
             double timeVal = 0.0;
             if (m_isTimeDrivenMode) {
                 timeVal = m_currentSimulationTime;
+            } else if (IsEventDrivenMode()) {
+                // 事件驱动模式：用迭代计数计算时间
+                timeVal = (GetCurrentIteration() - 1) / m_sampleRate;
             } else {
                 switch (m_StartStopOption) {
                 case Sink::Auto:
@@ -143,7 +146,7 @@ bool Sink_Block::Run()
                     timeVal = m_TimeStart + (Index - 1) / m_sampleRate;
                     break;
                 case Sink::Samples:
-                    timeVal = 0.0;  // 不使用
+                    timeVal = 0.0;
                     break;
                 }
             }
@@ -152,9 +155,8 @@ bool Sink_Block::Run()
             m_pdBuffer[m_iBuffer].value = inputData[i];
             ++m_iBuffer;
             ++m_flushCounter;
-            ++Index;  // 全局序号递增
+            ++Index;
 
-            // 缓冲区满则写入
             RunDealData();
         }
     }
@@ -162,12 +164,16 @@ bool Sink_Block::Run()
     else {
         double inputData;
         if (!inputReader->ReadData(inputData)) {
-            return true;  // 无数据，静默跳过
+            // 事件驱动模式下无数据时仍然返回true
+            return true;
         }
 
         double timeVal = 0.0;
         if (m_isTimeDrivenMode) {
             timeVal = m_currentSimulationTime;
+        } else if (IsEventDrivenMode()) {
+            // 事件驱动模式：用迭代计数计算时间
+            timeVal = (GetCurrentIteration() - 1) / m_sampleRate;
         } else {
             switch (m_StartStopOption) {
             case Sink::Auto:
@@ -277,6 +283,20 @@ bool Sink_Block::Flush()
 
 bool Sink_Block::IsCollectionComplete()
 {
+    // 事件驱动模式：基于迭代计数判断完成
+    if (IsEventDrivenMode()) {
+        switch (m_StartStopOption) {
+        case Sink::Auto:
+            return GetCurrentIteration() >= static_cast<unsigned long long>(getSimu().num_Samples);
+        case Sink::Samples:
+            return (Index - 1) >= static_cast<unsigned long long>(m_SampleStop - m_SampleStart + 1);
+        case Sink::Time:
+            return GetCurrentIteration() >= static_cast<unsigned long long>(m_TimeStop * m_sampleRate);
+        default:
+            return false;
+        }
+    }
+
     unsigned long long collected = Index - 1;   // 实际已记录点数
 
     switch (m_StartStopOption) {

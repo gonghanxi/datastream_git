@@ -1,9 +1,11 @@
 #include "EventDrivenScheduler.h"
 #include "algorithmmanager.h"
 #include <QDebug>
+#include <QQueue>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <set>
 
 EventDrivenScheduler::EventDrivenScheduler()
     : m_stopSignal(false)
@@ -643,4 +645,552 @@ void EventDrivenScheduler::resetSchedulerContext(SchedulerContext& ctx)
     for (Block* block : ctx.executionOrder) {
         block->SetDone(false);
     }
+}
+
+// ========== 数据流调度接口实现 ==========
+
+bool EventDrivenScheduler::schedule(const QString& linkKey,
+                                    QVector<Block*> blocks,
+                                    std::shared_ptr<DataStreamVerification> verificationSystem,
+                                    const SimuParameter& simuParams)
+{
+    return eventDrivenSchedulerImpl(linkKey, blocks, verificationSystem, simuParams);
+}
+
+void EventDrivenScheduler::setPauseControls(QAtomicInt* paused,
+                                            QAtomicInt* stopRequested,
+                                            QMutex* pauseMutex,
+                                            QWaitCondition* pauseCond)
+{
+    m_paused = paused;
+    m_stopRequested = stopRequested;
+    m_pauseMutex = pauseMutex;
+    m_pauseCond = pauseCond;
+}
+
+int EventDrivenScheduler::generalWork(Block* currentBlock)
+{
+    if (!currentBlock || currentBlock->IsDone()) {
+        return -1;
+    }
+
+    if (currentBlock->Run()) {
+        if (currentBlock->GetBlockType() == Block::BlockType::SOURCE) {
+            std::map<std::string, Buffer*> outports = currentBlock->GetOutputPorts();
+            int generate_num = 1;
+            for (auto it = outports.begin(); it != outports.end(); ++it) {
+                size_t WriteSize = it->second->GetWriteSize();
+                generate_num = std::max(generate_num, static_cast<int>(WriteSize));
+            }
+            return generate_num;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+int EventDrivenScheduler::calculateMaxProcessCount(QVector<Block*> blocks,
+                                                   const QString& linkKey,
+                                                   int sourceCount)
+{
+    int maxProcessCount = 0;
+
+    for (auto block : blocks) {
+        if (block->GetBlockType() == Block::BlockType::SINK) {
+            std::string option = block->getParameter("StartStopOption").Value;
+            std::transform(option.begin(), option.end(), option.begin(), ::tolower);
+
+            int count = 0;
+            if (option == "auto") {
+                count = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).num_Samples * sourceCount;
+            }
+            else if (option == "samples") {
+                int sampleStop = std::stoi(block->getParameter("SampleStop").Value);
+                count = sampleStop * sourceCount;
+            }
+            else if (option == "time") {
+                double timeStop = std::stod(block->getParameter("TimeStop").Value);
+                double timeInterval = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).time_Interval;
+                count = static_cast<int>(timeStop / timeInterval) * sourceCount;
+            }
+
+            if (count > maxProcessCount) {
+                maxProcessCount = count;
+            }
+        }
+    }
+
+    return maxProcessCount > 0 ? maxProcessCount : 1000;
+}
+
+void EventDrivenScheduler::precomputeDownstreamSets(SchedulerContext& ctx)
+{
+    ctx.zeroCrossBlocks.clear();
+    ctx.zeroCrossDownstreamMap.clear();
+
+    // Find all ZeroCross blocks (使用类型标识，不依赖跨DLL虚函数)
+    for (Block* block : ctx.executionOrder) {
+        if (block->IsZeroCrossType()) {
+            ctx.zeroCrossBlocks.append(block);
+        }
+    }
+
+    if (ctx.zeroCrossBlocks.isEmpty()) {
+        return;
+    }
+
+    // For each ZeroCross block, BFS forward through connections to find all downstream blocks
+    for (Block* zcBlock : ctx.zeroCrossBlocks) {
+        QSet<Block*>& downstreamSet = ctx.zeroCrossDownstreamMap[zcBlock];
+        QQueue<Block*> bfsQueue;
+
+        // Start from ZeroCross's output ports
+        for (size_t i = 0; i < zcBlock->GetOutputPortCount(); i++) {
+            std::string portName = zcBlock->GetOutputPortName(i);
+            Buffer* buffer = zcBlock->GetOutputPort(portName);
+            if (!buffer) continue;
+
+            // Find all blocks that read from this buffer
+            for (Block* candidate : ctx.executionOrder) {
+                if (candidate == zcBlock) continue;
+                for (size_t j = 0; j < candidate->GetInputPortCount(); j++) {
+                    std::string inPortName = candidate->GetInputPortName(j);
+                    BufferReader* reader = candidate->GetInputPort(inPortName);
+                    if (reader && reader->GetConnectedBuffer() == buffer) {
+                        if (!downstreamSet.contains(candidate)) {
+                            downstreamSet.insert(candidate);
+                            bfsQueue.enqueue(candidate);
+                        }
+                    }
+                }
+            }
+        }
+
+        // BFS: for each downstream block, find its downstream blocks
+        while (!bfsQueue.isEmpty()) {
+            Block* current = bfsQueue.dequeue();
+            for (size_t i = 0; i < current->GetOutputPortCount(); i++) {
+                std::string portName = current->GetOutputPortName(i);
+                Buffer* buffer = current->GetOutputPort(portName);
+                if (!buffer) continue;
+
+                for (Block* candidate : ctx.executionOrder) {
+                    if (candidate == current || downstreamSet.contains(candidate)) continue;
+                    for (size_t j = 0; j < candidate->GetInputPortCount(); j++) {
+                        std::string inPortName = candidate->GetInputPortName(j);
+                        BufferReader* reader = candidate->GetInputPort(inPortName);
+                        if (reader && reader->GetConnectedBuffer() == buffer) {
+                            downstreamSet.insert(candidate);
+                            bfsQueue.enqueue(candidate);
+                        }
+                    }
+                }
+            }
+        }
+
+        qDebug() << "[EventDrivenScheduler] ZeroCross block:" << QString::fromStdString(zcBlock->GetName())
+                 << "downstream count:" << downstreamSet.size();
+        for (Block* d : downstreamSet) {
+            qDebug() << "  ->" << QString::fromStdString(d->GetName());
+        }
+    }
+}
+
+bool EventDrivenScheduler::isDownstreamOfTriggeredZeroCross(const SchedulerContext& ctx, Block* block) const
+{
+    for (Block* zc : ctx.zeroCrossBlocks) {
+        if (zc->IsZeroCrossTriggered()) {
+            auto it = ctx.zeroCrossDownstreamMap.find(zc);
+            if (it != ctx.zeroCrossDownstreamMap.end() && it.value().contains(block)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
+                                                    QVector<Block*> blocks,
+                                                    std::shared_ptr<DataStreamVerification> verificationSystem,
+                                                    const SimuParameter& simuParams)
+{
+    if (!verificationSystem) {
+        LOG_ERROR("[EventDrivenScheduler] Verification system not initialized!");
+        return false;
+    }
+
+    // 1. Create verification system
+    auto VerificationSystem = Block::GetVerificationSystem();
+    if (!VerificationSystem) {
+        LOG_ERROR("[EventDrivenScheduler] Cannot get verification system!");
+        return false;
+    }
+
+    // 2. Register blocks
+    for (auto block : blocks) {
+        VerificationSystem->registerBlock(block);
+    }
+
+    LOG_INFO("[EventDrivenScheduler] Data consistency check passed");
+
+    // 3. Group blocks by type
+    QMap<Block::BlockType, QVector<Block*>> blocksByType;
+    for (Block* block : blocks) {
+        blocksByType[block->GetBlockType()].append(block);
+    }
+
+    // 4. Topologically sort processors
+    QVector<Block*> sortedProcessors;
+    if (!blocksByType[Block::BlockType::PROCESSOR].isEmpty()) {
+        sortedProcessors = m_topologySorter.sortProcessorsCrossLayer(
+            linkKey,
+            AlgorithmManager::createInstance()->getBlocksInfo(),
+            AlgorithmManager::createInstance()->getConnection()
+        );
+    } else {
+        sortedProcessors = blocksByType[Block::BlockType::PROCESSOR];
+    }
+
+    // 5. Build execution order
+    QVector<Block*> executionOrder;
+    executionOrder.append(blocksByType[Block::BlockType::SOURCE]);
+    executionOrder.append(sortedProcessors);
+    executionOrder.append(blocksByType[Block::BlockType::SINK]);
+
+    qDebug() << "[EventDrivenScheduler] Execution order:";
+    for (Block* block : executionOrder) {
+        qDebug() << "  " << QString::fromStdString(block->GetName());
+    }
+
+    // 6. Count sources and sinks
+    int sourceCount = 0, sinkCount = 0, OutputBusCount = 0;
+    for (Block* block : blocks) {
+        if (block->GetBlockType() == Block::BlockType::SOURCE) sourceCount++;
+        else if (block->GetBlockType() == Block::BlockType::SINK) sinkCount++;
+        for (size_t i = 0; i < block->GetOutputPortCount(); i++) {
+            Buffer* buffer = block->GetOutputPort(block->GetOutputPortName(i));
+            if (buffer->IsBusType(buffer->GetDataType())) {
+                OutputBusCount++;
+            }
+        }
+    }
+
+    if (sourceCount == 0 || sinkCount == 0) {
+        LOG_ERROR("[EventDrivenScheduler] Missing source or sink blocks!");
+        return false;
+    }
+
+    // 7. Calculate max process count
+    int maxProcessCount = calculateMaxProcessCount(blocks, linkKey, sourceCount);
+
+    // 8. Initialize all blocks
+    for (Block* block : executionOrder) {
+        block->SetDone(false);
+    }
+
+    // 9. Set event-driven mode on all blocks
+    for (Block* block : executionOrder) {
+        block->SetEventDrivenMode(true);
+    }
+
+    // 10. Build scheduler context and precompute downstream sets
+    SchedulerContext ctx;
+    ctx.linkKey = linkKey;
+    ctx.executionOrder = executionOrder;
+    ctx.sourceCount = sourceCount;
+    ctx.sinkCount = sinkCount;
+    ctx.OutputBusCount = OutputBusCount;
+    ctx.currentIteration = 0;
+
+    precomputeDownstreamSets(ctx);
+
+    for (Block* block : blocks) {
+        if (block->GetBlockType() == Block::BlockType::SINK) {
+            ctx.sinkProcessCount[block->GetName()] = 0;
+        }
+    }
+
+    // 11. Scheduling state
+    unsigned int nalive = blocks.size();
+    unsigned int blocks_count = nalive;
+    bool made_progress_last_pass = true;
+    bool making_progress = false;
+    int iteration = 0;
+    int lastProgress = -1;
+    int noProgressCount = 0;
+    int FinalProgress = 0;
+    const int MAX_NO_PROGRESS_ITERATIONS = 1000;
+
+    qDebug() << "[EventDrivenScheduler] Starting data-flow scheduling";
+    qDebug() << "  ZeroCross blocks:" << ctx.zeroCrossBlocks.size();
+    qDebug() << "  Max process count:" << maxProcessCount;
+
+    // ========== Main scheduling loop ==========
+    // Event-driven mode: currentIteration is the authoritative counter.
+    // Loop terminates when sinks complete naturally (nalive == 0)
+    // OR when iteration budget is exhausted.
+    while (nalive > 0 && ctx.currentIteration < (unsigned long long)maxProcessCount) {
+
+        // Check stop request
+        if (m_stopRequested && (*m_stopRequested)) {
+            LOG_INFO("[EventDrivenScheduler] Stop requested, terminating...");
+            break;
+        }
+
+        // Check pause state
+        if (m_paused && (*m_paused)) {
+            QMutexLocker locker(m_pauseMutex);
+            LOG_INFO("[EventDrivenScheduler] Paused, waiting...");
+
+            while (m_paused && (*m_paused) && m_stopRequested && !(*m_stopRequested)) {
+                m_pauseCond->wait(m_pauseMutex, 1000);
+            }
+
+            if (m_stopRequested && (*m_stopRequested)) {
+                break;
+            }
+            LOG_INFO("[EventDrivenScheduler] Resumed");
+        }
+
+        iteration++;
+        making_progress = false;
+
+        // Increment and broadcast iteration count
+        ctx.currentIteration++;
+        for (Block* b : executionOrder) {
+            b->SetCurrentIteration(ctx.currentIteration);
+        }
+
+        // Iterate blocks in topological order
+        for (Block* currentBlock : executionOrder) {
+            if (currentBlock->IsDone()) {
+                continue;
+            }
+
+            Block::BlockType type = currentBlock->GetBlockType();
+            bool blockDone = false;
+            bool progressMade = false;
+
+            // Deadlock detection
+            if (noProgressCount / blocks_count > 10) {
+                LOG_ERROR("[EventDrivenScheduler] Too many iterations without progress");
+                blockDone = true;
+            } else {
+                if (type == Block::BlockType::SOURCE) {
+                    // SOURCE in event-driven mode: runs every iteration to produce data.
+                    // Terminate when iteration budget is exhausted or downstream is done.
+                    if (ctx.currentIteration >= (unsigned long long)maxProcessCount ||
+                            currentBlock->IsDownstreamDone()) {
+                        blockDone = true;
+                    }
+
+                    bool output_ready = true;
+                    for (size_t i = 0; i < currentBlock->GetOutputPortCount(); i++) {
+                        std::string portName = currentBlock->GetOutputPortName(i);
+                        Buffer* buffer = currentBlock->GetOutputPort(portName);
+                        if (buffer->GetReaderCount() != 0) {
+                            size_t freeSpace = buffer->GetBufferFreeSpace();
+                            if (freeSpace == 0) {
+                                output_ready = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!output_ready) {
+                        continue;
+                    }
+
+                    int result = generalWork(currentBlock);
+                    if (result > 0) {
+                        progressMade = true;
+                        making_progress = true;
+                    }
+                }
+                else if (type == Block::BlockType::SINK) {
+                    // Set skip flag for sink if downstream of triggered ZeroCross
+                    // Sink still runs (to advance time) but checks this flag to skip data output
+                    bool shouldSkip = isDownstreamOfTriggeredZeroCross(ctx, currentBlock);
+                    currentBlock->SetSkipDataOutput(shouldSkip);
+                    // SINK: called every iteration
+                    // Check termination conditions
+                    int max_items_avail = 0;
+                    bool input_done = false;
+                    bool all_upstream_done = true;
+
+                    for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
+                        std::string portName = currentBlock->GetInputPortName(i);
+                        BufferReader* reader = currentBlock->GetInputPort(portName);
+                        size_t available = reader->GetAvailableDataCount();
+
+                        if (available < 1) {
+                            if (reader->IsUpstreamDone()) {
+                                input_done = true;
+                            }
+                        }
+
+                        if (!reader->IsUpstreamDone()) {
+                            all_upstream_done = false;
+                        }
+
+                        if (max_items_avail < (int)available) {
+                            max_items_avail = available;
+                        }
+                    }
+
+                    // Check if sink should terminate
+                    if ((input_done && all_upstream_done) ||
+                            (FinalProgress == 100 && nalive / sinkCount == 1 && OutputBusCount > 0)) {
+                        blockDone = true;
+                    }
+                    else {
+                        // Always call sink (even if no data available)
+                        // Sink's Run() handles event-driven mode internally
+                        int result = generalWork(currentBlock);
+                        if (result > 0) {
+                            progressMade = true;
+                            making_progress = true;
+                            // Only count data actually received
+                            if (max_items_avail > 0) {
+                                BufferReader* reader = currentBlock->GetInputPort(currentBlock->GetInputPortName(0));
+                                ctx.sinkProcessCount[currentBlock->GetName()] += reader->GetReadSize();
+                            }
+                        }
+                    }
+
+                    if (blockDone) {
+                        currentBlock->SetDone(true);
+                        currentBlock->Stop();
+                        nalive--;
+                        sinkCount--;
+                        break;
+                    }
+                }
+                else { // PROCESSOR
+                    // KEY CHECK: Skip if downstream of triggered ZeroCross
+                    if (isDownstreamOfTriggeredZeroCross(ctx, currentBlock)) {
+                        // Consume input data to advance read pointers.
+                        // This prevents stale data from being read when the block
+                        // resumes execution in the next iteration.
+                        // Do NOT ResetBuffer output - that resets read/write pointers
+                        // and desynchronizes downstream readers.
+                        for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
+                            std::string portName = currentBlock->GetInputPortName(i);
+                            BufferReader* reader = currentBlock->GetInputPort(portName);
+                            if (reader && reader->HasValidConnection() && reader->HasDataAvailable()) {
+                                // Read and discard data to advance the read pointer
+                                std::vector<double> discard;
+                                reader->ReadData(discard);
+                            }
+                        }
+                        qDebug() << "[EventDrivenScheduler] SKIP block:" << QString::fromStdString(currentBlock->GetName())
+                                 << "iteration:" << ctx.currentIteration;
+                        continue;
+                    }
+
+                    // In event-driven mode, processors run every iteration.
+                    // The block's Run() handles empty input gracefully.
+                    // Skip only if output buffer is full (backpressure).
+                    bool output_ready = true;
+                    for (size_t i = 0; i < currentBlock->GetOutputPortCount(); i++) {
+                        std::string portName = currentBlock->GetOutputPortName(i);
+                        Buffer* buffer = currentBlock->GetOutputPort(portName);
+                        if (buffer->GetReaderCount() == 0) continue;
+                        size_t freeSpace = buffer->GetBufferFreeSpace();
+                        if (freeSpace <= 0) {
+                            output_ready = false;
+                            break;
+                        }
+                    }
+
+                    if (!output_ready) {
+                        continue;
+                    }
+
+                    // Check if upstream is done (for blockDone detection)
+                    bool allUpstreamDone = true;
+                    for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
+                        std::string portName = currentBlock->GetInputPortName(i);
+                        BufferReader* reader = currentBlock->GetInputPort(portName);
+                        if (reader->HasValidConnection() && !reader->IsUpstreamDone()) {
+                            allUpstreamDone = false;
+                            break;
+                        }
+                    }
+
+                    if (allUpstreamDone) {
+                        blockDone = true;
+                    }
+
+                    if (!blockDone) {
+                        int result = generalWork(currentBlock);
+                        if (result > 0) {
+                            progressMade = true;
+                            making_progress = true;
+                            noProgressCount = 0;
+                        }
+                    }
+                }
+            }
+
+            if (blockDone) {
+                currentBlock->SetDone(true);
+                currentBlock->Stop();
+                nalive--;
+            }
+
+            if (!progressMade && !blockDone) {
+                noProgressCount++;
+            }
+        }
+
+        // End of pass
+        made_progress_last_pass = making_progress;
+        making_progress = false;
+
+        // Deadlock detection
+        if (!made_progress_last_pass) {
+            if (++noProgressCount > MAX_NO_PROGRESS_ITERATIONS) {
+                LOG_ERROR("[EventDrivenScheduler] Deadlock detected, forcing exit");
+                break;
+            }
+        } else {
+            noProgressCount = 0;
+        }
+
+        // Progress update (based on iterations for event-driven mode)
+        double iterationProgress = (double)ctx.currentIteration / maxProcessCount * 100.0;
+        int currentProgress = static_cast<int>(iterationProgress);
+        if (currentProgress > lastProgress) {
+            lastProgress = currentProgress;
+            if (currentProgress % 10 == 0) {
+                LOG_DEBUG("[EventDrivenScheduler] Progress:", currentProgress, "%");
+                std::cout << "[PROCESS]" << currentProgress << "%" << std::endl;
+                fflush(stdout);
+                if (currentProgress >= 100) FinalProgress = 100;
+            }
+        }
+    }
+
+    // Final progress
+    int finalProgress = 100;
+    if (nalive > 0 && ctx.currentIteration < (unsigned long long)maxProcessCount) {
+        // Loop exited abnormally (e.g., deadlock), calculate partial progress
+        finalProgress = static_cast<int>((double)ctx.currentIteration / maxProcessCount * 100.0);
+    }
+    LOG_INFO("[EventDrivenScheduler] Final progress:", finalProgress, "%");
+    std::cout << "[PROCESS]" << finalProgress << "%" << std::endl;
+
+    // Cleanup
+    for (Block* block : blocks) {
+        if (!block->IsDone()) {
+            block->SetDone(true);
+            block->Stop();
+        }
+        block->Done();
+    }
+
+    qDebug() << "[EventDrivenScheduler] Scheduling complete."
+             << "Total iterations:" << ctx.currentIteration;
+    return true;
 }

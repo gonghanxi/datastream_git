@@ -184,6 +184,7 @@ bool SimpleScheduler::simpleSchedulerImpl(const QString& linkKey,
     int noProgressCount = 0;
     int FinalProgress = 0;
     const int MAX_NO_PROGRESS_ITERATIONS = 1000;
+    std::set<std::string> processedBlocks;  // 追踪已实际执行过的 processor block
 
     // 主调度循环
     while (nalive > 0 || processCount < maxProcessCount) {
@@ -348,25 +349,25 @@ bool SimpleScheduler::simpleSchedulerImpl(const QString& linkKey,
                         blockDone = true;
                         goto process_sink_done;
                     }
-
-                    // 如果没有数据可用，跳过
-                    if (max_items_avail < 1) {
+                    else if (max_items_avail < 1) {
+                        // 如果没有数据可用，跳过
                         qDebug() << "Sink: no data available";
                         continue;
                     }
-
-                    // 执行sink块的工作
-                    progressMade = processSinkBlock(currentBlock);
-                    if (progressMade) {
-                        making_progress = true;
-                        BufferReader* reader = currentBlock->GetInputPort(currentBlock->GetInputPortName(0));
-                        qDebug() << "sink reader read size: " << reader->GetReadSize();
-                        sinkProcessCount[currentBlock->GetName()] += reader->GetReadSize();
-                        qDebug() << QString::fromStdString(currentBlock->GetName())
-                                 << " Sink collected data, count: " << sinkProcessCount[currentBlock->GetName()];
+                    else {
+                        // 执行sink块的工作
+                        progressMade = processSinkBlock(currentBlock);
+                        if (progressMade) {
+                            making_progress = true;
+                            BufferReader* reader = currentBlock->GetInputPort(currentBlock->GetInputPortName(0));
+                            qDebug() << "sink reader read size: " << reader->GetReadSize();
+                            sinkProcessCount[currentBlock->GetName()] += reader->GetReadSize();
+                            qDebug() << QString::fromStdString(currentBlock->GetName())
+                                     << " Sink collected data, count: " << sinkProcessCount[currentBlock->GetName()];
+                        }
                     }
 
-process_sink_done:
+                    process_sink_done:
                     if (blockDone) {
                         currentBlock->SetDone(true);
                         currentBlock->Stop();
@@ -381,24 +382,36 @@ process_sink_done:
                     bool input_ready = true;
                     bool upstream_done = false;
                     bool hasActiveInputPorts = false;
+                    bool hasConnectedPorts = false;       // 是否有已连接的输入端口
+                    bool allConnectedUpstreamDone = true;  // 所有已连接端口的上游是否完成
 
                     for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
                         std::string portName = currentBlock->GetInputPortName(i);
                         qDebug() << "currentBlock Port: " << QString::fromStdString(portName);
-                        if(!currentBlock->GetInputPort(portName)->HasValidConnection() &&
-                                !currentBlock->GetInputPort(portName)->IsBusType(currentBlock->GetInputPort(portName)->GetDataType())) {
+                        BufferReader* reader = currentBlock->GetInputPort(portName);
+                        bool isConnected = reader->HasValidConnection();
+                        bool isBusType = reader->IsBusType(reader->GetDataType());
+
+                        // 非总线类型且无有效连接：完全跳过
+                        if(!isConnected && !isBusType) {
                             qDebug() << "currentBlock"  << QString::fromStdString(currentBlock->GetName()) << "Port: " << QString::fromStdString(portName) << "Skip";
-                            qDebug() << "Checking currentBlock Port: "
-                                     << (currentBlock->GetInputPort(portName)->HasValidConnection() ? "true" : "false");
+                            qDebug() << "Checking currentBlock Port: false";
                             continue;
                         }
+
+                        // 总线类型但无实际连接（未连接的 bus 端口）：跳过
+                        if(isBusType && reader->GetBusConnections().empty()) {
+                            continue;
+                        }
+
                         hasActiveInputPorts = true;
-                        BufferReader* reader = currentBlock->GetInputPort(portName);
+                        hasConnectedPorts = true;
+
                         if (!reader->HasDataAvailable()) {
                             input_ready = false;
                             //判断bus类型是否应该退出
-                            if(reader->IsBusType(reader->GetDataType())) {
-                                bool all_done = true;  // 初始为 true
+                            if(isBusType) {
+                                bool all_done = true;
                                 for(auto busreader : reader->GetBusConnections()) {
                                     all_done &= busreader.bridgeReader->IsUpstreamDone();
                                     qDebug() << "busreader.bridgeReader: "
@@ -407,14 +420,35 @@ process_sink_done:
                                     qDebug() << "busreader: " << (busreader.bridgeReader->IsUpstreamDone()?"true":"false");
                                 }
                                 upstream_done = all_done;
+                                allConnectedUpstreamDone &= all_done;
                             }
                             else {
-                                if (reader->IsUpstreamDone() && reader->HasValidConnection()) {
+                                if (reader->IsUpstreamDone()) {
                                     upstream_done = true;
+                                    // allConnectedUpstreamDone &= true (不变)
+                                } else {
+                                    allConnectedUpstreamDone = false;
                                 }
                             }
-
+                        } else {
+                            // 有数据可用，但上游可能仍在产生数据
+                            if(isBusType) {
+                                bool all_done = true;
+                                for(auto busreader : reader->GetBusConnections()) {
+                                    all_done &= busreader.bridgeReader->IsUpstreamDone();
+                                }
+                                allConnectedUpstreamDone &= all_done;
+                            } else {
+                                if (!reader->IsUpstreamDone()) {
+                                    allConnectedUpstreamDone = false;
+                                }
+                            }
                         }
+                    }
+
+                    // 如果没有已连接的端口，allConnectedUpstreamDone 不应为 true
+                    if (!hasConnectedPorts) {
+                        allConnectedUpstreamDone = false;
                     }
 
                     if (!hasActiveInputPorts) {
@@ -449,29 +483,36 @@ process_sink_done:
                         }
                     }
 
-                    qDebug() << "upstream_done: " << upstream_done;
-                    // 检查processor是否应该结束
-                    if (upstream_done && AllOutPortsfreeSpace != 0) {
-                        blockDone = true;
-                        goto process_processor_done;
-                    }
+                    qDebug() << "upstream_done: " << upstream_done
+                             << " allConnectedUpstreamDone: " << allConnectedUpstreamDone;
 
-                    if (!input_ready || !output_ready) {
+                    bool hasRunBefore = processedBlocks.count(currentBlock->GetName()) > 0;
+
+                    // 当所有已连接端口上游完成但块从未执行时，强制执行一次
+                    // 防止因 input_ready 永远为 false 导致死锁
+                    bool forceRun = allConnectedUpstreamDone && !hasRunBefore && output_ready;
+
+                    // 检查processor是否应该结束
+                    // 条件：所有已连接端口上游完成 + 有输出空间 + 至少执行过一次
+                    if (allConnectedUpstreamDone && AllOutPortsfreeSpace != 0 && hasRunBefore) {
+                        blockDone = true;
+                    }
+                    else if (!forceRun && (!input_ready || !output_ready)) {
                         qDebug() << "Processor not ready - input_ready: " << input_ready
                                  << ", output_ready: " << output_ready;
                         continue;
                     }
 
-                    // 执行processor块的工作
-                    progressMade = processProcessorBlock(currentBlock);
-                    if (progressMade) {
-                        making_progress = true;
-                        noProgressCount = 0;
-                        qDebug() << "Processor processed data";
+                    if (!blockDone) {
+                        // 执行processor块的工作
+                        progressMade = processProcessorBlock(currentBlock);
+                        if (progressMade) {
+                            making_progress = true;
+                            noProgressCount = 0;
+                            processedBlocks.insert(currentBlock->GetName());
+                            qDebug() << "Processor processed data";
+                        }
                     }
-
-process_processor_done:
-                    ;
                 }
             }
 

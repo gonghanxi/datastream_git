@@ -1,6 +1,11 @@
 #include "AtoD_Block.h"
+#include <algorithm>
+#include <cmath>
 
 namespace {
+const double kPi = 3.1415926535897932384626433832795;
+const double kTiny = 1e-30;
+
 std::string TrimCopy(const std::string& value)
 {
     std::string s = value;
@@ -15,47 +20,74 @@ std::string ToLowerCopy(const std::string& value)
     std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     return s;
 }
+
+double clip(double x, double lo, double hi)
+{
+    if (x < lo) return lo;
+    if (x > hi) return hi;
+    return x;
+}
+
+int clampInt(int v, int lo, int hi)
+{
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
 }
 
 AtoD_Block::AtoD_Block(const std::string& name)
     : Block(name)
+    , m_sampleIndex(0)
+    , m_sdIIntegrator(0.0)
+    , m_sdQIntegrator(0.0)
+    , m_sdIFeedback(0.0)
+    , m_sdQFeedback(0.0)
+    , m_sdIAccum(0.0)
+    , m_sdQAccum(0.0)
+    , m_sdAccumCount(0)
+    , m_sdHeldOutput(0.0, 0.0)
+    , m_rng(0x12345678)
+    , m_hasClockState(false)
+    , m_lastClockValue(0.0)
+    , m_heldSample(0.0, 0.0)
+    , m_hasPendingClockSample(false)
+    , m_pendingClockSample(0.0, 0.0)
+    , m_hasRawInputState(false)
+    , m_prevRawInputTime(0.0)
+    , m_prevRawInput(0.0, 0.0)
+    , m_hasNextClockCrossing(false)
+    , m_nextClockCrossingTime(0.0)
 {
 }
 
 bool AtoD_Block::parseArrayString(const std::string &arrayStr, std::vector<double> &outArray)
 {
-        outArray.clear();
+    outArray.clear();
 
     std::string str = arrayStr;
-    // 去除首尾空格
     size_t start = str.find_first_not_of(" \t\n\r");
     if (start == std::string::npos) return false;
     size_t end = str.find_last_not_of(" \t\n\r");
     str = str.substr(start, end - start + 1);
 
-    // 检查是否是数组格式
     if (str.empty() || str.front() != '[' || str.back() != ']') {
         return false;
     }
 
-    // 去除外层括号
     std::string content = str.substr(1, str.length() - 2);
 
-    // 去除首尾空格
     start = content.find_first_not_of(" \t\n\r");
     if (start == std::string::npos) {
-        // 空数组
         return true;
     }
     end = content.find_last_not_of(" \t\n\r");
     content = content.substr(start, end - start + 1);
 
-    // 按逗号分割
     std::stringstream ss(content);
     std::string item;
 
     while (std::getline(ss, item, ',')) {
-        // 去除空格
         start = item.find_first_not_of(" \t\n\r");
         if (start == std::string::npos) continue;
         end = item.find_last_not_of(" \t\n\r");
@@ -79,6 +111,7 @@ void AtoD_Block::SetDefaultParamters()
 {
     m_NBits = 8;
     m_VRef = 1.0;
+    m_ADCType = AtoD::Current_AtoD;
     m_OutputDigitalFormat = AtoD::Offset_binary;
     m_DistortionModel = AtoD::Jitter_INL_DNL;
     m_EnableJitter = AtoD::Jitter_No;
@@ -115,54 +148,253 @@ void AtoD_Block::SetDefaultParamters()
     m_AntiAliasingFilter = AtoD::AA_OFF;
     m_ExcessBW = 0.5;
 
+    m_PipelineStageBits = 1;
+    m_PipelineLatency = 0;
+    m_SigmaDeltaOrder = 1;
+    m_SigmaDeltaOSR = 16;
 }
 
 void AtoD_Block::SetParameters()
 {
     m_PhaseNoiseData = primdata.data();
-    m_PhaseNoiseDataSize =  static_cast<double>(primdata.size());
-    if(!m_atod) {
-        return;
+    m_PhaseNoiseDataSize = static_cast<double>(primdata.size());
+}
+
+void AtoD_Block::initQuantizationParams()
+{
+    m_nbits = clampInt(m_NBits, 4, 16);
+    
+    if (m_VRef <= 0.0)
+        m_vref = 1.0;
+    else
+        m_vref = m_VRef;
+    
+    m_codeCount = 1 << m_nbits;
+    m_midCode = m_codeCount / 2;
+    m_lsb = 2.0 * m_vref / static_cast<double>(m_codeCount);
+    
+    m_sampleIndex = 0;
+    m_pipelineFifo.clear();
+    
+    m_sdIIntegrator = 0.0;
+    m_sdQIntegrator = 0.0;
+    m_sdIFeedback = 0.0;
+    m_sdQFeedback = 0.0;
+    m_sdIAccum = 0.0;
+    m_sdQAccum = 0.0;
+    m_sdAccumCount = 0;
+    m_sdHeldOutput = std::complex<double>(0.0, 0.0);
+}
+
+AtoD_Block::QuantResult AtoD_Block::quantize(double x) const
+{
+    QuantResult r;
+    double xc = clip(x, -m_vref, m_vref);
+    
+    double u = (xc + m_vref) / m_lsb;
+    int code = static_cast<int>(std::floor(u));
+    code = clampInt(code, 0, m_codeCount - 1);
+    
+    r.codeOffset = code;
+    r.analog = -m_vref + (static_cast<double>(code) + 0.5) * m_lsb;
+    
+    if (m_OutputDigitalFormat == AtoD::Twos_complement)
+        r.codeDigital = code - m_midCode;
+    else
+        r.codeDigital = code;
+    
+    return r;
+}
+
+AtoD_Block::QuantResult AtoD_Block::quantizeFlash(double x) const
+{
+    QuantResult r;
+    double xc = clip(x, -m_vref, m_vref);
+    int code = 0;
+    
+    for (int k = 1; k < m_codeCount; ++k) {
+        double th = -m_vref + static_cast<double>(k) * m_lsb;
+        if (xc >= th)
+            ++code;
+        else
+            break;
     }
-    m_atod->NBits = m_NBits;
-    m_atod->VRef = m_VRef;
-    m_atod->OutputDigitalFormat = m_OutputDigitalFormat;
-    m_atod->DistortionModel = m_DistortionModel;
-    m_atod->EnableJitter = m_EnableJitter;
-    m_atod->RJrms = m_RJrms;
-    m_atod->PhaseNoiseData = m_PhaseNoiseData;
-    m_atod->PhaseNoiseDataSize = m_PhaseNoiseDataSize;
+    
+    code = clampInt(code, 0, m_codeCount - 1);
+    r.codeOffset = code;
+    r.analog = -m_vref + (static_cast<double>(code) + 0.5) * m_lsb;
+    
+    if (m_OutputDigitalFormat == AtoD::Twos_complement)
+        r.codeDigital = code - m_midCode;
+    else
+        r.codeDigital = code;
+    
+    return r;
+}
 
+std::complex<double> AtoD_Block::processPipeline(const std::complex<double>& x)
+{
+    if (m_PipelineLatency <= 0)
+        return x;
+    
+    m_pipelineFifo.push_back(x);
+    
+    if (static_cast<int>(m_pipelineFifo.size()) <= m_PipelineLatency)
+        return std::complex<double>(0.0, 0.0);
+    
+    std::complex<double> y = m_pipelineFifo.front();
+    m_pipelineFifo.erase(m_pipelineFifo.begin());
+    return y;
+}
 
-    m_atod->PN_Type = m_PN_Type;
+std::complex<double> AtoD_Block::processSigmaDelta(const std::complex<double>& x)
+{
+    double ui = clip(x.real() / std::max(m_vref, kTiny), -1.0, 1.0);
+    double uq = clip(x.imag() / std::max(m_vref, kTiny), -1.0, 1.0);
+    
+    m_sdIIntegrator += ui - m_sdIFeedback;
+    double bi = (m_sdIIntegrator >= 0.0) ? 1.0 : -1.0;
+    m_sdIFeedback = bi;
+    
+    m_sdQIntegrator += uq - m_sdQFeedback;
+    double bq = (m_sdQIntegrator >= 0.0) ? 1.0 : -1.0;
+    m_sdQFeedback = bq;
+    
+    m_sdIAccum += bi;
+    m_sdQAccum += bq;
+    ++m_sdAccumCount;
+    
+    int osr = std::max(1, m_SigmaDeltaOSR);
+    if (m_sdAccumCount >= osr) {
+        double ai = m_sdIAccum / static_cast<double>(m_sdAccumCount);
+        double aq = m_sdQAccum / static_cast<double>(m_sdAccumCount);
+        
+        m_sdHeldOutput = std::complex<double>(
+            clip(ai * m_vref, -m_vref, m_vref),
+            clip(aq * m_vref, -m_vref, m_vref));
+        
+        m_sdIAccum = 0.0;
+        m_sdQAccum = 0.0;
+        m_sdAccumCount = 0;
+    }
+    else if (m_sampleIndex == 0) {
+        m_sdHeldOutput = std::complex<double>(bi * m_vref, bq * m_vref);
+    }
+    
+    return m_sdHeldOutput;
+}
 
-    m_atod->INL = m_INL;
-    m_atod->DNL = m_DNL;
+double AtoD_Block::firstPositiveCrossingAtOrAfter(double t) const
+{
+    const double period = 1.0 / std::max(m_Clock, kTiny);
+    const double phaseRad = m_Phase * kPi / 180.0;
+    const double base = ((1.5 * kPi) - phaseRad) / (2.0 * kPi * std::max(m_Clock, kTiny));
 
-    m_atod->ENOB = m_ENOB;
-    m_atod->SNR_dB = m_SNR_dB;
-    m_atod->H2_dBc = m_H2_dBc;
-    m_atod->H3_dBc = m_H3_dBc;
-    m_atod->H4_dBc = m_H4_dBc;
-    m_atod->H5_dBc = m_H5_dBc;
+    double k = std::ceil((t - base) / period - 1e-12);
+    if (k < 0.0)
+        k = 0.0;
 
-    m_atod->SINAD_dB = m_SINAD_dB;
-    m_atod->SFDR_dBc = m_SFDR_dBc;
-    m_atod->FFT_Size = m_FFT_Size;
+    double ts = base + k * period;
+    while (ts < t - 1e-15)
+        ts += period;
 
-    m_atod->SNR_Model = m_SNR_Model;
-    m_atod->ThermalNoise_SNR_dBFS = m_ThermalNoise_SNR_dBFS;
-    m_atod->CenterFreq = m_CenterFreq;
-    m_atod->Level_dBFS = m_Level_dBFS;
+    return ts;
+}
 
-    m_atod->ConversionType = m_ConversionType;
-    m_atod->Clock = m_Clock;
-    m_atod->Phase = m_Phase;
+std::complex<double> AtoD_Block::interpSample(const std::complex<double>& x0, double t0,
+                                               const std::complex<double>& x1, double t1, double ts) const
+{
+    if (std::fabs(t1 - t0) <= kTiny)
+        return x1;
 
-    m_atod->DownsampleFactor = m_DownsampleFactor;
-    m_atod->DownsamplePhase = m_DownsamplePhase;
-    m_atod->AntiAliasingFilter = m_AntiAliasingFilter;
-    m_atod->ExcessBW = m_ExcessBW;
+    double a = (ts - t0) / (t1 - t0);
+    a = clip(a, 0.0, 1.0);
+    return x0 + (x1 - x0) * a;
+}
+
+std::complex<double> AtoD_Block::getClockInput(const std::complex<double>& x, double t)
+{
+    if (m_Clock <= 0.0)
+        return x;
+
+    const double phaseRad = m_Phase * kPi / 180.0;
+    const double c = std::cos(2.0 * kPi * m_Clock * t + phaseRad);
+    const double period = 1.0 / std::max(m_Clock, kTiny);
+
+    if (!m_hasClockState)
+    {
+        m_heldSample = std::complex<double>(0.0, 0.0);
+        m_hasPendingClockSample = false;
+        m_pendingClockSample = std::complex<double>(0.0, 0.0);
+
+        m_lastClockValue = c;
+        m_hasClockState = true;
+
+        m_hasRawInputState = true;
+        m_prevRawInputTime = t;
+        m_prevRawInput = x;
+
+        m_nextClockCrossingTime = firstPositiveCrossingAtOrAfter(t);
+        m_hasNextClockCrossing = true;
+
+        if (m_nextClockCrossingTime <= t + 1e-15)
+        {
+            m_pendingClockSample = x;
+            m_hasPendingClockSample = true;
+            m_nextClockCrossingTime += period;
+        }
+
+        return m_heldSample;
+    }
+
+    if (m_hasPendingClockSample)
+    {
+        m_heldSample = m_pendingClockSample;
+        m_hasPendingClockSample = false;
+    }
+
+    const std::complex<double> y = m_heldSample;
+
+    if (!m_hasRawInputState)
+    {
+        m_hasRawInputState = true;
+        m_prevRawInputTime = t;
+        m_prevRawInput = x;
+        m_lastClockValue = c;
+        return y;
+    }
+
+    if (t < m_prevRawInputTime - 1e-15)
+    {
+        m_prevRawInputTime = t;
+        m_prevRawInput = x;
+        m_nextClockCrossingTime = firstPositiveCrossingAtOrAfter(t);
+        m_hasNextClockCrossing = true;
+        m_lastClockValue = c;
+        return y;
+    }
+
+    if (!m_hasNextClockCrossing)
+    {
+        m_nextClockCrossingTime = firstPositiveCrossingAtOrAfter(m_prevRawInputTime);
+        m_hasNextClockCrossing = true;
+    }
+
+    while (m_nextClockCrossingTime <= t + 1e-15)
+    {
+        if (m_nextClockCrossingTime >= m_prevRawInputTime - 1e-15)
+        {
+            m_pendingClockSample = interpSample(m_prevRawInput, m_prevRawInputTime, x, t, m_nextClockCrossingTime);
+            m_hasPendingClockSample = true;
+        }
+        m_nextClockCrossingTime += period;
+    }
+
+    m_prevRawInputTime = t;
+    m_prevRawInput = x;
+    m_lastClockValue = c;
+
+    return y;
 }
 
 bool AtoD_Block::Setup()
@@ -172,6 +404,31 @@ bool AtoD_Block::Setup()
     while (!m_aoutQueue.empty()) m_aoutQueue.pop();
     while (!m_diQueue.empty()) m_diQueue.pop();
     while (!m_dqQueue.empty()) m_dqQueue.pop();
+    
+    // Reset algorithm state
+    m_sampleIndex = 0;
+    m_pipelineFifo.clear();
+    m_sdIIntegrator = 0.0;
+    m_sdQIntegrator = 0.0;
+    m_sdIFeedback = 0.0;
+    m_sdQFeedback = 0.0;
+    m_sdIAccum = 0.0;
+    m_sdQAccum = 0.0;
+    m_sdAccumCount = 0;
+    m_sdHeldOutput = std::complex<double>(0.0, 0.0);
+
+    // Reset clocked input state
+    m_hasClockState = false;
+    m_lastClockValue = 0.0;
+    m_heldSample = std::complex<double>(0.0, 0.0);
+    m_hasPendingClockSample = false;
+    m_pendingClockSample = std::complex<double>(0.0, 0.0);
+    m_hasRawInputState = false;
+    m_prevRawInputTime = 0.0;
+    m_prevRawInput = std::complex<double>(0.0, 0.0);
+    m_hasNextClockCrossing = false;
+    m_nextClockCrossingTime = 0.0;
+    
     return true;
 }
 
@@ -183,53 +440,75 @@ bool AtoD_Block::Run()
 
 bool AtoD_Block::DataStreamRun()
 {
-    // 获取输入输出端口名称
     std::string A_INPortName = GetInputPortName(0);
     std::string A_outPortName = GetOutputPortName(0);
     std::string D_IPortName = GetOutputPortName(1);
     std::string D_QPortName = GetOutputPortName(2);
-    qDebug() << "Atod_Block::Run - inputData: 1111";
 
-     auto inputData = ReadInputData<SystemVueModelBuilder::EnvelopeSignal>(A_INPortName);
-     if(inputData.empty()) {
-         qDebug() << "inputData is empty ";
-         if(IsVariableStepMode()) {
-             return true;
-         }
-         return false;
-     }
-     qDebug() << "Atod_Block::Run - inputData: 2222" << inputData.size();
-     m_atod->A_Input = inputData;
-     qDebug() << "Atod_Block::Run - inputData: 3333" << inputData.size();
+    auto inputData = ReadInputData<SystemVueModelBuilder::EnvelopeSignal>(A_INPortName);
+    if (inputData.empty()) {
+        if (IsVariableStepMode()) {
+            return true;
+        }
+        return false;
+    }
 
-     if (!m_atod->Run()) {
-         return false;
-     }
-     std::vector<SystemVueModelBuilder::EnvelopeSignal> outputA_OUTData;
-     std::vector<double> outputD_IData;
-     std::vector<double> outputD_QData;
+    std::vector<SystemVueModelBuilder::EnvelopeSignal> outputA_OUTData;
+    std::vector<double> outputD_IData;
+    std::vector<double> outputD_QData;
 
-     outputA_OUTData.push_back(m_atod->A_out[0]);
-     outputD_IData.push_back(m_atod->D_I[0]);
-     outputD_QData.push_back(m_atod->D_Q[0]);
+    for (size_t idx = 0; idx < inputData.size(); ++idx) {
+        std::complex<double> rawX = inputData[idx].complex();
 
-     qDebug() << "outputA_OUTDataread:: " << outputA_OUTData[0].real();
-     qDebug() << "outputA_OUTDataimag:: " << outputA_OUTData[0].imag();
+        // Apply clocked input (sample-and-hold) for Clocked mode
+        std::complex<double> x;
+        if (m_ConversionType == AtoD::Clocked) {
+            double t = simulator_param.startTime + static_cast<double>(m_sampleIndex) * simulator_param.time_Interval;
+            x = getClockInput(rawX, t);
+        } else {
+            x = rawX;
+        }
+        
+        QuantResult qi, qq;
+        
+        if (m_ADCType == AtoD::Flash_ADC) {
+            qi = quantizeFlash(x.real());
+            qq = quantizeFlash(x.imag());
+        }
+        else if (m_ADCType == AtoD::Pipeline_ADC) {
+            std::complex<double> xp = processPipeline(x);
+            qi = quantize(xp.real());
+            qq = quantize(xp.imag());
+        }
+        else if (m_ADCType == AtoD::SigmaDelta_ADC) {
+            std::complex<double> xs = processSigmaDelta(x);
+            qi = quantize(xs.real());
+            qq = quantize(xs.imag());
+        }
+        else {
+            // Current AtoD - simple quantization
+            qi = quantize(x.real());
+            qq = quantize(x.imag());
+        }
+        
+        outputA_OUTData.push_back(SystemVueModelBuilder::EnvelopeSignal(std::complex<double>(qi.analog, qq.analog)));
+        outputD_IData.push_back(static_cast<double>(qi.codeDigital));
+        outputD_QData.push_back(static_cast<double>(qq.codeDigital));
+        
+        ++m_sampleIndex;
+    }
 
+    WriteOutputData(A_outPortName, outputA_OUTData);
+    WriteOutputData(D_IPortName, outputD_IData);
+    WriteOutputData(D_QPortName, outputD_QData);
 
-     WriteOutputData(A_outPortName, outputA_OUTData);
-     WriteOutputData(D_IPortName, outputD_IData);
-     WriteOutputData(D_QPortName, outputD_QData);
+    m_atod->Advance();
 
-     if (m_atod) {
-         m_atod->Advance();
-     }
-     return true;
+    return true;
 }
 
 bool AtoD_Block::TimeDrivenRun()
 {
-    // ---- 1. 累积输入 ----
     std::string A_INPortName = GetInputPortName(0);
     auto inputData = ReadInputData<SystemVueModelBuilder::EnvelopeSignal>(A_INPortName);
     if (inputData.empty()) {
@@ -238,55 +517,75 @@ bool AtoD_Block::TimeDrivenRun()
         }
         return false;
     }
+    
     for (size_t i = 0; i < inputData.size(); ++i) {
         m_inputBuffer.push_back(inputData[i]);
     }
 
-    // ---- 2. 处理：每累计 m_inputRate 个输入 → 运行一次算法 → 3路输出入队 ----
-    if (static_cast<int>(m_inputBuffer.size()) >= m_inputRate)
-    {
-        std::vector<SystemVueModelBuilder::EnvelopeSignal> batch(
-            m_inputBuffer.begin(), m_inputBuffer.begin() + m_inputRate);
-        m_atod->A_Input = batch;
+    if (static_cast<int>(m_inputBuffer.size()) >= m_inputRate) {
+        // Get the sample at the downsample phase index
+        int phase = clampInt(m_DownsamplePhase, 0, m_inputRate - 1);
+        std::complex<double> rawX = m_inputBuffer[phase].complex();
 
-        if (!m_atod->Run()) {
-            return false;
+        // Apply clocked input (sample-and-hold) for Clocked mode
+        std::complex<double> x;
+        if (m_ConversionType == AtoD::Clocked) {
+            double t = simulator_param.startTime + static_cast<double>(m_sampleIndex) * simulator_param.time_Interval;
+            x = getClockInput(rawX, t);
+        } else {
+            x = rawX;
         }
-
-        m_aoutQueue.push(m_atod->A_out[0]);
-        m_diQueue.push(static_cast<double>(m_atod->D_I[0]));
-        m_dqQueue.push(static_cast<double>(m_atod->D_Q[0]));
-
-        if (m_atod) {
-            m_atod->Advance();
+        
+        QuantResult qi, qq;
+        
+        if (m_ADCType == AtoD::Flash_ADC) {
+            qi = quantizeFlash(x.real());
+            qq = quantizeFlash(x.imag());
         }
-
+        else if (m_ADCType == AtoD::Pipeline_ADC) {
+            std::complex<double> xp = processPipeline(x);
+            qi = quantize(xp.real());
+            qq = quantize(xp.imag());
+        }
+        else if (m_ADCType == AtoD::SigmaDelta_ADC) {
+            std::complex<double> xs = processSigmaDelta(x);
+            qi = quantize(xs.real());
+            qq = quantize(xs.imag());
+        }
+        else {
+            qi = quantize(x.real());
+            qq = quantize(x.imag());
+        }
+        
+        m_aoutQueue.push(SystemVueModelBuilder::EnvelopeSignal(std::complex<double>(qi.analog, qq.analog)));
+        m_diQueue.push(static_cast<double>(qi.codeDigital));
+        m_dqQueue.push(static_cast<double>(qq.codeDigital));
+        
+        ++m_sampleIndex;
         m_inputBuffer.clear();
     }
 
-    // ---- 3. 逐点输出 ----
     std::string A_outPortName = GetOutputPortName(0);
-    std::string D_IPortName  = GetOutputPortName(1);
-    std::string D_QPortName  = GetOutputPortName(2);
+    std::string D_IPortName = GetOutputPortName(1);
+    std::string D_QPortName = GetOutputPortName(2);
 
-    if (!m_aoutQueue.empty())
-    {
+    if (!m_aoutQueue.empty()) {
         std::vector<SystemVueModelBuilder::EnvelopeSignal> outA{ m_aoutQueue.front() };
         m_aoutQueue.pop();
         WriteOutputData(A_outPortName, outA);
     }
-    if (!m_diQueue.empty())
-    {
+    if (!m_diQueue.empty()) {
         std::vector<double> outI{ m_diQueue.front() };
         m_diQueue.pop();
         WriteOutputData(D_IPortName, outI);
     }
-    if (!m_dqQueue.empty())
-    {
+    if (!m_dqQueue.empty()) {
         std::vector<double> outQ{ m_dqQueue.front() };
         m_dqQueue.pop();
         WriteOutputData(D_QPortName, outQ);
     }
+
+    m_atod->Advance();
 
     return true;
 }
@@ -294,8 +593,6 @@ bool AtoD_Block::TimeDrivenRun()
 bool AtoD_Block::Initialize()
 {
     SetBlockType(Block::BlockType::PROCESSOR);
-
-    m_atod = std::make_unique<AtoD>();
 
     SetDefaultParamters();
     simulator_param = getSimu();
@@ -340,27 +637,32 @@ bool AtoD_Block::Initialize()
     try { m_AntiAliasingFilter = ConvertStringToAntiAliasingFilterEnum(getParameter("AntiAliasingFilter").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'AntiAliasingFilter', using default value."); }
     try { m_ExcessBW = std::stod(getParameter("ExcessBW").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ExcessBW', using default value."); }
 
+    try { m_ADCType = ConvertStringToADCTypeEnum(getParameter("ADCType").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'ADCType', using default value."); }
+    try { m_PipelineStageBits = std::stoi(getParameter("PipelineStageBits").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PipelineStageBits', using default value."); }
+    try { m_PipelineLatency = std::stoi(getParameter("PipelineLatency").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'PipelineLatency', using default value."); }
+    try { m_SigmaDeltaOrder = std::stoi(getParameter("SigmaDeltaOrder").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SigmaDeltaOrder', using default value."); }
+    try { m_SigmaDeltaOSR = std::stoi(getParameter("SigmaDeltaOSR").Value); } catch (...) { LOG_WARN("Failed to parse parameter 'SigmaDeltaOSR', using default value."); }
+
     SetParameters();
+    initQuantizationParams();
 
-    if (!m_atod->Setup()) {
-        return false;
-    }
-
-    // ---- 与 AtoD::Setup() 相同的速率判断 ----
+    // Determine input rate
     if (m_ConversionType == AtoD::Downsampled) {
         m_inputRate = m_DownsampleFactor;
     } else {
         m_inputRate = 1;
     }
 
+    // Create m_atod only for port buffers
+    m_atod = std::make_unique<AtoD>();
     m_atod->A_in.SetStartTime(simulator_param.startTime);
     m_atod->A_out.SetStartTime(simulator_param.startTime);
 
-    // ---- 端口注册移到末尾 ----
+    // Register ports
     AddInputPort("A_in", m_atod->A_in, m_inputRate, Block::DataType::ENVELOPE_SIGNAL);
     AddOutputPort("A_out", m_atod->A_out, 1, Block::DataType::ENVELOPE_SIGNAL);
-    AddOutputPort("D_I" , m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
-    AddOutputPort("D_Q",  m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
+    AddOutputPort("D_I", m_atod->D_I, 1, Block::DataType::CIRCULAR_BUFFER_INT);
+    AddOutputPort("D_Q", m_atod->D_Q, 1, Block::DataType::CIRCULAR_BUFFER_INT);
 
     return true;
 }
@@ -478,6 +780,7 @@ AtoD::ConversionTypeEnum AtoD_Block::ConvertStringToConversionTypeEnum(const std
     }
     return AtoD::Clocked;
 }
+
 AtoD::AntiAliasingFilterEnum AtoD_Block::ConvertStringToAntiAliasingFilterEnum(const std::string& value)
 {
     const std::string lower = ToLowerCopy(TrimCopy(value));
@@ -488,4 +791,22 @@ AtoD::AntiAliasingFilterEnum AtoD_Block::ConvertStringToAntiAliasingFilterEnum(c
         return AtoD::AA_ON;
     }
     return AtoD::AA_OFF;
+}
+
+AtoD::ADCTypeEnum AtoD_Block::ConvertStringToADCTypeEnum(const std::string& value)
+{
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if (lower == "current_atod" || lower == "current") {
+        return AtoD::Current_AtoD;
+    }
+    if (lower == "flash" || lower == "flash_adc" || lower == "1") {
+        return AtoD::Flash_ADC;
+    }
+    if (lower == "pipeline" || lower == "pipeline_adc" || lower == "2") {
+        return AtoD::Pipeline_ADC;
+    }
+    if (lower == "sigmadelta" || lower == "sigma_delta" || lower == "sigmadelta_adc" || lower == "3") {
+        return AtoD::SigmaDelta_ADC;
+    }
+    return AtoD::Current_AtoD;
 }
