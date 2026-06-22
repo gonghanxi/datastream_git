@@ -355,6 +355,15 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
 
     // 步骤1：如果可执行文件不存在，调用引擎生成
     if (!QFile::exists(exePath)) {
+        // 已经尝试过编译且失败，不再重复调用编译器，仅输出一行
+        if (m_buildAttempted) {
+            if (!m_buildErrorLogged) {
+                m_buildErrorLogged = true;
+                LOG_ERROR("[CFunctionBlock] Build previously failed, skipping rebuild:", m_instanceName.toStdString());
+            }
+            return false;
+        }
+
         if (!engineFound) {
             LOG_ERROR("[CFunctionBlock] Engine script not found. Searched:",
                       (jsonDir + ", " + appDir).toStdString());
@@ -362,6 +371,7 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         }
 
         qDebug() << "[CFunctionBlock] Executable not found, building:" << exePath;
+        m_buildAttempted = true;  // 标记已尝试编译
 
         // 查找Python解释器：优先使用deploy_package中自带的Python
         QString pythonExe;
@@ -410,6 +420,7 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
             QString partialStderr = buildProcess.readAllStandardError();
             QString partialStdout = buildProcess.readAllStandardOutput();
             buildProcess.kill();
+            m_buildErrorLogged = true;
             LOG_ERROR("[CFunctionBlock] Engine build timeout:", m_instanceName.toStdString());
             if (!partialStderr.isEmpty()) {
                 LOG_ERROR("[CFunctionBlock] Engine partial stderr:", partialStderr.toStdString());
@@ -423,6 +434,7 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         if (buildProcess.exitCode() != 0) {
             QString stderrOutput = buildProcess.readAllStandardError();
             QString stdoutOutput = buildProcess.readAllStandardOutput();
+            m_buildErrorLogged = true;
             LOG_ERROR("[CFunctionBlock] Engine build error:", stderrOutput.toStdString());
             if (!stdoutOutput.isEmpty()) {
                 qDebug() << "[CFunctionBlock] Engine stdout:" << stdoutOutput;
@@ -431,11 +443,17 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         }
 
         qDebug() << "[CFunctionBlock] Executable built successfully:" << exePath;
+        m_buildErrorLogged = false;  // 编译成功，重置错误标记
     }
 
     // 验证可执行文件存在
     if (!QFile::exists(exePath)) {
-        LOG_ERROR("[CFunctionBlock] Executable not found after build:", exePath.toStdString());
+        if (!m_buildErrorLogged) {
+            m_buildErrorLogged = true;
+            LOG_ERROR("[CFunctionBlock] Executable not found after build:", exePath.toStdString());
+        } else {
+            LOG_ERROR("[CFunctionBlock] Executable not found (repeated, details suppressed):", m_instanceName.toStdString());
+        }
         return false;
     }
 

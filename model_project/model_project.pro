@@ -251,6 +251,7 @@ RADAR_CW \
     RADAR_CornerReflectorLocation \
     RADAR_DBF \
     RADAR_DDC \
+    RADAR_DUC \
 RADAR_Detector\
 RADAR_DOA\
     RADAR_Detector_M \
