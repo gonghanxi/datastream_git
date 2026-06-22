@@ -47,15 +47,12 @@ bool ZeroCross_Block::Run()
 
     qDebug()<<"isCross"<<isCross;
     if (isCross) {
-        // Crossing detected: set flag, suppress output
+        // Crossing detected: set flag, write output to downstream
         SetZeroCrossTriggered(true);
-        // Do NOT write to output - downstream blocks will be skipped by scheduler
-        // Don't clear output buffer here - ResetBuffer resets read/write pointers
-        // which can cause issues when the buffer is shared with downstream blocks
-    } else {
-        // No crossing: clear flag, pass data through
-        SetZeroCrossTriggered(false);
         WriteOutputData(outputPortName, inputData);
+    } else {
+        // No crossing: clear flag, suppress output
+        SetZeroCrossTriggered(false);
     }
 
     return true;

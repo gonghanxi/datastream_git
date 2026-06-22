@@ -155,6 +155,7 @@ private:
 
     void precomputeDownstreamSets(SchedulerContext& ctx);
     bool isDownstreamOfTriggeredZeroCross(const SchedulerContext& ctx, Block* block) const;
+    bool isBlockedByUntriggeredZeroCross(const SchedulerContext& ctx, Block* block) const;
     int generalWork(Block* currentBlock);
     int calculateMaxProcessCount(QVector<Block*> blocks, const QString& linkKey, int sourceCount);
 

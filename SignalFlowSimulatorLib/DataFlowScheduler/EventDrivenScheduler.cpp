@@ -809,6 +809,21 @@ bool EventDrivenScheduler::isDownstreamOfTriggeredZeroCross(const SchedulerConte
     return false;
 }
 
+bool EventDrivenScheduler::isBlockedByUntriggeredZeroCross(const SchedulerContext& ctx, Block* block) const
+{
+    for (Block* zc : ctx.zeroCrossBlocks) {
+        auto it = ctx.zeroCrossDownstreamMap.find(zc);
+        if (it != ctx.zeroCrossDownstreamMap.end() && it.value().contains(block)) {
+            // This block is downstream of zc
+            if (!zc->IsZeroCrossTriggered()) {
+                // zc hasn't triggered yet -> block is blocked
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                                                     QVector<Block*> blocks,
                                                     std::shared_ptr<DataStreamVerification> verificationSystem,
@@ -1008,9 +1023,9 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                     }
                 }
                 else if (type == Block::BlockType::SINK) {
-                    // Set skip flag for sink if downstream of triggered ZeroCross
+                    // Set skip flag for sink if blocked by untriggered ZeroCross
                     // Sink still runs (to advance time) but checks this flag to skip data output
-                    bool shouldSkip = isDownstreamOfTriggeredZeroCross(ctx, currentBlock);
+                    bool shouldSkip = isBlockedByUntriggeredZeroCross(ctx, currentBlock);
                     currentBlock->SetSkipDataOutput(shouldSkip);
                     // SINK: called every iteration
                     // Check termination conditions
@@ -1067,8 +1082,9 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                     }
                 }
                 else { // PROCESSOR
-                    // KEY CHECK: Skip if downstream of triggered ZeroCross
-                    if (isDownstreamOfTriggeredZeroCross(ctx, currentBlock)) {
+                    // KEY CHECK: Skip if downstream of an untriggered ZeroCross
+                    // (ZeroCross only writes on crossing; downstream runs only when ZC has triggered)
+                    if (isBlockedByUntriggeredZeroCross(ctx, currentBlock)) {
                         // Consume input data to advance read pointers.
                         // This prevents stale data from being read when the block
                         // resumes execution in the next iteration.

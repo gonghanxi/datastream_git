@@ -542,7 +542,7 @@ void SinkCx_Block::writeDataPointToStream(size_t bufferIndex, unsigned long long
     }
 
     m_stream << "\t\t" << R"("(re)Sink_Data": )" << pt.value.real() << "," << "\r\n";
-    m_stream << "\t\t" << R"("(im)Sink_Data": )" << pt.value.real() << "\r\n";
+    m_stream << "\t\t" << R"("(im)Sink_Data": )" << pt.value.imag() << "\r\n";
     m_stream << "\t}";
 }
 
