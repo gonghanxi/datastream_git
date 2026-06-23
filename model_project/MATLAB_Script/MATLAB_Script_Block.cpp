@@ -384,7 +384,20 @@ bool MATLAB_Script_Block::Initialize()
         callStr.append(")");
         mStr.append(callStr);
         mStr.append("\n");
-        mStr.append(Equations.c_str());
+        // 确保 Equations 每行以分号结尾，防止 Octave 回显变量值
+        {
+            QStringList eqLines = QString::fromStdString(Equations).split("\n");
+            for (int li = 0; li < eqLines.size(); ++li) {
+                QString trimmed = eqLines[li].trimmed();
+                if (trimmed.isEmpty() || trimmed.startsWith('%')) {
+                    continue;
+                }
+                if (!trimmed.endsWith(';')) {
+                    eqLines[li] = eqLines[li].trimmed() + ";";
+                }
+            }
+            mStr.append(eqLines.join("\n").toUtf8().constData());
+        }
         mStr.append("\n");
         mStr.append("end\n");
 
