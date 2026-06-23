@@ -103,6 +103,7 @@ ComplexExpGen \
     Conjugate_M \
 Const \
 ConstCx \
+    ConstFxp \
     ConvolutionalCoder \
 CxToEnv \
 ConstInt\
@@ -151,6 +152,7 @@ FFT_Cx\
 Gain \
 GainCx\
 GainEnv \
+    GainFxp \
 GainInt\
 GaussianNoiseGen\
     GeometricMean \
@@ -342,6 +344,7 @@ SetSampleRateInt\
 SineGen \
 SineSweepGen\
 Sink \
+    SinkFxp \
     Sink_M \
 SinkCx \
     SinkCx_M \

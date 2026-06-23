@@ -355,12 +355,8 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
 
     // 步骤1：如果可执行文件不存在，调用引擎生成
     if (!QFile::exists(exePath)) {
-        // 已经尝试过编译且失败，不再重复调用编译器，仅输出一行
+        // 已经尝试过编译且失败，不再重复调用编译器，不再打印任何错误
         if (m_buildAttempted) {
-            if (!m_buildErrorLogged) {
-                m_buildErrorLogged = true;
-                LOG_ERROR("[CFunctionBlock] Build previously failed, skipping rebuild:", m_instanceName.toStdString());
-            }
             return false;
         }
 
@@ -420,7 +416,6 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
             QString partialStderr = buildProcess.readAllStandardError();
             QString partialStdout = buildProcess.readAllStandardOutput();
             buildProcess.kill();
-            m_buildErrorLogged = true;
             LOG_ERROR("[CFunctionBlock] Engine build timeout:", m_instanceName.toStdString());
             if (!partialStderr.isEmpty()) {
                 LOG_ERROR("[CFunctionBlock] Engine partial stderr:", partialStderr.toStdString());
@@ -434,7 +429,6 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         if (buildProcess.exitCode() != 0) {
             QString stderrOutput = buildProcess.readAllStandardError();
             QString stdoutOutput = buildProcess.readAllStandardOutput();
-            m_buildErrorLogged = true;
             LOG_ERROR("[CFunctionBlock] Engine build error:", stderrOutput.toStdString());
             if (!stdoutOutput.isEmpty()) {
                 qDebug() << "[CFunctionBlock] Engine stdout:" << stdoutOutput;
@@ -443,17 +437,11 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         }
 
         qDebug() << "[CFunctionBlock] Executable built successfully:" << exePath;
-        m_buildErrorLogged = false;  // 编译成功，重置错误标记
     }
 
     // 验证可执行文件存在
     if (!QFile::exists(exePath)) {
-        if (!m_buildErrorLogged) {
-            m_buildErrorLogged = true;
-            LOG_ERROR("[CFunctionBlock] Executable not found after build:", exePath.toStdString());
-        } else {
-            LOG_ERROR("[CFunctionBlock] Executable not found (repeated, details suppressed):", m_instanceName.toStdString());
-        }
+        LOG_ERROR("[CFunctionBlock] Executable not found after build:", exePath.toStdString());
         return false;
     }
 

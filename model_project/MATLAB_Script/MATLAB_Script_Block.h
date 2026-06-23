@@ -30,6 +30,13 @@ private:
     octave_value vectorToOctave(const std::vector<std::complex<double>>& data);
     octave_value matrixToOctave(const std::vector<SystemVueModelBuilder::DoubleMatrix>& data);
     octave_value complexMatrixToOctave(const std::vector<SystemVueModelBuilder::DComplexMatrix>& data);
+
+    // 参数解析辅助方法（数组/矩阵/复数）
+    void assignArrayParam(const std::string& name, const QString& innerStr);
+    void assignMatrixParam(const std::string& name, const QString& innerStr);
+    void assignComplexScalarParam(const std::string& name, const QString& str);
+    static std::complex<double> parseComplexElement(const QString& str);
+    static bool isComplexElement(const QString& str);
 private:
     octave::interpreter *m_interp;
     QString callStr;

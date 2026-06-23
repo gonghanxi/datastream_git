@@ -82,12 +82,14 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
                 )
 
             //Real 类型作为起点
-            //允许连接Real Anytype Variant Multiple_Real Multiple_Anytype Multiple_Varaint
+            //允许连接Real Fixedpoint Anytype Variant Multiple_Real Multiple_Fixedpoint Multiple_Anytype Multiple_Varaint
             || dataTypeStart==PortMsg::REAL&& !(
                 dataTypeEnd==PortMsg::REAL||
+                dataTypeEnd==PortMsg::FIXEDPOINT||
                 dataTypeEnd==PortMsg::ANYTYPE||
                 dataTypeEnd==PortMsg::VARIANT||
                 dataTypeEnd==PortMsg::MULTIPLE_REAL||
+                dataTypeEnd==PortMsg::MULTIPLE_FIXEDPOINT||
                 dataTypeEnd==PortMsg::MULTIPLE_ANYTYPE||
                 dataTypeEnd==PortMsg::MULTIPLE_VARIANT
                 )
@@ -131,9 +133,10 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT
             //Multiple_Real 类型作为起点
-            //允许连接Multiple_Real Multiple_Anytype Multiple_Variant
+            //允许连接Multiple_Real Multiple_FixPoint Multiple_Anytype Multiple_Variant
             || dataTypeStart==PortMsg::MULTIPLE_REAL&&
             dataTypeEnd!=PortMsg::MULTIPLE_REAL&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT&&
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT
             //Multiple_FixPoint 类型作为起点
@@ -188,13 +191,15 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_Real 类型作为起点
-            //允许连接Matrix_Real Matrix_Anytype Matrix_Variant
-            //       Matrix_Multiple_Real Matrix_Multiple_Anytype Matrix_Multiple_Variant
+            //允许连接Matrix_Real Matrix_FixPoint Matrix_Anytype Matrix_Variant
+            //       Matrix_Multiple_Real Matrix_Multiple_FixPoint Matrix_Multiple_Anytype Matrix_Multiple_Variant
             || dataTypeStart==PortMsg::REAL_MATRIX&&
             dataTypeEnd!=PortMsg::REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::FIXEDPOINT_MATRIX&&
             dataTypeEnd!=PortMsg::ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::VARIANT_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_FixPoint 类型作为起点
@@ -235,9 +240,10 @@ bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortM
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_Multiple_Real 类型作为起点
-            //允许连接Matrix_Multiple_Real Matrix_Multiple_Anytype Matrix_Multiple_Variant
+            //允许连接Matrix_Multiple_Real Matrix_Multiple_FixPoint Matrix_Multiple_Anytype Matrix_Multiple_Variant
             || dataTypeStart==PortMsg::MULTIPLE_REAL_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_REAL_MATRIX&&
+            dataTypeEnd!=PortMsg::MULTIPLE_FIXEDPOINT_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_ANYTYPE_MATRIX&&
             dataTypeEnd!=PortMsg::MULTIPLE_VARIANT_MATRIX
             //Matrix_Multiple_FixPoint 类型作为起点

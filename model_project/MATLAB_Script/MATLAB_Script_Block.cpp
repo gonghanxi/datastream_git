@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QRegularExpression>
+#include <exception>
 
 #include "octave/dMatrix.h"
 #include "octave/CMatrix.h"
@@ -91,6 +92,166 @@ octave_value MATLAB_Script_Block::complexMatrixToOctave(const std::vector<SV::DC
     return octave_value(cell);
 }
 
+// ===================== 参数解析辅助方法 =====================
+
+bool MATLAB_Script_Block::isComplexElement(const QString& str)
+{
+    QString trimmed = str.trimmed();
+    return trimmed.startsWith('(') && trimmed.endsWith(')');
+}
+
+std::complex<double> MATLAB_Script_Block::parseComplexElement(const QString& str)
+{
+    QString trimmed = str.trimmed();
+    // 去掉外层括号 (real,imag)
+    if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+        trimmed = trimmed.mid(1, trimmed.length() - 2).trimmed();
+    }
+    int commaPos = trimmed.indexOf(',');
+    if (commaPos >= 0) {
+        double real = trimmed.left(commaPos).trimmed().toDouble();
+        double imag = trimmed.mid(commaPos + 1).trimmed().toDouble();
+        return std::complex<double>(real, imag);
+    }
+    // 只有实部
+    return std::complex<double>(trimmed.toDouble(), 0.0);
+}
+
+void MATLAB_Script_Block::assignArrayParam(const std::string& name, const QString& innerStr)
+{
+    // 按逗号分割元素（需考虑括号内的逗号）
+    QStringList elements;
+    int depth = 0;
+    QString current;
+    for (int i = 0; i < innerStr.length(); ++i) {
+        QChar ch = innerStr[i];
+        if (ch == '(') depth++;
+        else if (ch == ')') depth--;
+        if (ch == ',' && depth == 0) {
+            elements.append(current.trimmed());
+            current.clear();
+        } else {
+            current.append(ch);
+        }
+    }
+    if (!current.trimmed().isEmpty()) {
+        elements.append(current.trimmed());
+    }
+
+    if (elements.isEmpty()) return;
+
+    // 判断是否为复数数组
+    bool hasComplex = false;
+    for (const QString& elem : elements) {
+        if (isComplexElement(elem)) {
+            hasComplex = true;
+            break;
+        }
+    }
+
+    if (hasComplex) {
+        ComplexMatrix mat(1, static_cast<octave_idx_type>(elements.size()));
+        for (int i = 0; i < elements.size(); ++i) {
+            std::complex<double> val = parseComplexElement(elements[i]);
+            mat(0, static_cast<octave_idx_type>(i)) = Complex(val.real(), val.imag());
+        }
+        m_interp->get_evaluator().top_level_assign(name, octave_value(mat));
+    } else {
+        ::Matrix mat(1, static_cast<octave_idx_type>(elements.size()));
+        for (int i = 0; i < elements.size(); ++i) {
+            mat(0, static_cast<octave_idx_type>(i)) = elements[i].toDouble();
+        }
+        m_interp->get_evaluator().top_level_assign(name, octave_value(mat));
+    }
+}
+
+void MATLAB_Script_Block::assignMatrixParam(const std::string& name, const QString& innerStr)
+{
+    // 按分号分割行
+    QStringList rows = innerStr.split(';', Qt::SkipEmptyParts);
+    if (rows.isEmpty()) return;
+
+    // 解析每行的元素（考虑括号内的逗号和分号）
+    std::vector<QStringList> matrixRows;
+    int maxCols = 0;
+    bool hasComplex = false;
+
+    for (const QString& row : rows) {
+        QStringList elements;
+        int depth = 0;
+        QString current;
+        for (int i = 0; i < row.length(); ++i) {
+            QChar ch = row[i];
+            if (ch == '(') depth++;
+            else if (ch == ')') depth--;
+            if (ch == ',' && depth == 0) {
+                elements.append(current.trimmed());
+                current.clear();
+            } else {
+                current.append(ch);
+            }
+        }
+        if (!current.trimmed().isEmpty()) {
+            elements.append(current.trimmed());
+        }
+        if (elements.size() > maxCols) maxCols = elements.size();
+        for (const QString& elem : elements) {
+            if (isComplexElement(elem)) hasComplex = true;
+        }
+        matrixRows.push_back(elements);
+    }
+
+    int numRows = static_cast<int>(matrixRows.size());
+
+    if (hasComplex) {
+        ComplexMatrix mat(static_cast<octave_idx_type>(numRows), static_cast<octave_idx_type>(maxCols));
+        for (int r = 0; r < numRows; ++r) {
+            const QStringList& cols = matrixRows[r];
+            for (int c = 0; c < cols.size(); ++c) {
+                std::complex<double> val = parseComplexElement(cols[c]);
+                mat(static_cast<octave_idx_type>(r), static_cast<octave_idx_type>(c)) = Complex(val.real(), val.imag());
+            }
+        }
+        m_interp->get_evaluator().top_level_assign(name, octave_value(mat));
+    } else {
+        ::Matrix mat(static_cast<octave_idx_type>(numRows), static_cast<octave_idx_type>(maxCols));
+        for (int r = 0; r < numRows; ++r) {
+            const QStringList& cols = matrixRows[r];
+            for (int c = 0; c < cols.size(); ++c) {
+                mat(static_cast<octave_idx_type>(r), static_cast<octave_idx_type>(c)) = cols[c].toDouble();
+            }
+        }
+        m_interp->get_evaluator().top_level_assign(name, octave_value(mat));
+    }
+}
+
+void MATLAB_Script_Block::assignComplexScalarParam(const std::string& name, const QString& str)
+{
+    QString trimmed = str.trimmed();
+    double real = 0.0, imag = 0.0;
+
+    if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+        // 格式: (real,imag)
+        QString inner = trimmed.mid(1, trimmed.length() - 2).trimmed();
+        int commaPos = inner.indexOf(',');
+        if (commaPos >= 0) {
+            real = inner.left(commaPos).trimmed().toDouble();
+            imag = inner.mid(commaPos + 1).trimmed().toDouble();
+        } else {
+            real = inner.toDouble();
+        }
+    } else {
+        // 格式: real,imag
+        int commaPos = trimmed.lastIndexOf(',');
+        if (commaPos >= 0) {
+            real = trimmed.left(commaPos).trimmed().toDouble();
+            imag = trimmed.mid(commaPos + 1).trimmed().toDouble();
+        }
+    }
+
+    m_interp->get_evaluator().top_level_assign(name, octave_value(std::complex<double>(real, imag)));
+}
+
 // ===================== 构造 / 析构 =====================
 
 MATLAB_Script_Block::MATLAB_Script_Block(const std::string& name)
@@ -157,6 +318,7 @@ bool MATLAB_Script_Block::Run()
         }
     }
 
+    try {
     // 添加脚本路径
     QString appPath = QCoreApplication::applicationDirPath();
     QString folderPath = appPath + "/m";
@@ -167,10 +329,17 @@ bool MATLAB_Script_Block::Run()
     for (auto key : inputs.keys()) {
         m_interp->get_evaluator().top_level_assign(key.toStdString(), inputs[key]);
     }
-    qDebug() << QString("MATLAB_Script_Block Run3");
+
+    // 检查所有输入端口是否都有数据
+    int expectedInputs = 0;
+    for (auto port : ports) {
+        if (port.putType == "in") expectedInputs++;
+    }
+    if (inputs.size() < expectedInputs) {
+        return true;
+    }
 
     // 执行生成的 MATLAB/Octave 函数
-    qDebug()<<callStr;
     m_interp->eval(QString("%1;").arg(callStr).toStdString(), 0);
     qDebug() << QString("MATLAB_Script_Block Run4");
     // 读取输出变量
@@ -266,9 +435,25 @@ bool MATLAB_Script_Block::Run()
             }
         }
     }
+    } catch (const std::exception& e) {
+        static bool logged = false;
+        if (!logged) {
+            LOG_ERROR("MATLAB_Script_Block Octave exception: ", e.what(),
+                      " blockName: ", getInstanceName().c_str());
+            logged = true;
+        }
+        return false;
+    } catch (...) {
+        static bool logged = false;
+        if (!logged) {
+            LOG_ERROR("MATLAB_Script_Block Octave unknown exception, blockName: ",
+                      getInstanceName().c_str());
+            logged = true;
+        }
+        return false;
+    }
     return true;
 }
-
 // ===================== Initialize =====================
 
 bool MATLAB_Script_Block::Initialize()
@@ -345,26 +530,29 @@ bool MATLAB_Script_Block::Initialize()
                 inputs.append(Name.c_str());
 
                 QString str = e.second.Value.c_str();
-                if(str.contains(",")){
-                    QStringList list;
-                    QRegularExpression re("\\d+");
-                    QRegularExpressionMatchIterator it = re.globalMatch(str);
-                    while (it.hasNext()) {
-                        list.append(it.next().captured(0));
+                QString trimmed = str.trimmed();
+
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    // === 数组 / 矩阵 ===
+                    QString inner = trimmed.mid(1, trimmed.length() - 2).trimmed();
+                    if (inner.isEmpty()) {
+                        // 空数组 []
+                        m_interp->get_evaluator().top_level_assign(Name, octave_value(::Matrix(0, 0)));
+                    } else if (inner.contains(";")) {
+                        // 2D 矩阵
+                        assignMatrixParam(Name, inner);
+                    } else {
+                        // 1D 数组
+                        assignArrayParam(Name, inner);
                     }
-                    std::complex<double> value;
-                    value.real(list.at(0).toDouble());
-                    value.imag(list.at(1).toDouble());
-
-                    m_interp->get_evaluator().top_level_assign(Name, octave_value(value));
-                } else{
-
+                } else if (trimmed.contains("(") || trimmed.contains(",")) {
+                    // === 复数标量 (real,imag) 或 real,imag ===
+                    assignComplexScalarParam(Name, trimmed);
+                } else {
+                    // === double 标量 ===
                     double value = std::stod(e.second.Value);
-
-
                     m_interp->get_evaluator().top_level_assign(Name, octave_value(value));
                 }
-                //qDebug() << QString("MATLAB_Script_Block Initialize add param:%1=%2").arg(Name.c_str()).arg(value);
             }
         }
 

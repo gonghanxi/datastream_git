@@ -68,9 +68,7 @@ private:
     // 参数信息缓存
     std::map<std::string, QString> m_parameterValues;
 
-    // 编译失败标记：首次失败输出完整错误，后续跳过编译并仅输出一行
-    bool m_buildErrorLogged = false;
-    // 编译已尝试标记：失败后不再重复调用编译器
+    // 编译已尝试标记：失败后不再重复调用编译器，也不再打印任何错误
     bool m_buildAttempted = false;
 };
 
