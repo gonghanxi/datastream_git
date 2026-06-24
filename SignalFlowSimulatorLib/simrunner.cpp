@@ -230,6 +230,31 @@ bool SimRunner::isPaused() const
     return m_paused == 1;
 }
 
+void SimRunner::setStopSignalPath(const QString &stopFilePath)
+{
+    return;
+}
+
+std::map<std::string, std::string> SimRunner::GetSinksOutPutPaths()
+{
+    return {};
+}
+
+void SimRunner::SetLinkFiles(const char** linkFiles, int FileCount) {
+    // 可复用构造函数中的逻辑
+    for (int i = 0; i < FileCount; ++i) {
+        m_linkFiles.append(QString::fromUtf8(linkFiles[i]));
+    }
+}
+
+bool SimRunner::Initialize() { return true; }   // 按需实现
+bool SimRunner::Setup() { return true; }
+bool SimRunner::Stop() { requestStop(); return true; }
+int SimRunner::GetModelStatus() { return 0; }  // 返回状态码
+bool SimRunner::OnCurrStepChanged(int curStep) { return true; }
+void SimRunner::SetLogCallback(LogCallback callback) { /* 存储回调 */ }
+bool SimRunner::OnEventStepChanged(const QString& bits) { return true; }
+
 bool SimRunner::AnalysisFiles()
 {
     LinkParser parser;

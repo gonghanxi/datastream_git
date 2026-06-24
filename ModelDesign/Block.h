@@ -102,6 +102,36 @@ public:
     };
 public:
 
+    //DDS - 事件节拍
+    void setEventSize(int eventSize)
+    {
+        EventSize = eventSize;
+    }
+
+    int getEventSize() const
+    {
+        return EventSize;
+    }
+
+    //DDS服务 - 周期: 时间节拍
+    void setCurStep(int curStep)
+    {
+        m_CurentStep = curStep;
+    }
+    int getCurStep() const
+    {
+        return m_CurentStep;
+    }
+    //DDS服务 - 周期: 输出路径
+    void setSinkOutPutPath(const std::string &outPutPath)
+    {
+        m_sinkOutPutPath = outPutPath;
+    }
+    std::string getSinkOutPutPath()
+    {
+        return m_sinkOutPutPath;
+    }
+
 
     // 引擎设置用户ID
     void setUserId(const std::string& id)
@@ -689,6 +719,9 @@ private:
     BlockType m_blockType;
     DataType m_dataType;
     SystemVueModelBuilder::DFInterface m_dfinterface;
+    std::string m_sinkOutPutPath;//收集器输出完整路径
+    //DDS服务 - 周期: 时间节拍
+    int m_CurentStep = 0;
 
     //Bus类型连接计数
     static int m_OutPutbusConnectionCount;
@@ -788,6 +821,8 @@ private:
     unsigned long long m_currentIteration = 0; // 当前迭代计数（事件驱动模式）
     bool m_skipDataOutput = false;      // 本次迭代是否跳过数据输出（ZeroCross触发）
 
+    //事件节拍 - 仿真次数
+    int EventSize = 0;
 public:
     //---------------------解析矩阵参数----------------
     template<typename T>

@@ -78,6 +78,7 @@ struct BlockInfo
     QMap<QString, int> paramValueReferences; // 参数名 -> valueReference
     // 标志位
     bool isFmuModel = false;                 // 是否为FMU模型
+    bool isinPort = false;                   // 是否为inPort模型
 
     // CFunction相关字段
     bool isCFunctionModel = false;           // 是否为CFunction模型

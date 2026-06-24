@@ -75,6 +75,18 @@ public:
 
     //设置是否为时间驱动
 
+    //DDS服务
+    void setStopSignalPath(const QString &stopFilePath) override;
+    std::map<std::string, std::string> GetSinksOutPutPaths() override;
+    void SetLinkFiles(const char **linkFiles, int FileCount) override;
+    bool Initialize() override;
+    bool Setup() override;
+    bool Stop() override;
+    int GetModelStatus() override;
+    bool OnCurrStepChanged(int curStep) override;
+    void SetLogCallback(LogCallback callback) override;
+    bool OnEventStepChanged(const QString &bits) override;
+
 
 private:
     //json文件解析

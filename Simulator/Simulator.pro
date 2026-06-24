@@ -62,6 +62,8 @@ INCLUDEPATH += $$PWD/DDS
 
 
 SOURCES += \
+    DDS/CommandHandler.cpp \
+    DDS/WebSocketServer.cpp \
     StdinListener.cpp \
     main.cpp
 
@@ -70,6 +72,8 @@ FORMS += \
 
 
 HEADERS += \ \
+    DDS/CommandHandler.h \
+    DDS/WebSocketServer.h \
     StdinListener.h
 
 

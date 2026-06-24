@@ -398,9 +398,9 @@ bool CFunctionModelParser::readCFunctionOutput(
             // 支持单值和矩阵 "[1.0,2.0;3.0,4.0]"
             QString cleaned = valueStr;
             cleaned.remove('[').remove(']');
-            QStringList rows = cleaned.split(';', Qt::SkipEmptyParts);
+            QStringList rows = cleaned.split(';', QString::SkipEmptyParts);
             for (const QString& row : rows) {
-                QStringList cols = row.split(',', Qt::SkipEmptyParts);
+                QStringList cols = row.split(',', QString::SkipEmptyParts);
                 for (const QString& col : cols) {
                     bool ok = false;
                     double v = col.trimmed().toDouble(&ok);
