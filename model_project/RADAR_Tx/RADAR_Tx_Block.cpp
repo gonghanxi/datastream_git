@@ -11,6 +11,13 @@ std::string TrimCopy(const std::string& value)
     return s;
 }
 
+std::string ToLowerCopy(const std::string& value)
+{
+    std::string s = value;
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return s;
+}
+
 // 解析 complex<double> 参数：支持 "re" 或 "re,im" 或 "(re,im)" 格式
 std::complex<double> ParseComplex(const std::string& value)
 {
@@ -144,7 +151,7 @@ bool RADAR_Tx_Block::Initialize()
     try { m_NoiseFigure_Mixer = std::stod(getParameter("NoiseFigure_Mixer").Value); } catch (...) { LOG_WARN("Failed to parse 'NoiseFigure_Mixer'."); }
 
     // ========== 解析 RF 增益压缩参数 ==========
-    try { m_GCType_RF_Gain = std::stoi(getParameter("GCType_RF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'GCType_RF_Gain'."); }
+    try { m_GCType_RF_Gain = static_cast<int>(ConvertStringToGCType(getParameter("GCType_RF_Gain").Value)); } catch (...) { LOG_WARN("Failed to parse 'GCType_RF_Gain'."); }
     try { m_TOIout_RF_Gain = std::stod(getParameter("TOIout_RF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'TOIout_RF_Gain'."); }
     try { m_dBc1out_RF_Gain = std::stod(getParameter("dBc1out_RF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'dBc1out_RF_Gain'."); }
     try { m_PSat_RF_Gain = std::stod(getParameter("PSat_RF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'PSat_RF_Gain'."); }
@@ -153,7 +160,7 @@ bool RADAR_Tx_Block::Initialize()
     try { m_GComp_RF_Gain_Data = ParseDoubleArray(getParameter("GComp_RF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'GComp_RF_Gain'."); }
 
     // ========== 解析 IF 增益压缩参数 ==========
-    try { m_GCType_IF_Gain = std::stoi(getParameter("GCType_IF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'GCType_IF_Gain'."); }
+    try { m_GCType_IF_Gain = static_cast<int>(ConvertStringToGCType(getParameter("GCType_IF_Gain").Value)); } catch (...) { LOG_WARN("Failed to parse 'GCType_IF_Gain'."); }
     try { m_TOIout_IF_Gain = std::stod(getParameter("TOIout_IF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'TOIout_IF_Gain'."); }
     try { m_dBc1out_IF_Gain = std::stod(getParameter("dBc1out_IF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'dBc1out_IF_Gain'."); }
     try { m_PSat_IF_Gain = std::stod(getParameter("PSat_IF_Gain").Value); } catch (...) { LOG_WARN("Failed to parse 'PSat_IF_Gain'."); }
@@ -392,4 +399,44 @@ void RADAR_Tx_Block::SetParameters()
         m_tx->GComp_IF_Gain = m_GComp_IF_Gain_Data.data();
         m_tx->GComp_IF_Gain_Size = static_cast<int>(m_GComp_IF_Gain_Data.size());
     }
+}
+
+// ============================================================================
+// 枚举解析
+// ============================================================================
+
+RADAR_Tx::SelectedGCType RADAR_Tx_Block::ConvertStringToGCType(const std::string& value)
+{
+    const std::string lower = ToLowerCopy(TrimCopy(value));
+    if(lower == "none" || lower == "0") {
+        return RADAR_Tx::none;
+    }
+    if(lower == "toi" || lower == "1") {
+        return RADAR_Tx::TOI;
+    }
+    if(lower == "dbc1" || lower == "2") {
+        return RADAR_Tx::dBc1;
+    }
+    if(lower == "toi_dbc1" || lower == "3") {
+        return RADAR_Tx::TOI_dBc1;
+    }
+    if(lower == "psat_gcsat_toi" || lower == "4") {
+        return RADAR_Tx::PSat_GCSat_TOI;
+    }
+    if(lower == "psat_gcsat_dbc1" || lower == "5") {
+        return RADAR_Tx::PSat_GCSat_dBc1;
+    }
+    if(lower == "psat_gcsat_toi_dbc1" || lower == "6") {
+        return RADAR_Tx::PSat_GCSat_TOI_dBc1;
+    }
+    if(lower == "rappnonlinearity" || lower == "7") {
+        return RADAR_Tx::RappNonlinearity;
+    }
+    if(lower == "gain_compression_vs_input_power" || lower == "8") {
+        return RADAR_Tx::Gain_compression_vs_input_power;
+    }
+    if(lower == "am_am_and_ampm_vs_input_power" || lower == "9") {
+        return RADAR_Tx::AM_AM_and_AMPM_vs_input_power;
+    }
+    return RADAR_Tx::none;
 }

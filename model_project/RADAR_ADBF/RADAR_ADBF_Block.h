@@ -6,6 +6,8 @@
 
 #include <complex>
 #include <vector>
+#include <queue>
+#include <deque>
 
 using namespace SystemVueModelBuilder;
 
@@ -24,6 +26,13 @@ private:
     void SetParameters();
 
     bool DataStreamRun();
+    bool TimeDrivenRun();
+
+    // single-channel black-box branch (matches DFModel)
+    bool runSingleChannelBlackBox_(int expectedM,
+                                   const std::vector<std::complex<double>>& inputData,
+                                   int K,
+                                   std::vector<std::complex<double>>& outputData);
 
     // algorithm helpers
     int getNumX() const;
@@ -49,6 +58,11 @@ private:
     double m_Theta;
     double m_Phi;
     double m_SampleRate;
+
+    // ========== 时间驱动缓冲队列 ==========
+    std::deque<std::complex<double>> m_tdInputBuffer;
+    std::queue<std::vector<std::complex<double>>> m_tdOutputQueue;
+    int m_outputCount = 0;
 };
 
 RegAlgo(RADAR_ADBF_Block);

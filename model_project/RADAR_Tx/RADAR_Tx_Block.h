@@ -70,6 +70,9 @@ private:
     int    m_RappS_IF_Gain;
     std::vector<double> m_GComp_IF_Gain_Data;
 
+    // ========== 枚举解析 ==========
+    static RADAR_Tx::SelectedGCType ConvertStringToGCType(const std::string& value);
+
     // ========== 运行时状态 ==========
     int m_outRate;
 

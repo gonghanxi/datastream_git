@@ -50,14 +50,17 @@ bool RADAR_ADBF_Block::Setup()
 {
     Block::Setup();
     SetParameters();
+    while (!m_tdInputBuffer.empty()) m_tdInputBuffer.pop_back();
+    while (!m_tdOutputQueue.empty()) m_tdOutputQueue.pop();
+    m_outputCount = 0;
     return true;
 }
 
 bool RADAR_ADBF_Block::Run()
 {
-//    if (IsVariableStepMode()) {
-//        return TimeDrivenRun();
-//    }
+    if (IsVariableStepMode()) {
+        return TimeDrivenRun();
+    }
     return DataStreamRun();
 }
 
@@ -107,6 +110,20 @@ bool RADAR_ADBF_Block::DataStreamRun()
     const int ny = getNumY();
     const int expectedM = getNumElements();
     const int M = (nChannels < expectedM) ? nChannels : expectedM;
+
+    // ========================================================================
+    // 单通道黑盒分支 (与 DFModel runSingleChannelBlackBoxBranch 对齐)
+    //
+    // 当实际 pipeline 只有 1 路通道时，使用黑盒增益公式代替标准 MVDR。
+    // ========================================================================
+    if (nChannels == 1 && expectedM == 1) {
+        std::vector<std::complex<double>> outputData;
+        if (runSingleChannelBlackBox_(expectedM, inputData, K, outputData)) {
+            std::string weightPortName = GetOutputPortName(0);
+            WriteOutputData(weightPortName, outputData);
+            return true;
+        }
+    }
 
     double thetaDeg = m_Theta;
     double phiDeg   = m_Phi;
@@ -199,6 +216,190 @@ bool RADAR_ADBF_Block::DataStreamRun()
 
     std::string weightPortName = GetOutputPortName(0);
     WriteOutputData(weightPortName, outputData);
+
+    return true;
+}
+
+// ============================================================================
+// 单通道黑盒分支 (与 DFModel runSingleChannelBlackBoxBranch 对齐)
+// ============================================================================
+bool RADAR_ADBF_Block::runSingleChannelBlackBox_(
+    int expectedM,
+    const std::vector<std::complex<double>>& inputData,
+    int K,
+    std::vector<std::complex<double>>& outputData)
+{
+    if (expectedM <= 0 || K < 1) {
+        return false;
+    }
+
+    if (K < 1) {
+        K = 1;
+    }
+
+    double avgPower = 0.0;
+    for (int k = 0; k < K && k < static_cast<int>(inputData.size()); ++k) {
+        avgPower += std::norm(inputData[k]);
+    }
+    avgPower /= static_cast<double>(K);
+
+    if (!std::isfinite(avgPower) || avgPower < 0.0) {
+        avgPower = 0.0;
+    }
+
+    const double N = 16.0; // 黑盒分支始终使用默认天线数 16
+
+    // 黑盒公式: gain = N / (1 + c * avgPower)
+    // c = (N + 0.5) / (N - 0.5)
+    double c = 1.0;
+    if (N > 0.5) {
+        c = (N + 0.5) / (N - 0.5);
+    }
+
+    const double gain = N / (1.0 + c * avgPower);
+
+    outputData.clear();
+    outputData.push_back(std::complex<double>(gain, 0.0));
+    return true;
+}
+
+// ============================================================================
+// TimeDrivenRun: 输入存buffer，数据够才处理，输出存队列，一次run只输出一个
+// ============================================================================
+bool RADAR_ADBF_Block::TimeDrivenRun()
+{
+    // ---- 步骤1: 读取输入，追加到 buffer ----
+    std::string inPortName = GetInputPortName(0);
+    auto inputData = ReadInputData<std::complex<double>>(inPortName);
+    for (const auto& sample : inputData) {
+        m_tdInputBuffer.push_back(sample);
+    }
+
+    // ---- 步骤2: 累积够 m_NumOfSamples 个样本后执行处理 ----
+    const int K = (m_NumOfSamples >= 1) ? m_NumOfSamples : 1;
+
+    if (static_cast<int>(m_tdInputBuffer.size()) >= K) {
+        // 取出 K 个样本
+        std::vector<std::complex<double>> batch(K);
+        for (int i = 0; i < K; ++i) {
+            batch[i] = m_tdInputBuffer.front();
+            m_tdInputBuffer.pop_front();
+        }
+
+        const int expectedM = getNumElements();
+        std::vector<std::complex<double>> result;
+
+        if (expectedM == 1) {
+            // 单通道走黑盒分支
+            runSingleChannelBlackBox_(expectedM, batch, K, result);
+        } else {
+            // 多通道走完整 MVDR
+            const int nx = getNumX();
+            const int ny = getNumY();
+            const int M = 1; // 单通道输入，M 最大为 1
+
+            // 读取 el / az
+            double thetaDeg = m_Theta;
+            double phiDeg   = m_Phi;
+            {
+                std::string elPortName = GetInputPortName(1);
+                auto elData = ReadInputData<double>(elPortName);
+                if (!elData.empty()) {
+                    thetaDeg = elData[0];
+                }
+            }
+            {
+                std::string azPortName = GetInputPortName(2);
+                auto azData = ReadInputData<double>(azPortName);
+                if (!azData.empty()) {
+                    phiDeg = azData[0];
+                }
+            }
+
+            std::vector<std::complex<double>> a;
+            buildSteeringVector(nx, ny, m_Dx, m_Dy, thetaDeg, phiDeg, a);
+            if (static_cast<int>(a.size()) > M) { a.resize(M); }
+            if (static_cast<int>(a.size()) < M) { a.resize(M, std::complex<double>(1.0, 0.0)); }
+
+            std::vector<std::vector<std::complex<double>>> R(
+                M, std::vector<std::complex<double>>(M, std::complex<double>(0.0, 0.0)));
+
+            for (int k = 0; k < K; ++k) {
+                std::vector<std::complex<double>> x(M, std::complex<double>(0.0, 0.0));
+                for (int ch = 0; ch < M; ++ch) {
+                    x[ch] = batch[ch * K + k];
+                }
+                for (int r = 0; r < M; ++r) {
+                    for (int c = 0; c < M; ++c) {
+                        R[r][c] += x[r] * std::conj(x[c]);
+                    }
+                }
+            }
+
+            const double invK = 1.0 / static_cast<double>(K);
+            for (int r = 0; r < M; ++r) {
+                for (int c = 0; c < M; ++c) {
+                    R[r][c] *= invK;
+                }
+            }
+
+            double traceReal = 0.0;
+            for (int i = 0; i < M; ++i) {
+                traceReal += std::real(R[i][i]);
+            }
+            double avgPower = traceReal / static_cast<double>(M);
+            if (!std::isfinite(avgPower) || avgPower <= 0.0) {
+                avgPower = 1.0;
+            }
+            const double loading = kDiagonalLoadingRelative * avgPower + kDiagonalLoadingAbsolute;
+            for (int i = 0; i < M; ++i) {
+                R[i][i] += std::complex<double>(loading, 0.0);
+            }
+
+            std::vector<std::complex<double>> u;
+            std::vector<std::complex<double>> w;
+            const bool ok = solveLinearSystem(R, a, u);
+            if (ok && static_cast<int>(u.size()) == M) {
+                std::complex<double> denom(0.0, 0.0);
+                for (int i = 0; i < M; ++i) {
+                    denom += std::conj(a[i]) * u[i];
+                }
+                if (std::abs(denom) > 1.0e-24) {
+                    w.resize(M);
+                    for (int i = 0; i < M; ++i) {
+                        w[i] = u[i] / denom;
+                    }
+                } else {
+                    fallbackConventionalWeight(a, w);
+                }
+            } else {
+                fallbackConventionalWeight(a, w);
+            }
+
+            result.reserve(M);
+            for (int ch = 0; ch < M; ++ch) {
+                if (kOutputConjugateForDBF) {
+                    result.push_back(std::conj(w[ch]));
+                } else {
+                    result.push_back(w[ch]);
+                }
+            }
+        }
+
+        if (!result.empty()) {
+            m_tdOutputQueue.push(result);
+        }
+    }
+
+    // ---- 步骤3: 从输出队列取一个写出 ----
+    if (!m_tdOutputQueue.empty()) {
+        auto outValue = m_tdOutputQueue.front();
+        m_tdOutputQueue.pop();
+        m_outputCount++;
+
+        std::string weightPortName = GetOutputPortName(0);
+        WriteOutputData(weightPortName, outValue);
+    }
 
     return true;
 }

@@ -286,15 +286,18 @@ RADAR_PULSE \
     RADAR_PdMeasure \
     RADAR_Pd_Measurement \
     RADAR_Pf_Measurement \
+    RADAR_PhaseShift \
     RADAR_PhasedArrayRx \
     RADAR_PhasedArrayTx \
     RADAR_PlotsCentroid \
     RADAR_PropagationLoss \
 RADAR_PulseCompression \
     RADAR_PulseCompression_M \
+    RADAR_QuadSample \
     RADAR_RaisedCosineFilter \
 RADAR_RangeMeas\
 RADAR_RCS\
+    RADAR_Rx \
     RADAR_Rx_DBS_2D \
     RADAR_SAR_Echo \
     RADAR_Sea_Clutter \
