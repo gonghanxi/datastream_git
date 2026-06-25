@@ -8,7 +8,7 @@ DEFINES += SYSTEMVUEMODELBUILDER_EXPORTS
 
 # ------------------- FFTW 配置 -------------------
 # 定义FFTW根路径
-FFTW_ROOT = $$clean_path($$PWD/fftw-3.3.5)
+FFTW_ROOT = $$clean_path($$PWD/../../third-party/fftw-3.3.5)
 # 包含FFTW的pri文件
 include($$FFTW_ROOT/fftw.pri)
 # -------------------------------------------------
