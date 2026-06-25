@@ -316,7 +316,7 @@ QString CFunctionModelParser::generateCFunctionJson(
         QString defaultVal;
         QString dt = port.dataType.toLower();
         if (dt == "bool") defaultVal = "false";
-        else if (dt == "complex") defaultVal = "[0,0]";
+        else if (dt.contains("complex")) defaultVal = "(0,0)";
         else defaultVal = "0";  // real, int, matrix等数值类型
         portObj["value"] = defaultVal;
         inputArray.append(portObj);
@@ -336,11 +336,12 @@ QString CFunctionModelParser::generateCFunctionJson(
     }
     root["output"] = outputArray;
 
-    // 写文件
+    // 写文件：若目录已存在则先清除（避免残留旧的exe/build缓存）
     QDir dir(outputDir);
-    if (!dir.exists()) {
-        dir.mkpath(".");
+    if (dir.exists()) {
+        dir.removeRecursively();
     }
+    dir.mkpath(".");
 
     QString fileName = QString("%1.json").arg(modelInfo.instanceName);
     QString filePath = dir.absoluteFilePath(fileName);
@@ -395,16 +396,31 @@ bool CFunctionModelParser::readCFunctionOutput(
 
         QVector<double> values;
         if (!valueStr.isEmpty()) {
-            // 支持单值和矩阵 "[1.0,2.0;3.0,4.0]"
-            QString cleaned = valueStr;
-            cleaned.remove('[').remove(']');
-            QStringList rows = cleaned.split(';', QString::SkipEmptyParts);
-            for (const QString& row : rows) {
-                QStringList cols = row.split(',', QString::SkipEmptyParts);
-                for (const QString& col : cols) {
-                    bool ok = false;
-                    double v = col.trimmed().toDouble(&ok);
-                    if (ok) values.append(v);
+            if (valueStr.startsWith('(') && valueStr.endsWith(')')) {
+                // 复数格式 "(real,imag)" —— 解析为两个连续值
+                QString inner = valueStr.mid(1, valueStr.length() - 2);
+                QStringList parts = inner.split(',', QString::SkipEmptyParts);
+                if (parts.size() >= 2) {
+                    bool ok1 = false, ok2 = false;
+                    double realPart = parts[0].trimmed().toDouble(&ok1);
+                    double imagPart = parts[1].trimmed().toDouble(&ok2);
+                    if (ok1 && ok2) {
+                        values.append(realPart);
+                        values.append(imagPart);
+                    }
+                }
+            } else {
+                // 支持单值和矩阵 "[1.0,2.0;3.0,4.0]"
+                QString cleaned = valueStr;
+                cleaned.remove('[').remove(']');
+                QStringList rows = cleaned.split(';', QString::SkipEmptyParts);
+                for (const QString& row : rows) {
+                    QStringList cols = row.split(',', QString::SkipEmptyParts);
+                    for (const QString& col : cols) {
+                        bool ok = false;
+                        double v = col.trimmed().toDouble(&ok);
+                        if (ok) values.append(v);
+                    }
                 }
             }
         }

@@ -261,7 +261,7 @@ bool CFunctionBlock::updateJsonInput()
             // 无数据可用时，写入类型对应的默认值，确保JSON中不出现空字符串
             QString defVal;
             if (dataType == "bool") defVal = "false";
-            else if (dataType == "complex") defVal = "[0,0]";
+            else if (dataType.contains("complex")) defVal = "(0,0)";
             else defVal = "0";
             inputObj["value"] = defVal;
             inputArray[i] = inputObj;
@@ -293,8 +293,20 @@ bool CFunctionBlock::updateJsonInput()
             std::vector<std::complex<double>> data;
             reader->ReadData(data);
             if (!data.empty()) {
-                valueStr = QString("[%1,%2]").arg(data[0].real(), 0, 'g', 15)
+                valueStr = QString("(%1,%2)").arg(data[0].real(), 0, 'g', 15)
                                              .arg(data[0].imag(), 0, 'g', 15);
+            }
+        } else if (dataType.contains("multiple complex")) {
+            // 复数总线: [(r,i),(r,i),...]
+            std::vector<std::complex<double>> data;
+            reader->ReadData(data);
+            if (!data.empty()) {
+                QStringList elems;
+                for (const auto& c : data) {
+                    elems << QString("(%1,%2)").arg(c.real(), 0, 'g', 15)
+                                               .arg(c.imag(), 0, 'g', 15);
+                }
+                valueStr = "[" + elems.join(",") + "]";
             }
         } else if (dataType.startsWith("matrix")) {
             std::vector<double> data;
@@ -497,6 +509,10 @@ bool CFunctionBlock::readAndWriteOutput()
     for (const auto& output : outputs) {
         std::string portName = output.first.toStdString();
         const QVector<double>& values = output.second;
+
+        qDebug() << "[CFunctionBlock] readAndWriteOutput:"
+                 << output.first << "values:" << values.size()
+                 << "data:" << values;
 
         // 获取输出端口的数据类型
         Buffer* buffer = GetOutputPort(portName);
