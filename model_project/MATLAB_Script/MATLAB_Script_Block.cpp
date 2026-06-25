@@ -168,7 +168,7 @@ void MATLAB_Script_Block::assignArrayParam(const std::string& name, const QStrin
 void MATLAB_Script_Block::assignMatrixParam(const std::string& name, const QString& innerStr)
 {
     // 按分号分割行
-    QStringList rows = innerStr.split(';', Qt::SkipEmptyParts);
+    QStringList rows = innerStr.split(';', QString::SkipEmptyParts);
     if (rows.isEmpty()) return;
 
     // 解析每行的元素（考虑括号内的逗号和分号）

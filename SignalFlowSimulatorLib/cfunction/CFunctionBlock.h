@@ -70,6 +70,7 @@ private:
 
     // 编译已尝试标记：失败后不再重复调用编译器，也不再打印任何错误
     bool m_buildAttempted = false;
+
 };
 
 }
