@@ -298,6 +298,7 @@ RADAR_PulseCompression \
 RADAR_RangeMeas\
 RADAR_RCS\
     RADAR_Rx \
+    RADAR_Rx_4x4 \
     RADAR_Rx_DBS_2D \
     RADAR_SAR_Echo \
     RADAR_Sea_Clutter \
@@ -311,8 +312,10 @@ RADAR_Switch\
     RADAR_TargetTrack_M \
     RADAR_TargetTrajectory \
     RADAR_Tx \
+    RADAR_Tx_4x4 \
     RADAR_Tx_DBS_2D \
     RADAR_Tx_DBS_Measurement \
+    RADAR_Tx_Synthesis \
 RADAR_UnAmbRange\
 RADAR_UnAmbVelocity\
 RADAR_VelocityMeas\

@@ -336,12 +336,23 @@ QString CFunctionModelParser::generateCFunctionJson(
     }
     root["output"] = outputArray;
 
-    // 写文件：若目录已存在则先清除（避免残留旧的exe/build缓存）
+    // 确保目录存在（多个CFunction块共享同一linkKey目录，不能整体删除）
     QDir dir(outputDir);
-    if (dir.exists()) {
-        dir.removeRecursively();
+    if (!dir.exists()) {
+        dir.mkpath(".");
     }
-    dir.mkpath(".");
+
+    // 仅清理当前实例的缓存exe和_build目录，避免残留旧编译结果
+    QString exeExt;
+#ifdef Q_OS_WIN
+    exeExt = ".exe";
+#endif
+    QString exePath = dir.absoluteFilePath(modelInfo.instanceName + exeExt);
+    if (QFile::exists(exePath)) {
+        QFile::remove(exePath);
+    }
+    QString buildDir = dir.absoluteFilePath("_build");
+    QDir(buildDir).removeRecursively();
 
     QString fileName = QString("%1.json").arg(modelInfo.instanceName);
     QString filePath = dir.absoluteFilePath(fileName);
