@@ -251,6 +251,16 @@ bool CFunctionModelParser::parseCFunctionModel(
     if (!parsePorts(cmpObj, outModelInfo)) return false;
     if (!parseAttributes(currentLinkKey, cmpObj, currentVars, scopeMgr, resolver, outModelInfo)) return false;
 
+    // 解析 isUserDefined 字段
+    if (cmpObj.contains("isUserDefined")) {
+        CFunctionParameter param;
+        param.name = "isUserDefined";
+        param.value = cmpObj["isUserDefined"].toBool() ? "true" : "false";
+        outModelInfo.parameters["isUserDefined"] = param;
+        qDebug() << "[CFunction] isUserDefined:" << param.value
+                 << "instance:" << outModelInfo.instanceName;
+    }
+
     qDebug() << "[CFunction] parse complete:" << outModelInfo.instanceName
              << "ports:" << outModelInfo.ports.size()
              << "params:" << outModelInfo.parameters.size();
@@ -291,6 +301,10 @@ QString CFunctionModelParser::generateCFunctionJson(
     QJsonArray attrArray;
     for (auto it = modelInfo.parameters.begin(); it != modelInfo.parameters.end(); ++it) {
         const CFunctionParameter& param = it.value();
+        // 跳过内部标记参数，不写入JSON
+        if (param.name == "isUserDefined") {
+            continue;
+        }
         QJsonObject attrObj;
         attrObj["name"] = param.name;
         attrObj["datatype"] = param.dataType;

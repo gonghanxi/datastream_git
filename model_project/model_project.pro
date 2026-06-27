@@ -289,6 +289,7 @@ RADAR_PULSE \
     RADAR_PhaseShift \
     RADAR_PhasedArrayRx \
     RADAR_PhasedArrayTx \
+    RADAR_Platform \
     RADAR_PlotsCentroid \
     RADAR_PropagationLoss \
 RADAR_PulseCompression \

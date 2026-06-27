@@ -632,8 +632,8 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
         return true;
     }
 
-    // 判断是否为CFunction模型
-    if (cmpType == "CFunction") {
+    // 判断是否为CFunction模型（兼容另存后cmpType变化的情况，以configData字段为辅助判断依据）
+    if (cmpType == "CFunction" || (cmpObj.contains("configData") && cmpObj["configData"].isObject())) {
         CFunctionModelParser cfuncParser;
         CFunctionModelInfo cfuncModelInfo;
 
@@ -691,8 +691,12 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
         return false;
     }
 
-    // ===== 添加Equations字段解析 =====
-    if (blockInfo.cmpType == "MATLAB_Script") {
+    // ===== 添加Equations字段解析（兼容另存后cmpType变化的情况，以Equations字段为辅助判断依据；排除CFunction避免冲突）=====
+    if (blockInfo.cmpType == "MATLAB_Script" || (cmpObj.contains("Equations") && !cmpObj["Equations"].toString().isEmpty() && !cmpObj.contains("configData"))) {
+        // 修正cmpType为MATLAB_Script，确保后续模型创建逻辑正确
+        if (cmpObj.contains("Equations") && !cmpObj.contains("configData")) {
+            blockInfo.cmpType = "MATLAB_Script";
+        }
         if(cmpObj.contains("Equations")) {
             Parameter para;
             para.Name = "Equations";
@@ -700,6 +704,15 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
             blockInfo.parameters["Equations"] = para;
             qDebug() << "添加Equations字段:" << blockInfo.instanceName
                      << "内容:" << para.Value.c_str();
+        }
+        // ===== 新增：添加isUserDefined字段解析 =====
+        if(cmpObj.contains("isUserDefined")) {
+            Parameter para;
+            para.Name = "isUserDefined";
+            para.Value = cmpObj["isUserDefined"].toBool() ? "true" : "false";
+            blockInfo.parameters["isUserDefined"] = para;
+            qDebug() << "添加isUserDefined字段:" << blockInfo.instanceName
+                     << "值:" << para.Value.c_str();
         }
     }
 

@@ -10,6 +10,10 @@
 
 namespace SV = SystemVueModelBuilder;
 
+// 静态成员变量初始化
+octave::interpreter* MATLAB_Script_Block::s_sharedInterp = nullptr;
+int MATLAB_Script_Block::s_instanceCount = 0;
+
 // ===================== Octave 数据转换辅助方法 =====================
 
 octave_value MATLAB_Script_Block::vectorToOctave(const std::vector<double>& data)
@@ -257,13 +261,22 @@ void MATLAB_Script_Block::assignComplexScalarParam(const std::string& name, cons
 MATLAB_Script_Block::MATLAB_Script_Block(const std::string& name)
     : Block(name)
 {
-    m_interp = new octave::interpreter();
-    m_interp->execute();
+    // 使用共享 Octave 解释器（所有实例共用）
+    if (s_instanceCount == 0) {
+        s_sharedInterp = new octave::interpreter();
+        s_sharedInterp->execute();
+    }
+    s_instanceCount++;
+    m_interp = s_sharedInterp;  // 指向共享解释器
 }
 
 MATLAB_Script_Block::~MATLAB_Script_Block()
 {
-    delete m_interp;
+    s_instanceCount--;
+    if (s_instanceCount == 0 && s_sharedInterp) {
+        delete s_sharedInterp;
+        s_sharedInterp = nullptr;
+    }
 }
 
 bool MATLAB_Script_Block::Setup()
@@ -324,6 +337,31 @@ bool MATLAB_Script_Block::Run()
     QString folderPath = appPath + "/m";
     m_interp->eval(QString("addpath('%1');").arg(folderPath).toStdString(), 0);
     qDebug() << QString("MATLAB_Script_Block Run2");
+
+    // 重新注入当前模型的参数（多实例共享解释器时，确保参数正确）
+    std::map<std::string, SV::Parameter> allparameters = getAllParameter();
+    for (auto e : allparameters) {
+        std::string Name = e.second.Name;
+        if (Name != "Equations" && Name != "isUserDefined") {
+            QString str = e.second.Value.c_str();
+            QString trimmed = str.trimmed();
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                QString inner = trimmed.mid(1, trimmed.length() - 2).trimmed();
+                if (inner.isEmpty()) {
+                    m_interp->get_evaluator().top_level_assign(Name, octave_value(::Matrix(0, 0)));
+                } else if (inner.contains(";")) {
+                    assignMatrixParam(Name, inner);
+                } else {
+                    assignArrayParam(Name, inner);
+                }
+            } else if (trimmed.contains("(") || trimmed.contains(",")) {
+                assignComplexScalarParam(Name, trimmed);
+            } else {
+                double value = std::stod(e.second.Value);
+                m_interp->get_evaluator().top_level_assign(Name, octave_value(value));
+            }
+        }
+    }
 
     // 将输入变量注入 Octave 工作区
     for (auto key : inputs.keys()) {
@@ -440,6 +478,10 @@ bool MATLAB_Script_Block::Run()
         if (!logged) {
             LOG_ERROR("MATLAB_Script_Block Octave exception: ", e.what(),
                       " blockName: ", getInstanceName().c_str());
+            std::string isUserDefined = getParameter("isUserDefined").Value;
+            if (isUserDefined == "true") {
+                LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+            }
             logged = true;
         }
         return false;
@@ -448,9 +490,24 @@ bool MATLAB_Script_Block::Run()
         if (!logged) {
             LOG_ERROR("MATLAB_Script_Block Octave unknown exception, blockName: ",
                       getInstanceName().c_str());
+            std::string isUserDefined = getParameter("isUserDefined").Value;
+            if (isUserDefined == "true") {
+                LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+            }
             logged = true;
         }
         return false;
+    }
+    // 自定义模型校验成功日志（只输出一次）
+    {
+        static bool loggedSuccess = false;
+        if (!loggedSuccess) {
+            std::string isUserDefined = getParameter("isUserDefined").Value;
+            if (isUserDefined == "true") {
+                LOG_INFO("自定义模型校验成功");
+            }
+            loggedSuccess = true;
+        }
     }
     return true;
 }
@@ -526,7 +583,7 @@ bool MATLAB_Script_Block::Initialize()
         for (auto e : allparameters) {
             std::string Name = e.second.Name;
 
-            if (Name != "Equations") {
+            if (Name != "Equations" && Name != "isUserDefined") {
                 inputs.append(Name.c_str());
 
                 QString str = e.second.Value.c_str();
