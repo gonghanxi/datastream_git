@@ -13,6 +13,10 @@
 
 namespace SystemVueModelBuilder{
 
+static bool g_updateError = true;
+static bool g_invokeEngineError = true;
+static bool g_rWError = true;
+
 CFunctionBlock::CFunctionBlock(const std::string& name)
     : Block(name)
 {
@@ -207,23 +211,32 @@ bool CFunctionBlock::executeCFunction()
 {
     // 步骤1：更新cfunction.json的input字段
     if (!updateJsonInput()) {
-        LOG_ERROR("[CFunctionBlock] Failed to update JSON input:",
-                  m_instanceName.toStdString());
-        return false;
+        if(g_updateError) {
+            LOG_ERROR("[CFunctionBlock] Failed to update JSON input:",
+                      m_instanceName.toStdString());
+            g_updateError = false;
+            return false;
+        }
     }
 
     // 步骤2：调用外部小引擎
     if (!invokeEngine(m_generatedJsonPath)) {
-        LOG_ERROR("[CFunctionBlock] Engine invocation failed:",
-                  m_instanceName.toStdString());
-        return false;
+        if(g_invokeEngineError) {
+            LOG_ERROR("[CFunctionBlock] Engine invocation failed:",
+                      m_instanceName.toStdString());
+            g_invokeEngineError = false;
+            return false;
+        }
     }
 
     // 步骤3：读取output并写入输出端口
     if (!readAndWriteOutput()) {
-        LOG_ERROR("[CFunctionBlock] Failed to read/write output:",
-                  m_instanceName.toStdString());
-        return false;
+        if(g_rWError) {
+            LOG_ERROR("[CFunctionBlock] Failed to read/write output:",
+                      m_instanceName.toStdString());
+            g_rWError = false;
+            return false;
+        }
     }
 
     return true;

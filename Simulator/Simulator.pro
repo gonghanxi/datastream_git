@@ -3,7 +3,7 @@ TEMPLATE = app
 CONFIG += c++17 cmdline
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-DESTDIR = ../bin
+DESTDIR = "$$PWD/../bin"
 QT += core gui opengl svg printsupport network websockets concurrent
 
 # 解决QDebug中文乱码/不显示核心配置
