@@ -223,11 +223,6 @@ bool CFunctionBlock::executeCFunction()
             g_updateError = false;
             return false;
         }
-        if (!m_updateJsonInputErrorLogged) {
-            LOG_ERROR("[CFunctionBlock] JSON输入更新失败:",
-                      m_instanceName.toStdString());
-            m_updateJsonInputErrorLogged = true;
-        }
         return false;
     }
 
@@ -239,11 +234,6 @@ bool CFunctionBlock::executeCFunction()
             g_invokeEngineError = false;
             return false;
         }
-        if (!m_invokeEngineErrorLogged) {
-            LOG_ERROR("[CFunctionBlock] 引擎调用失败:",
-                      m_instanceName.toStdString());
-            m_invokeEngineErrorLogged = true;
-        }
         return false;
     }
 
@@ -254,11 +244,6 @@ bool CFunctionBlock::executeCFunction()
                       m_instanceName.toStdString());
             g_rWError = false;
             return false;
-        }
-        if (!m_readAndWriteOutputErrorLogged) {
-            LOG_ERROR("[CFunctionBlock] 输出读写失败:",
-                      m_instanceName.toStdString());
-            m_readAndWriteOutputErrorLogged = true;
         }
         return false;
     }

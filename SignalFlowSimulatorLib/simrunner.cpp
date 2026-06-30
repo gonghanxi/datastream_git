@@ -94,7 +94,29 @@ bool SimRunner::start()
         LOG_INFO("模型实例Setup失败");
         return false;
     }
+
+    // 所有校验完成后，如果有子系统则打印校验成功提示
+    if (hasSubSystems()) {
+        LOG_INFO("自定义模型校验成功");
+    }
+
     return true;
+}
+
+bool SimRunner::hasSubSystems() const
+{
+    AlgorithmManager* algoMgr = AlgorithmManager::createInstance();
+    if (!algoMgr) return false;
+
+    const auto& blocksInfoMap = algoMgr->getBlocksInfo();
+    for (auto it = blocksInfoMap.begin(); it != blocksInfoMap.end(); ++it) {
+        for (const BlockInfo& blockInfo : it.value()) {
+            if (blockInfo.isSubSystem && blockInfo.isUserDefined) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 bool SimRunner::run()
@@ -1196,6 +1218,9 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             {
                 qDebug() << "目标端口是锚点端口(topProtId=" << dstPort.topProtId << ")，递归处理上游连接";
                 qDebug() << "场景A --srcNode.childTopoId: " << srcNode.childTopoId;
+                // 校验子链路入口端口的topProtId是否与父级端口ID匹配
+                if (!checkSubLinkTopProtId(srcNode.childTopoId, srcPort, "outPort"))
+                    return false;
                 if(!dfsTraverseLink(upstreamBlock, upstreamPort, srcNode, srcPort, srcNode.childTopoId))
                 {
                     qDebug() << "场景A递归失败";
@@ -1211,6 +1236,9 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             {
                 qDebug() << "目标端口不是锚点端口，递归处理下游连接";
                 qDebug() << "场景A --srcNode.childTopoId: " << srcNode.childTopoId;
+                // 校验子链路入口端口的topProtId是否与父级端口ID匹配
+                if (!checkSubLinkTopProtId(srcNode.childTopoId, srcPort, "outPort"))
+                    return false;
                 if(!dfsTraverseLink(dstNode, dstPort, srcNode, srcPort, srcNode.childTopoId))
                 {
                     qDebug() << "场景A递归失败";
@@ -1232,6 +1260,9 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             if(srcPort.topProtId!=-1)
             {
                 qDebug() << "源端口是锚点端口(topProtId=" << srcPort.topProtId << ")，递归处理上游连接";
+                // 校验子链路入口端口的topProtId是否与父级端口ID匹配
+                if (!checkSubLinkTopProtId(dstNode.childTopoId, dstPort))
+                    return false;
                 if(!dfsTraverseLink(upstreamBlock, upstreamPort, dstNode, dstPort, dstNode.childTopoId))
                 {
                     qDebug() << "场景B递归失败";
@@ -1246,6 +1277,9 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             else
             {
                 qDebug() << "源端口不是锚点端口，递归处理下游连接";
+                // 校验子链路入口端口的topProtId是否与父级端口ID匹配
+                if (!checkSubLinkTopProtId(dstNode.childTopoId, dstPort))
+                    return false;
                 if(!dfsTraverseLink(srcNode, srcPort, dstNode, dstPort, dstNode.childTopoId))
                 {
                     qDebug() << "场景B递归失败";
@@ -1286,7 +1320,6 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
                            dstNode.block, dstPort.name.toStdString());
             qDebug() << "入穿透连接成功：" << upstreamBlock.instanceName << ":" << upstreamPort.name
                      << " -----> " << dstNode.instanceName << ":" << dstPort.name;
-
         }
 
         // 出穿透：子链路锚点源 → 上游（上游非容器）
@@ -1350,7 +1383,6 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             mConnections.push_back(connection);
             qDebug() << "基础连接成功：" << srcNode.instanceName << ":" << srcPort.name
                      << " -----> " << dstNode.instanceName << ":" << dstPort.name;
-
         }
     }
     qDebug() << "=== dfsTraverseLink 结束 ===";
@@ -1473,6 +1505,28 @@ bool SimRunner::isSubSystemEmpty(const QString& subLinkKey)
     }
 
     qDebug() << "  不是空子系统";
+    return false;
+}
+
+bool SimRunner::checkSubLinkTopProtId(const QString& childTopoId, const PortMsg& entryPort, const QString& portType)
+{
+    AlgorithmManager* algoMgr = AlgorithmManager::createInstance();
+    if (!algoMgr || childTopoId.isEmpty()) return true;
+
+    QVector<BlockInfo> subBlocks = algoMgr->getBlocksInfo().value(childTopoId);
+    for (const BlockInfo& block : subBlocks) {
+        if (block.cmpType != portType) continue;
+        for (const auto& port : block.portsMsg) {
+            if (port.topProtId == entryPort.id) {
+                return true;
+            }
+        }
+    }
+
+    LOG_ERROR("子系统子链路端口topProtId校验失败：",
+             "子链路", childTopoId.toStdString(),
+             "中未找到topProtId为", entryPort.id,
+             "的" + portType.toStdString() + "端口，请检查子链路" + portType.toStdString() + "的topProtId是否与父级子系统端口ID一致");
     return false;
 }
 

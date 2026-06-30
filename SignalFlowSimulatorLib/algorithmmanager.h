@@ -95,6 +95,9 @@ struct BlockInfo
     //短路开路
     QString cmpCondition;
     QString cmpCategory;
+
+    // 自定义模型标志
+    bool isUserDefined = false;
 };
 
 class AlgorithmManager

@@ -59,6 +59,7 @@ public:
     ~SimRunner();
     bool start() override;
     bool run() override;
+    bool hasSubSystems() const;
     void setWriter(ILogWriter* write) override;
     void setSimCfg(SimCfgData* data) override;
     bool portPutTypeCheck(const QString& putTypeStart,const QString& putTypeEnd);
@@ -114,6 +115,7 @@ private:
     //递归建立连接关系（无限嵌套子链路）
     bool dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& upstreamPort, const BlockInfo& parentBlock, const PortMsg& parentPort, const QString& linkKey);
     bool isSubSystemEmpty(const QString& subLinkKey);//判断子系统是否为空
+    bool checkSubLinkTopProtId(const QString& childTopoId, const PortMsg& entryPort, const QString& portType = "inPort");//校验子链路入口端口的topProtId是否匹配
     //调度
     bool RunBlocks();
     bool NewScheduler();
