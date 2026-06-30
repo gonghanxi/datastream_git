@@ -456,7 +456,7 @@ bool LinkParser::parseParameters(
 
         // ===== 参数校验（只对非inPort/outPort、子系统模型执行）=====
 
-        if(blockInfo.cmpType != "subSystem") {
+        if(blockInfo.cmpType != "subSystem" && !blockInfo.isSubSystem) {
             // 枚举类型校验
             if (paramDataType.toLower() == "enumeration") {
                 if (paramObj.contains("selectOptions") && paramObj["selectOptions"].isArray()) {
@@ -565,9 +565,14 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
     blockInfo.cmpId = extractId(cmpObj["cmpId"].toString(), "cp_").toInt();
     blockInfo.isSubSystem = cmpObj["isSubSystem"].toBool();
     blockInfo.cmpType = cmpObj["cmpType"].toString();
+    // 兼容前端从数据库拖出子系统后cmpType/objectType变化的情况
+    if (blockInfo.isSubSystem) {
+        blockInfo.cmpType = "subSystem";
+    }
     blockInfo.instanceName = cmpObj["instanceName"].toString();
     blockInfo.childTopoId = cmpObj["childTopoId"].toString();
     blockInfo.cmpCondition = cmpObj["cmpCondition"].toString();
+    blockInfo.isUserDefined = cmpObj["isUserDefined"].toBool();
 
     qDebug() << "解析到 cmpCondition:" << blockInfo.cmpCondition
              << "模型:" << blockInfo.instanceName;
@@ -695,7 +700,7 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
     // ===== 添加Equations字段解析（兼容另存后cmpType变化的情况，以Equations字段为辅助判断依据；排除CFunction避免冲突）=====
     // 已有明确类型的模型（inPort、outPort、subSystem等）不应被MATLAB_Script检测覆盖
     static const QSet<QString> protectedTypes = {"inPort", "outPort", "subSystem", "Fmu"};
-    if (blockInfo.cmpType == "MATLAB_Script" || (!protectedTypes.contains(blockInfo.cmpType) && cmpObj.contains("Equations") && !cmpObj["Equations"].toString().isEmpty() && !cmpObj.contains("configData"))) {
+    if (blockInfo.cmpType == "MATLAB_Script" || (!blockInfo.isSubSystem && !protectedTypes.contains(blockInfo.cmpType) && cmpObj.contains("Equations") && !cmpObj["Equations"].toString().isEmpty() && !cmpObj.contains("configData"))) {
         // 仅当cmpType不是受保护类型时，才修正为MATLAB_Script
         if (cmpObj.contains("Equations") && !cmpObj.contains("configData") && !protectedTypes.contains(blockInfo.cmpType)) {
             blockInfo.cmpType = "MATLAB_Script";
