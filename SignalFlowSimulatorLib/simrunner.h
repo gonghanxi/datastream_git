@@ -73,6 +73,12 @@ public:
     void requestStop() override;   // 请求停止仿真
     bool isPaused() const;         // 查询暂停状态
 
+    // 获取暂停控制指针，供外部直接操作原子标志
+    QAtomicInt* getPausedPtr() override { return &m_paused; }
+    QAtomicInt* getStopRequestedPtr() override { return &m_stopRequested; }
+    QMutex* getPauseMutexPtr() override { return &m_pauseMutex; }
+    QWaitCondition* getPauseCondPtr() override { return &m_pauseCond; }
+
     //设置是否为时间驱动
 
     //DDS服务

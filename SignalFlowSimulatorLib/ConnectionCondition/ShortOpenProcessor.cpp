@@ -95,7 +95,7 @@ bool ShortOpenProcessor::processSingleLink(
             }
 
             // 处理短路（修改 connections）
-            processShort(item.blockInfo, connections);
+            processShort(item.blockInfo, connections, blocksInfo);
         }
     }
 
@@ -172,18 +172,17 @@ void ShortOpenProcessor::processOpen(const BlockInfo& blockInfo,
 }
 
 void ShortOpenProcessor::processShort(const BlockInfo& blockInfo,
-    QVector<Connection>& connections)
+    QVector<Connection>& connections,
+    const QVector<BlockInfo>& blocksInfo)
 {
-//    Q_UNUSED(blocksInfo);
-
     qDebug() << "  短路处理: 模型" << blockInfo.instanceName
              << "(ID:" << blockInfo.cmpId << ")";
 
-    // 1. 获取所有上游连接（连接到本模型输入端口的连接）
-    QVector<Connection> incomingConns = getAllIncomingConnections(blockInfo, connections);
+    // 1. 获取所有上游连接（连接到本模型输入端口的连接，含反向连接识别）
+    QVector<Connection> incomingConns = getAllIncomingConnections(blockInfo, connections, blocksInfo);
 
-    // 2. 获取所有下游连接（从本模型输出端口出发的连接）
-    QVector<Connection> outgoingConns = getAllOutgoingConnections(blockInfo, connections);
+    // 2. 获取所有下游连接（从本模型输出端口出发的连接，含反向连接识别）
+    QVector<Connection> outgoingConns = getAllOutgoingConnections(blockInfo, connections, blocksInfo);
 
     qDebug() << "  上游连接数:" << incomingConns.size()
              << "下游连接数:" << outgoingConns.size();
@@ -199,7 +198,7 @@ void ShortOpenProcessor::processShort(const BlockInfo& blockInfo,
         return;
     }
 
-    // 4. 收集所有上游源端（上游模型的输出端口）
+    // 4. 收集所有上游源端（对端块的输出端口）
     struct SourceEndpoint {
         QString fromModelId;  // 上游模型ID
         QString fromPortId;   // 上游模型端口ID
@@ -207,14 +206,21 @@ void ShortOpenProcessor::processShort(const BlockInfo& blockInfo,
     QVector<SourceEndpoint> sources;
 
     for (const Connection& conn : incomingConns) {
-        SourceEndpoint src;
-        src.fromModelId = conn.fromModelId();
-        src.fromPortId = conn.fromPort();
-        sources.append(src);
-        qDebug() << "    上游源:" << src.fromModelId << ":" << src.fromPortId;
+        // 找到对端块和端口（不区分正常/反向，统一处理）
+        QString peerModelId;
+        QString peerPortId;
+        if (conn.fromModelId() != QString::number(blockInfo.cmpId)) {
+            peerModelId = conn.fromModelId();
+            peerPortId = conn.fromPort();
+        } else {
+            peerModelId = conn.toModelId();
+            peerPortId = conn.toPort();
+        }
+        sources.append({peerModelId, peerPortId});
+        qDebug() << "    上游源:" << peerModelId << ":" << peerPortId;
     }
 
-    // 5. 收集所有下游目标端（下游模型的输入端口）
+    // 5. 收集所有下游目标端（对端块的输入端口）
     struct TargetEndpoint {
         QString toModelId;    // 下游模型ID
         QString toPortId;     // 下游模型端口ID
@@ -222,11 +228,18 @@ void ShortOpenProcessor::processShort(const BlockInfo& blockInfo,
     QVector<TargetEndpoint> targets;
 
     for (const Connection& conn : outgoingConns) {
-        TargetEndpoint tgt;
-        tgt.toModelId = conn.toModelId();
-        tgt.toPortId = conn.toPort();
-        targets.append(tgt);
-        qDebug() << "    下游目标:" << tgt.toModelId << ":" << tgt.toPortId;
+        // 找到对端块和端口（不区分正常/反向，统一处理）
+        QString peerModelId;
+        QString peerPortId;
+        if (conn.toModelId() != QString::number(blockInfo.cmpId)) {
+            peerModelId = conn.toModelId();
+            peerPortId = conn.toPort();
+        } else {
+            peerModelId = conn.fromModelId();
+            peerPortId = conn.fromPort();
+        }
+        targets.append({peerModelId, peerPortId});
+        qDebug() << "    下游目标:" << peerModelId << ":" << peerPortId;
     }
 
     // 6. 删除原模型的所有连接
@@ -320,19 +333,32 @@ QVector<Connection> ShortOpenProcessor::getOutgoingConnections(
 
 QVector<Connection> ShortOpenProcessor::getAllIncomingConnections(
     const BlockInfo& blockInfo,
-    const QVector<Connection>& connections) const
+    const QVector<Connection>& connections,
+    const QVector<BlockInfo>& blocksInfo) const
 {
     QVector<Connection> result;
     QString targetModelId = QString::number(blockInfo.cmpId);
-    QSet<int> inputPortIds = getInputPortIds(blockInfo);
 
     for (const Connection& conn : connections) {
+        // 找到对端块ID和端口
+        int peerBlockId = -1;
+        int peerPortId = -1;
+
         if (conn.toModelId() == targetModelId) {
-            // 检查端口是否属于输入端口
-            int portId = conn.toPort().toInt();
-            if (inputPortIds.contains(portId)) {
-                result.append(conn);
-            }
+            peerBlockId = conn.fromModelId().toInt();
+            peerPortId = conn.fromPort().toInt();
+        } else if (conn.fromModelId() == targetModelId) {
+            peerBlockId = conn.toModelId().toInt();
+            peerPortId = conn.toPort().toInt();
+        } else {
+            continue; // 本连接不涉及本块
+        }
+
+        // 根据对端端口方向判断数据流方向
+        // 对端端口是 out → 数据从对端流出 → 流入本块 → incoming
+        QString peerPutType = findPortPutType(peerBlockId, peerPortId, blocksInfo);
+        if (peerPutType == "out") {
+            result.append(conn);
         }
     }
     return result;
@@ -340,18 +366,32 @@ QVector<Connection> ShortOpenProcessor::getAllIncomingConnections(
 
 QVector<Connection> ShortOpenProcessor::getAllOutgoingConnections(
     const BlockInfo& blockInfo,
-    const QVector<Connection>& connections) const
+    const QVector<Connection>& connections,
+    const QVector<BlockInfo>& blocksInfo) const
 {
     QVector<Connection> result;
     QString sourceModelId = QString::number(blockInfo.cmpId);
-    QSet<int> outputPortIds = getOutputPortIds(blockInfo);
 
     for (const Connection& conn : connections) {
+        // 找到对端块ID和端口
+        int peerBlockId = -1;
+        int peerPortId = -1;
+
         if (conn.fromModelId() == sourceModelId) {
-            int portId = conn.fromPort().toInt();
-            if (outputPortIds.contains(portId)) {
-                result.append(conn);
-            }
+            peerBlockId = conn.toModelId().toInt();
+            peerPortId = conn.toPort().toInt();
+        } else if (conn.toModelId() == sourceModelId) {
+            peerBlockId = conn.fromModelId().toInt();
+            peerPortId = conn.fromPort().toInt();
+        } else {
+            continue; // 本连接不涉及本块
+        }
+
+        // 根据对端端口方向判断数据流方向
+        // 对端端口是 in → 数据流入对端 → 从本块流出 → outgoing
+        QString peerPutType = findPortPutType(peerBlockId, peerPortId, blocksInfo);
+        if (peerPutType == "in") {
+            result.append(conn);
         }
     }
     return result;
@@ -418,4 +458,20 @@ bool ShortOpenProcessor::isSameConnection(
            conn1.fromPort() == conn2.fromPort() &&
            conn1.toModelId() == conn2.toModelId() &&
            conn1.toPort() == conn2.toPort();
+}
+
+QString ShortOpenProcessor::findPortPutType(
+    int blockId, int portId,
+    const QVector<BlockInfo>& blocksInfo) const
+{
+    for (const BlockInfo& block : blocksInfo) {
+        if (block.cmpId == blockId) {
+            auto it = block.portsMsg.find(portId);
+            if (it != block.portsMsg.end()) {
+                return it.value().putType;
+            }
+            break;
+        }
+    }
+    return "";
 }

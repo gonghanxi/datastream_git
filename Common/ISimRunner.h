@@ -6,6 +6,9 @@
 #include "simcfgdata.h"
 #include <map>
 #include <string>
+#include <QMutex>
+#include <QWaitCondition>
+#include <QAtomicInt>
 
 class ISimRunner{
 public:
@@ -67,6 +70,12 @@ public:
     virtual void resume() = 0;
     //停止
     virtual void requestStop() = 0;
+
+    // 获取暂停控制指针，供外部直接操作原子标志
+    virtual QAtomicInt* getPausedPtr() = 0;
+    virtual QAtomicInt* getStopRequestedPtr() = 0;
+    virtual QMutex* getPauseMutexPtr() = 0;
+    virtual QWaitCondition* getPauseCondPtr() = 0;
 };
 //typedef ISimRunner* (*CreateSimFunction)(QString, QStringList, QString);
 // 使用const char* (UTF-8编码) 作为接口

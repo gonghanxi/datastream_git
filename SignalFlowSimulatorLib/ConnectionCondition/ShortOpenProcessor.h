@@ -70,11 +70,14 @@ private:
 
     /**
      * @brief 处理短路：将所有上游端口连接到所有下游端口
+     * @param blockInfo 短路模型信息
+     * @param connections 连接关系列表（会被修改）
+     * @param blocksInfo 当前链路的所有模型信息（用于查找对端端口方向）
      */
     void processShort(
         const BlockInfo& blockInfo,
-//        QVector<BlockInfo>& blocksInfo,
-        QVector<Connection>& connections);
+        QVector<Connection>& connections,
+        const QVector<BlockInfo>& blocksInfo);
 
     /**
      * @brief 获取模型的所有输入端口（下游）ID
@@ -103,18 +106,26 @@ private:
         const QVector<Connection>& connections) const;
 
     /**
-     * @brief 获取连接到此模型输入端口的所有上游连接
+     * @brief 获取连接到此模型输入端口的所有上游连接（支持反向连接识别）
+     * @param blockInfo 目标模型信息
+     * @param connections 连接关系列表
+     * @param blocksInfo 当前链路的所有模型信息（用于查找对端端口方向）
      */
     QVector<Connection> getAllIncomingConnections(
         const BlockInfo& blockInfo,
-        const QVector<Connection>& connections) const;
+        const QVector<Connection>& connections,
+        const QVector<BlockInfo>& blocksInfo) const;
 
     /**
-     * @brief 获取从此模型输出端口出发的所有下游连接
+     * @brief 获取从此模型输出端口出发的所有下游连接（支持反向连接识别）
+     * @param blockInfo 目标模型信息
+     * @param connections 连接关系列表
+     * @param blocksInfo 当前链路的所有模型信息（用于查找对端端口方向）
      */
     QVector<Connection> getAllOutgoingConnections(
         const BlockInfo& blockInfo,
-        const QVector<Connection>& connections) const;
+        const QVector<Connection>& connections,
+        const QVector<BlockInfo>& blocksInfo) const;
 
     /**
      * @brief 从连接列表中删除与指定模型相关的所有连接
@@ -153,6 +164,16 @@ private:
      * @return true=短路, false=开路, 空值表示无处理
      */
     std::optional<bool> parseCondition(const QString& condition) const;
+
+    /**
+     * @brief 查找指定块的指定端口的 putType
+     * @param blockId 模型ID
+     * @param portId 端口ID
+     * @param blocksInfo 模型信息列表
+     * @return "in"/"out"，找不到返回空字符串
+     */
+    QString findPortPutType(int blockId, int portId,
+                            const QVector<BlockInfo>& blocksInfo) const;
 
     // 存储短路且为信号源或数据收集器的模型
     QVector<ShortCircuitedModel> m_shortCircuitedSourcesAndSinks;

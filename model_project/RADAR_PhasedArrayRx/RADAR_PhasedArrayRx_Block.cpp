@@ -351,13 +351,13 @@ bool RADAR_PhasedArrayRx_Block::Initialize()
 
     m_NumChannels = 0;
 
-    // 端口注册
-    AddInputPort("ArrayInput",      m_algo->ArrayInput,      1, Block::DataType::ENVELOPE_BUS);
-    AddInputPort("TargetThetaIn",   m_algo->TargetThetaIn,   1, Block::DataType::DOUBLE);
-    AddInputPort("TargetPhiIn",     m_algo->TargetPhiIn,     1, Block::DataType::DOUBLE);
-    AddInputPort("BeamThetaIn",     m_algo->BeamThetaIn,     1, Block::DataType::DOUBLE);
-    AddInputPort("BeamPhiIn",       m_algo->BeamPhiIn,       1, Block::DataType::DOUBLE);
-    AddOutputPort("ArrayOutput",    m_algo->ArrayOutput,     1, Block::DataType::ENVELOPE_BUS);
+    // 端口注册（端口名必须与 JSON 定义一致）
+    AddInputPort("ArrayInput",     m_algo->ArrayInput,      1, Block::DataType::ENVELOPE_BUS);
+    AddInputPort("TargetThetaIn",  m_algo->TargetThetaIn,   1, Block::DataType::DOUBLE);
+    AddInputPort("TargetPhiIn",    m_algo->TargetPhiIn,     1, Block::DataType::DOUBLE);
+    AddInputPort("BeamThetaIn",    m_algo->BeamThetaIn,     1, Block::DataType::DOUBLE);
+    AddInputPort("BeamPhiIn",      m_algo->BeamPhiIn,       1, Block::DataType::DOUBLE);
+    AddOutputPort("ArrayOutput",   m_algo->ArrayOutput,     1, Block::DataType::ENVELOPE_BUS);
 
     return true;
 }

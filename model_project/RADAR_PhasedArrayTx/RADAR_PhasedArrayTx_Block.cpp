@@ -199,7 +199,6 @@ bool RADAR_PhasedArrayTx_Block::DataStreamRun()
 
     // ---- 写入 ArrayOutput 总线 ----
     WriteOutputData(GetOutputPortName(0), outputData);
-
     return true;
 }
 
@@ -213,19 +212,19 @@ bool RADAR_PhasedArrayTx_Block::TimeDrivenRun()
 
     // ---- 读取可选角度端口 ----
     {
-        auto data = ReadInputData<double>(GetInputPortName(1));
+        auto data = ReadInputData<double>(GetInputPortName(1)); // TargetThetaIn
         if (!data.empty()) m_TargetTheta = data[0];
     }
     {
-        auto data = ReadInputData<double>(GetInputPortName(2));
+        auto data = ReadInputData<double>(GetInputPortName(2)); // TargetPhiIn
         if (!data.empty()) m_TargetPhi = data[0];
     }
     {
-        auto data = ReadInputData<double>(GetInputPortName(3));
+        auto data = ReadInputData<double>(GetInputPortName(3)); // BeamThetaIn
         if (!data.empty()) m_BeamTheta = data[0];
     }
     {
-        auto data = ReadInputData<double>(GetInputPortName(4));
+        auto data = ReadInputData<double>(GetInputPortName(4)); // BeamPhiIn
         if (!data.empty()) m_BeamPhi = data[0];
     }
 
@@ -351,13 +350,13 @@ bool RADAR_PhasedArrayTx_Block::Initialize()
 
     m_NumChannels = 0;
 
-    // 端口注册
-    AddInputPort("ArrayInput",      m_algo->ArrayInput,      1, Block::DataType::ENVELOPE_BUS);
-    AddInputPort("TargetThetaIn",   m_algo->TargetThetaIn,   1, Block::DataType::DOUBLE);
-    AddInputPort("TargetPhiIn",     m_algo->TargetPhiIn,     1, Block::DataType::DOUBLE);
-    AddInputPort("BeamThetaIn",     m_algo->BeamThetaIn,     1, Block::DataType::DOUBLE);
-    AddInputPort("BeamPhiIn",       m_algo->BeamPhiIn,       1, Block::DataType::DOUBLE);
-    AddOutputPort("ArrayOutput",    m_algo->ArrayOutput,     1, Block::DataType::ENVELOPE_BUS);
+    // 端口注册（端口名必须与 JSON 定义一致）
+    AddInputPort("ArrayInput",     m_algo->ArrayInput,      1, Block::DataType::ENVELOPE_BUS);
+    AddInputPort("TargetThetaIn",  m_algo->TargetThetaIn,   1, Block::DataType::DOUBLE);
+    AddInputPort("TargetPhiIn",    m_algo->TargetPhiIn,     1, Block::DataType::DOUBLE);
+    AddInputPort("BeamThetaIn",    m_algo->BeamThetaIn,     1, Block::DataType::DOUBLE);
+    AddInputPort("BeamPhiIn",      m_algo->BeamPhiIn,       1, Block::DataType::DOUBLE);
+    AddOutputPort("ArrayOutput",   m_algo->ArrayOutput,     1, Block::DataType::ENVELOPE_BUS);
 
     return true;
 }

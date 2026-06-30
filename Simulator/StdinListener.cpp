@@ -14,6 +14,17 @@ StdinListener::StdinListener(QObject *parent)
     qRegisterMetaType<ControlCommand>("ControlCommand");
 }
 
+void StdinListener::setPauseControls(QAtomicInt* paused,
+                                      QAtomicInt* stopRequested,
+                                      QMutex* pauseMutex,
+                                      QWaitCondition* pauseCond)
+{
+    m_paused = paused;
+    m_stopRequested = stopRequested;
+    m_pauseMutex = pauseMutex;
+    m_pauseCond = pauseCond;
+}
+
 void StdinListener::run()
 {
     QTextStream in(stdin);
@@ -33,14 +44,43 @@ void StdinListener::run()
 
         if (line == "pause") {
             qDebug() << "[StdinListener] 收到命令: PAUSE";
+            // 直接操作原子标志，绕过事件循环
+            if (m_paused) {
+                *m_paused = 1;
+                qDebug() << "[StdinListener] 暂停标志已直接设置";
+            }
+            // 保留信号槽作为备份
             emit commandReceived(ControlCommand::PAUSE);
         }
         else if (line == "continue" || line == "resume") {
             qDebug() << "[StdinListener] 收到命令: RESUME";
+            // 直接操作原子标志，绕过事件循环
+            if (m_paused) {
+                *m_paused = 0;
+                // 获取互斥锁后唤醒等待中的调度线程
+                if (m_pauseMutex && m_pauseCond) {
+                    QMutexLocker locker(m_pauseMutex);
+                    m_pauseCond->wakeAll();
+                }
+                qDebug() << "[StdinListener] 继续标志已直接设置，调度循环已唤醒";
+            }
+            // 保留信号槽作为备份
             emit commandReceived(ControlCommand::RESUME);
         }
         else if (line == "stop" || line == "exit" || line == "quit") {
             qDebug() << "[StdinListener] 收到命令: STOP";
+            // 直接操作原子标志
+            if (m_stopRequested) {
+                *m_stopRequested = 1;
+            }
+            if (m_paused && (*m_paused)) {
+                *m_paused = 0;
+                if (m_pauseMutex && m_pauseCond) {
+                    QMutexLocker locker(m_pauseMutex);
+                    m_pauseCond->wakeAll();
+                }
+            }
+            // 保留信号槽作为备份
             emit commandReceived(ControlCommand::STOP);
             break;
         }

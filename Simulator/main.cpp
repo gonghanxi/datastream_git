@@ -187,6 +187,14 @@ int main(int argc, char *argv[])
     // ========== 启动 stdin 监听线程 ==========
     StdinListener stdinListener;
 
+    // 传递暂停控制指针，允许 StdinListener 直接操作原子标志（绕过事件循环）
+    stdinListener.setPauseControls(
+        sim->getPausedPtr(),
+        sim->getStopRequestedPtr(),
+        sim->getPauseMutexPtr(),
+        sim->getPauseCondPtr()
+    );
+
     // 连接暂停命令
     QObject::connect(&stdinListener, &StdinListener::commandReceived,
         [&](ControlCommand cmd) {

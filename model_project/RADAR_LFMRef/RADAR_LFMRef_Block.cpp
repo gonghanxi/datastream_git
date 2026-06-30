@@ -172,9 +172,23 @@ void RADAR_LFMRef_Block::GenerateFrame(std::vector<std::complex<double>>& output
 
 bool RADAR_LFMRef_Block::DataStreamRun()
 {
-    std::vector<std::complex<double>> outputData;
-    GenerateFrame(outputData);
-    WriteOutputData(GetOutputPortName(0), outputData);
+    // 队列空时生成新帧（避免一次写入 1024 样本导致缓冲区满而死锁）
+    if (m_outputQueue.empty()) {
+        std::vector<std::complex<double>> outputData;
+        GenerateFrame(outputData);
+        for (const auto& val : outputData) {
+            m_outputQueue.push(val);
+        }
+    }
+
+    // 每次 Run 只写一个样本，与调度器 generalWork 返回 1 的语义一致
+    if (!m_outputQueue.empty()) {
+        std::vector<std::complex<double>> outVec;
+        outVec.push_back(m_outputQueue.front());
+        WriteOutputData(GetOutputPortName(0), outVec);
+        m_outputQueue.pop();
+    }
+
     return true;
 }
 

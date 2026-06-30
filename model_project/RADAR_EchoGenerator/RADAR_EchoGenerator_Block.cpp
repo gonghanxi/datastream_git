@@ -153,7 +153,7 @@ bool RADAR_EchoGenerator_Block::DataStreamRun()
     BufferReader* TargetScatterRCSPort = GetInputPort("TargetScatterRCS");//读取了两次
 
     //两次读取的inSignal输入数据存储
-    std::vector<EnvelopeSignal> TotalinSignalData = ReadInputData<EnvelopeSignal>(inSignalPort->GetName());
+    std::vector<EnvelopeSignal> TotalinSignalData = ReadInputData<EnvelopeSignal>("inSignal");
 
 
     for (int i = 0; i < TargetNum; i++)
