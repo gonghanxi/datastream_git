@@ -175,6 +175,12 @@ bool CFunctionBlock::Initialize()
         setParameter(param);
     }
 
+    // 读取isUserDefined标记
+    auto it = m_parameterValues.find("isUserDefined");
+    if (it != m_parameterValues.end()) {
+        m_isUserDefined = (it->second == "true");
+    }
+
     return true;
 }
 
@@ -217,6 +223,12 @@ bool CFunctionBlock::executeCFunction()
             g_updateError = false;
             return false;
         }
+        if (!m_updateJsonInputErrorLogged) {
+            LOG_ERROR("[CFunctionBlock] JSON输入更新失败:",
+                      m_instanceName.toStdString());
+            m_updateJsonInputErrorLogged = true;
+        }
+        return false;
     }
 
     // 步骤2：调用外部小引擎
@@ -227,6 +239,12 @@ bool CFunctionBlock::executeCFunction()
             g_invokeEngineError = false;
             return false;
         }
+        if (!m_invokeEngineErrorLogged) {
+            LOG_ERROR("[CFunctionBlock] 引擎调用失败:",
+                      m_instanceName.toStdString());
+            m_invokeEngineErrorLogged = true;
+        }
+        return false;
     }
 
     // 步骤3：读取output并写入输出端口
@@ -237,6 +255,18 @@ bool CFunctionBlock::executeCFunction()
             g_rWError = false;
             return false;
         }
+        if (!m_readAndWriteOutputErrorLogged) {
+            LOG_ERROR("[CFunctionBlock] 输出读写失败:",
+                      m_instanceName.toStdString());
+            m_readAndWriteOutputErrorLogged = true;
+        }
+        return false;
+    }
+
+    // 自定义模型校验成功日志（只输出一次）
+    if (m_isUserDefined && !m_validationLogged) {
+        LOG_INFO("自定义模型校验成功");
+        m_validationLogged = true;
     }
 
     return true;
@@ -245,13 +275,13 @@ bool CFunctionBlock::executeCFunction()
 bool CFunctionBlock::updateJsonInput()
 {
     if (m_generatedJsonPath.isEmpty()) {
-        LOG_ERROR("[CFunctionBlock] No generated JSON path set");
+        LOG_ERROR("[CFunctionBlock] JSON路径为空");
         return false;
     }
 
     QFile file(m_generatedJsonPath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        LOG_ERROR("[CFunctionBlock] Cannot open JSON:", m_generatedJsonPath.toStdString());
+        LOG_ERROR("[CFunctionBlock] 无法打开JSON文件");
         return false;
     }
 
@@ -386,8 +416,7 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         }
 
         if (!engineFound) {
-            LOG_ERROR("[CFunctionBlock] Engine script not found. Searched:",
-                      (jsonDir + ", " + appDir).toStdString());
+            LOG_ERROR("[CFunctionBlock] 引擎脚本未找到");
             return false;
         }
 
@@ -433,30 +462,38 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
         if (!buildProcess.waitForFinished(300000)) {
             // FailedToStart: python3不存在时waitForFinished也返回false，需优先检查
             if (buildProcess.error() == QProcess::FailedToStart) {
-                LOG_ERROR("[CFunctionBlock] Python not found. Tried:", pythonExe.toStdString());
-                LOG_ERROR("[CFunctionBlock] Please install python3 or ensure it is in PATH.");
+                LOG_ERROR("[CFunctionBlock] Python未找到，请安装python3或确保其在PATH中");
                 return false;
             }
             // 真正的超时
-            QString partialStderr = buildProcess.readAllStandardError();
-            QString partialStdout = buildProcess.readAllStandardOutput();
             buildProcess.kill();
-            LOG_ERROR("[CFunctionBlock] Engine build timeout:", m_instanceName.toStdString());
-            if (!partialStderr.isEmpty()) {
-                LOG_ERROR("[CFunctionBlock] Engine partial stderr:", partialStderr.toStdString());
-            }
-            if (!partialStdout.isEmpty()) {
-                qDebug() << "[CFunctionBlock] Engine partial stdout:" << partialStdout;
-            }
+            LOG_ERROR("[CFunctionBlock] 编译超时:", m_instanceName.toStdString());
             return false;
         }
 
         if (buildProcess.exitCode() != 0) {
-            QString stderrOutput = buildProcess.readAllStandardError();
             QString stdoutOutput = buildProcess.readAllStandardOutput();
-            LOG_ERROR("[CFunctionBlock] Engine build error:", stderrOutput.toStdString());
-            if (!stdoutOutput.isEmpty()) {
-                qDebug() << "[CFunctionBlock] Engine stdout:" << stdoutOutput;
+            QString stderrOutput = buildProcess.readAllStandardError();
+
+            // 从 stdout 解析结构化错误信息
+            QStringList stdoutLines = stdoutOutput.split('\n');
+            QString category;
+            QStringList errorDetails;
+            for (const QString& line : stdoutLines) {
+                QString trimmed = line.trimmed();
+                if (trimmed.startsWith("[BUILD_ERROR] category=")) {
+                    category = trimmed.mid(QString("[BUILD_ERROR] category=").length()).trimmed();
+                } else if (trimmed.startsWith("[BUILD_ERROR] ")) {
+                    errorDetails << trimmed.mid(QString("[BUILD_ERROR] ").length());
+                }
+            }
+
+            // 不输出具体编译错误详情，仅输出简短提示
+            LOG_ERROR("[CFunctionBlock] 编译失败:", m_instanceName.toStdString());
+            // 自定义模型编译失败日志（只输出一次）
+            if (m_isUserDefined && !m_validationLogged) {
+                LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                m_validationLogged = true;
             }
             return false;
         }
@@ -466,7 +503,7 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
 
     // 验证可执行文件存在
     if (!QFile::exists(exePath)) {
-        LOG_ERROR("[CFunctionBlock] Executable not found after build:", exePath.toStdString());
+        LOG_ERROR("[CFunctionBlock] 编译后可执行文件未找到");
         return false;
     }
 
@@ -476,34 +513,29 @@ bool CFunctionBlock::invokeEngine(const QString& jsonPath)
 
     if (!runProcess.waitForFinished(60000)) {
         runProcess.kill();
-        LOG_ERROR("[CFunctionBlock] Executable timeout:", m_instanceName.toStdString());
+        LOG_ERROR("[CFunctionBlock] 引擎执行超时:", m_instanceName.toStdString());
         return false;
     }
 
     if (runProcess.exitCode() != 0) {
-        QString stderrOutput = runProcess.readAllStandardError();
-        QString stdoutOutput = runProcess.readAllStandardOutput();
-        LOG_ERROR("[CFunctionBlock] Executable error:", stderrOutput.toStdString());
-        if (!stdoutOutput.isEmpty()) {
-            LOG_ERROR("[CFunctionBlock] Executable stdout:", stdoutOutput.toStdString());
-        }
+        LOG_ERROR("[CFunctionBlock] 引擎执行失败:", m_instanceName.toStdString());
         return false;
     }
 
     // 即使exitCode==0，也检查stderr以发现隐藏错误
     QString stderrOutput = runProcess.readAllStandardError();
     if (!stderrOutput.isEmpty()) {
-        LOG_ERROR("[CFunctionBlock] Executable stderr:", stderrOutput.toStdString());
+        LOG_ERROR("[CFunctionBlock] 引擎stderr警告:", m_instanceName.toStdString());
     }
 
     // 检查JSON文件状态
     QFileInfo jsonCheck(jsonPath);
     if (!jsonCheck.exists()) {
-        LOG_ERROR("[CFunctionBlock] JSON file missing after exec:", jsonPath.toStdString());
+        LOG_ERROR("[CFunctionBlock] 引擎执行后JSON文件缺失");
         return false;
     }
     if (jsonCheck.size() == 0) {
-        LOG_ERROR("[CFunctionBlock] JSON file is EMPTY after exec:", jsonPath.toStdString());
+        LOG_ERROR("[CFunctionBlock] 引擎执行后JSON文件为空");
         return false;
     }
 

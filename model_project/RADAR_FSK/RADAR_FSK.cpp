@@ -1,5 +1,6 @@
 #include "RADAR_FSK.h"
 #include <cmath>
+#include <algorithm>
 
 #ifndef SV_CODE_GEN
 DEFINE_MODEL_INTERFACE(RADAR_FSK)
@@ -13,7 +14,7 @@ DEFINE_MODEL_INTERFACE(RADAR_FSK)
 	{
 		SystemVueModelBuilder::DFParam enumParam = ADD_MODEL_ENUM_PARAM(Type, Types);
 		enumParam.SetUnit(SystemVueModelBuilder::Units::NONE);
-		enumParam.AddEnumeration("FSK", FSK); // ��������ʾ����
+		enumParam.AddEnumeration("FSK", FSK); // 添加枚举显示项
 		enumParam.AddEnumeration("FSK_PSK", FSK_PSK);
 		enumParam.SetDefaultValue("FSK");
 		enumParam.SetDescription("FSK code type");
@@ -61,7 +62,7 @@ DEFINE_MODEL_INTERFACE(RADAR_FSK)
 	{
 		SystemVueModelBuilder::DFParam enumParam = ADD_MODEL_ENUM_PARAM(CodeLength, CodeLengthEnum);
 		enumParam.SetUnit(SystemVueModelBuilder::Units::NONE);
-		enumParam.AddEnumeration("Length_2_a", Length_2_a); // ��������ʾ����
+		enumParam.AddEnumeration("Length_2_a", Length_2_a); // 添加枚举显示项
 		enumParam.AddEnumeration("Length_2_b", Length_2_b);
 		enumParam.AddEnumeration("Length_3", Length_3);
 		enumParam.AddEnumeration("Length_4_a", Length_4_a);
@@ -102,7 +103,7 @@ bool RADAR_FSK::Setup()
 		// Use TimedCircularBuffer::SetSampleRate method to set the output sample rate
 		//output.SetSampleRate(SampleRate);
 
-		// ��ʼ���Ϳ�������
+		// 初始化Barker码表
 		if (barkerCodes.empty()) {
 			InitializeBarkerCodes(barkerCodes);
 		}
@@ -121,20 +122,20 @@ bool RADAR_FSK::Setup()
 //-----------------------------------------------------------------------------------
 bool RADAR_FSK::Initialize()
 {   
-	// ������׼��һ�������ڵ����ݵ㣬��Run�����������������
+	// 准备一个脉冲周期内的数据点，供Run()循环输出
 	bool bStatus = true;
 	const double PI = 3.14159265358979323846;
 
 	switch (Type){
-	case FSK: // �ñ��뷽ʽ��һ�������Ϊ���Ƶ����е��ƣ�ÿ��Ƶ��ĳ���ʱ���ָ��
+	case FSK: // 跳频编码方式：将一段脉冲分解为多个跳频点，每个跳频点的持续时间由时间间隔指定
 	{
-		// ����Ƶ������Ƶ��ʱ�����������
+		// 校验跳频序列和时间间隔的元素个数是否一致
 		if (FHSequence.NumElements() != TimeIntervals.NumElements()) {
 			POST_ERROR("The size of FHSequence should be the same as TimeIntervals");
 			return false;
 		}
 
-		// ����Ƶ��ĳ���ʱ�����С�ڵ���PRI
+		// 跳频序列的总持续时间不应超过PRI
 		double pulseWidth = 0;
 		for (int i = 0; i < TimeIntervals.NumElements(); ++i) {
 			pulseWidth += TimeIntervals(i);
@@ -144,9 +145,9 @@ bool RADAR_FSK::Initialize()
 			return false;
 		}
 
-		// ����һ���������ź�����
-		int N_samples = static_cast<int>(pulseWidth * SampleRate); // �����ܲ�������
-		signal.resize(N_samples); // �����źŻ���Ĵ�С
+		// 生成一个周期的基带信号
+		int N_samples = static_cast<int>(pulseWidth * SampleRate); // 计算总采样点数
+		signal.resize(N_samples); // 调整信号缓冲区大小
 
 		int sampleIndex = 0;
 		for (int i = 0; i < FHSequence.NumElements(); i++) {
@@ -166,31 +167,37 @@ bool RADAR_FSK::Initialize()
 		break;
 	}
 		
-	case FSK_PSK: // ��FSK���ƻ����ϣ�����Ƶ�����尴�Ϳ������н�һ���ֽ�Ϊ����������������λ����
+	case FSK_PSK: // 在FSK编码基础上，叠加了Barker码调制
 	{
-		// ����Ƶ��ĳ���ʱ�����С�ڵ���PRI
-		double pulseWidth = FSKPSKSequence.NumElements() * FSKPSKSubTimePeriod;		
+		// 确保Barker码表已初始化（Initialize在Setup之前调用）
+		if (barkerCodes.empty()) {
+			InitializeBarkerCodes(barkerCodes);
+		}
+
+		// 校验总脉冲宽度不超过PRI
+		double pulseWidth = FSKPSKSequence.NumElements() * FSKPSKSubTimePeriod;
 		if (pulseWidth + 1e-17 > PRI) {
 			POST_ERROR("total time of FSKPSKSequence should not larger than PRI");
 			return false;
 		}
-		
-		// ����һ���������ź�����
-		int N_samples = static_cast<int>(pulseWidth * SampleRate); // �����ܲ�������
-		signal.resize(N_samples); // �����źŻ���Ĵ�С
+
+		// 计算每个子脉冲的采样点数
+		int subFreqNumSamples = static_cast<int>(std::round(FSKPSKSubTimePeriod * SampleRate));
+		int numElements = FSKPSKSequence.NumElements();
+		// 总采样点数 = 子脉冲数 × 每个子脉冲的采样点（避免浮点精度导致的不一致）
+		int N_samples = numElements * subFreqNumSamples;
+		signal.resize(N_samples); // 调整信号缓冲区大小
 		
 		int sampleIndex = 0;
 
-		// �Ȱ�ÿ��Ƶ��׼������������
-		for (int i = 0; i < FSKPSKSequence.NumElements(); i++) {
+		// 逐个频率点进行Barker码调制
+		for (int i = 0; i < numElements; i++) {
 			double freq = FSKPSKSequence(i);
-			double subPulseDuration = FSKPSKSubTimePeriod;
-			int subFreqNumSamples = static_cast<int>(subPulseDuration * SampleRate);
 
 			// Get the corresponding Barker code for this sub-pulse
 			std::vector<int> barkerCode = barkerCodes[CodeLength];
 
-			// �����ÿ��Ƶ�������壬���Ϳ������з�Ϊ��������
+			// 将每个频率段的采样点按Barker码元素进行相位编码
 			int samplesPerBarkerElement = subFreqNumSamples / barkerCode.size();
 
 			for (int j = 0; j < barkerCode.size(); j++) {
@@ -205,10 +212,11 @@ bool RADAR_FSK::Initialize()
 				}
 			}
 
-			// ���Ƶ�������岻�������Ϳ�����Ŀ���貹���ȱ��Ƶ������������β
+			// 若频率段采样点不足Barker码整周期，则补充未调制的载波尾部
 			int pointGenerated = samplesPerBarkerElement * barkerCode.size();
 			if (pointGenerated < subFreqNumSamples) {
 				for (int k = pointGenerated; k < subFreqNumSamples; k++) {
+					if (sampleIndex >= N_samples) break; // 防止越界
 					double t = sampleIndex / static_cast<double>(SampleRate);
 					double real = cos(2 * PI * freq * t);
 					double imag = sin(2 * PI * freq * t);

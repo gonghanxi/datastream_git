@@ -251,6 +251,16 @@ bool CFunctionModelParser::parseCFunctionModel(
     if (!parsePorts(cmpObj, outModelInfo)) return false;
     if (!parseAttributes(currentLinkKey, cmpObj, currentVars, scopeMgr, resolver, outModelInfo)) return false;
 
+    // 解析 isUserDefined 字段
+    if (cmpObj.contains("isUserDefined")) {
+        CFunctionParameter param;
+        param.name = "isUserDefined";
+        param.value = cmpObj["isUserDefined"].toBool() ? "true" : "false";
+        outModelInfo.parameters["isUserDefined"] = param;
+        qDebug() << "[CFunction] isUserDefined:" << param.value
+                 << "instance:" << outModelInfo.instanceName;
+    }
+
     qDebug() << "[CFunction] parse complete:" << outModelInfo.instanceName
              << "ports:" << outModelInfo.ports.size()
              << "params:" << outModelInfo.parameters.size();
@@ -291,6 +301,10 @@ QString CFunctionModelParser::generateCFunctionJson(
     QJsonArray attrArray;
     for (auto it = modelInfo.parameters.begin(); it != modelInfo.parameters.end(); ++it) {
         const CFunctionParameter& param = it.value();
+        // 跳过内部标记参数，不写入JSON
+        if (param.name == "isUserDefined") {
+            continue;
+        }
         QJsonObject attrObj;
         attrObj["name"] = param.name;
         attrObj["datatype"] = param.dataType;
@@ -336,12 +350,23 @@ QString CFunctionModelParser::generateCFunctionJson(
     }
     root["output"] = outputArray;
 
-    // 写文件：若目录已存在则先清除（避免残留旧的exe/build缓存）
+    // 确保目录存在（多个CFunction块共享同一linkKey目录，不能整体删除）
     QDir dir(outputDir);
-    if (dir.exists()) {
-        dir.removeRecursively();
+    if (!dir.exists()) {
+        dir.mkpath(".");
     }
-    dir.mkpath(".");
+
+    // 仅清理当前实例的缓存exe和_build目录，避免残留旧编译结果
+    QString exeExt;
+#ifdef Q_OS_WIN
+    exeExt = ".exe";
+#endif
+    QString exePath = dir.absoluteFilePath(modelInfo.instanceName + exeExt);
+    if (QFile::exists(exePath)) {
+        QFile::remove(exePath);
+    }
+    QString buildDir = dir.absoluteFilePath("_build");
+    QDir(buildDir).removeRecursively();
 
     QString fileName = QString("%1.json").arg(modelInfo.instanceName);
     QString filePath = dir.absoluteFilePath(fileName);

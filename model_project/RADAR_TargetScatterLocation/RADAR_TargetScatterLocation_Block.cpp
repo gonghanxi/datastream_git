@@ -809,7 +809,7 @@ bool RADAR_TargetScatterLocation_Block::TimeDrivenRun()
 
 bool RADAR_TargetScatterLocation_Block::Initialize()
 {
-    SetBlockType(Block::BlockType::PROCESSOR);
+    SetBlockType(Block::BlockType::SOURCE);
 
     m_algo = std::make_unique<RADAR_TargetScatterLocation>();
 

@@ -38,7 +38,11 @@ private:
     static std::complex<double> parseComplexElement(const QString& str);
     static bool isComplexElement(const QString& str);
 private:
-    octave::interpreter *m_interp;
+    // 共享 Octave 解释器（所有实例共用）
+    static octave::interpreter* s_sharedInterp;
+    static int s_instanceCount;
+
+    octave::interpreter *m_interp;  // 指向共享解释器的指针
     QString callStr;
 };
 
