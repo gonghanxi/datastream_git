@@ -71,8 +71,6 @@ private:
     // 编译已尝试标记：失败后不再重复调用编译器，也不再打印任何错误
     bool m_buildAttempted = false;
 
-<<<<<<< HEAD
-=======
     // 自定义模型校验
     bool m_isUserDefined = false;          // 是否为自定义模型
     bool m_validationLogged = false;       // 校验日志已输出标记（确保只报一次）
@@ -81,7 +79,6 @@ private:
     bool m_updateJsonInputErrorLogged = false;
     bool m_invokeEngineErrorLogged = false;
     bool m_readAndWriteOutputErrorLogged = false;
->>>>>>> 95d62a98df349c2d5923951dad0030c609e566a3
 };
 
 }
