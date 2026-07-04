@@ -1308,17 +1308,22 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             qDebug() << "=== 场景：入穿透（上游→子链路锚点目标） ===";
             qDebug() << "连接：" << upstreamBlock.instanceName << ":" << upstreamPort.name
                      << " -> " << dstNode.instanceName << ":" << dstPort.name;
-            //连接前检查，已连接的不再连接
-            //            QString connection=QString::fromStdString(upstreamBlock.block->GetName())+":"+upstreamPort.name+":"+QString::fromStdString(dstNode.block->GetName())+":"+dstPort.name;
-            QString connection=QString::number(upstreamBlock.cmpId)+":"+QString::number(upstreamPort.id)+":"+QString::number(dstNode.cmpId)+":"+QString::number(dstPort.id);
+            //连接前检查，已连接的不再连接 - 使用Block指针地址代替cmpId避免跨层ID冲突
+            QString connection = QString("%1:%2:%3:%4")
+                .arg(reinterpret_cast<quintptr>(upstreamBlock.block))
+                .arg(upstreamPort.name)
+                .arg(reinterpret_cast<quintptr>(dstNode.block))
+                .arg(dstPort.name);
             if(mConnections.contains(connection)) {
-                qDebug() << "连接已存在，跳过";
+                qDebug() << "连接已存在（根据Block指针判断），跳过";
                 continue;
             }
             Block::Connect(upstreamBlock.block, upstreamPort.name.toStdString(),
                            dstNode.block, dstPort.name.toStdString());
+            mConnections.push_back(connection);
             qDebug() << "入穿透连接成功：" << upstreamBlock.instanceName << ":" << upstreamPort.name
                      << " -----> " << dstNode.instanceName << ":" << dstPort.name;
+
         }
 
         // 出穿透：子链路锚点源 → 上游（上游非容器）
@@ -1327,11 +1332,16 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             qDebug() << "=== 场景：出穿透（子链路锚点源→上游）===";
             qDebug() << "连接：" << srcNode.instanceName << ":" << srcPort.name
                      << " -> " << upstreamBlock.instanceName << ":" << upstreamPort.name;
-            //连接前检查，已连接的不再连接
-            //            QString connection=QString::fromStdString(srcNode.block->GetName())+":"+srcPort.name+":"+QString::fromStdString(upstreamBlock.block->GetName())+":"+upstreamPort.name;
-            QString connection=QString::number(srcNode.cmpId)+":"+QString::number(srcPort.id)+":"+QString::number(upstreamBlock.cmpId)+":"+QString::number(upstreamPort.id);
-            if(mConnections.contains(connection))
+            //连接前检查，已连接的不再连接 - 使用Block指针地址代替cmpId避免跨层ID冲突
+            QString connection = QString("%1:%2:%3:%4")
+                .arg(reinterpret_cast<quintptr>(srcNode.block))
+                .arg(srcPort.name)
+                .arg(reinterpret_cast<quintptr>(upstreamBlock.block))
+                .arg(upstreamPort.name);
+            if(mConnections.contains(connection)) {
+                qDebug() << "连接已存在（根据Block指针判断），跳过";
                 continue;
+            }
             Block::Connect(srcNode.block, srcPort.name.toStdString(),
                            upstreamBlock.block, upstreamPort.name.toStdString());
             mConnections.push_back(connection);
