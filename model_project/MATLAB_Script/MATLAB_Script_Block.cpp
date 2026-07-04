@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QRegularExpression>
+#include <cmath>
 #include <exception>
 
 #include "octave/dMatrix.h"
@@ -119,6 +120,23 @@ std::complex<double> MATLAB_Script_Block::parseComplexElement(const QString& str
     }
     // 只有实部
     return std::complex<double>(trimmed.toDouble(), 0.0);
+}
+
+bool MATLAB_Script_Block::hasInvalidValues(const std::vector<double>& data)
+{
+    for (double v : data) {
+        if (std::isinf(v) || std::isnan(v)) return true;
+    }
+    return false;
+}
+
+bool MATLAB_Script_Block::hasInvalidValues(const std::vector<std::complex<double>>& data)
+{
+    for (const auto& c : data) {
+        if (std::isinf(c.real()) || std::isnan(c.real()) ||
+            std::isinf(c.imag()) || std::isnan(c.imag())) return true;
+    }
+    return false;
 }
 
 void MATLAB_Script_Block::assignArrayParam(const std::string& name, const QString& innerStr)
@@ -342,7 +360,7 @@ bool MATLAB_Script_Block::Run()
     std::map<std::string, SV::Parameter> allparameters = getAllParameter();
     for (auto e : allparameters) {
         std::string Name = e.second.Name;
-        if (Name != "Equations" && Name != "isUserDefined") {
+        if (!Name.empty() && Name != "Equations" && Name != "isUserDefined") {
             QString str = e.second.Value.c_str();
             QString trimmed = str.trimmed();
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
@@ -400,6 +418,19 @@ bool MATLAB_Script_Block::Run()
                         outputData.push_back(resultMat.elem(i));
                     }
                     qDebug() << QString("MATLAB_Script_Block Run get output double data[%1]:%2").arg(port.name).arg(outputData.size());
+                    if (hasInvalidValues(outputData)) {
+                        static bool infNanLogged = false;
+                        if (!infNanLogged) {
+                            LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                      "，模块:", getInstanceName().c_str());
+                            std::string isUserDefined = getParameter("isUserDefined").Value;
+                            if (isUserDefined == "true") {
+                                LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                            }
+                            infNanLogged = true;
+                        }
+                        return false;
+                    }
                     WriteOutputData(port.name.toStdString().c_str(), outputData);
 
                 } else if (port.dataType == SV::PortMsg::COMPLEX) {
@@ -412,6 +443,19 @@ bool MATLAB_Script_Block::Run()
                         outputData.push_back({c.real(), c.imag()});
                     }
                     qDebug() << QString("MATLAB_Script_Block Run get output complex data[%1]:%2").arg(port.name).arg(outputData.size());
+                    if (hasInvalidValues(outputData)) {
+                        static bool infNanLogged = false;
+                        if (!infNanLogged) {
+                            LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                      "，模块:", getInstanceName().c_str());
+                            std::string isUserDefined = getParameter("isUserDefined").Value;
+                            if (isUserDefined == "true") {
+                                LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                            }
+                            infNanLogged = true;
+                        }
+                        return false;
+                    }
                     WriteOutputData(port.name.toStdString().c_str(), outputData);
 
                 } else if (port.dataType == SV::PortMsg::INT_MATRIX || port.dataType == SV::PortMsg::REAL_MATRIX) {
@@ -428,6 +472,19 @@ bool MATLAB_Script_Block::Run()
                             }
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
+                        if (hasInvalidValues(outputData)) {
+                            static bool infNanLogged = false;
+                            if (!infNanLogged) {
+                                LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                          "，模块:", getInstanceName().c_str());
+                                std::string isUserDefined = getParameter("isUserDefined").Value;
+                                if (isUserDefined == "true") {
+                                    LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                                }
+                                infNanLogged = true;
+                            }
+                            return false;
+                        }
                         WriteOutputData(port.name.toStdString().c_str(), outputData);
                     } else {
                         // 普通矩阵
@@ -439,6 +496,19 @@ bool MATLAB_Script_Block::Run()
                             outputData.push_back(resultMat.elem(i));
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
+                        if (hasInvalidValues(outputData)) {
+                            static bool infNanLogged = false;
+                            if (!infNanLogged) {
+                                LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                          "，模块:", getInstanceName().c_str());
+                                std::string isUserDefined = getParameter("isUserDefined").Value;
+                                if (isUserDefined == "true") {
+                                    LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                                }
+                                infNanLogged = true;
+                            }
+                            return false;
+                        }
                         WriteOutputData(port.name.toStdString().c_str(), outputData);
                     }
 
@@ -456,6 +526,19 @@ bool MATLAB_Script_Block::Run()
                             }
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
+                        if (hasInvalidValues(outputData)) {
+                            static bool infNanLogged = false;
+                            if (!infNanLogged) {
+                                LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                          "，模块:", getInstanceName().c_str());
+                                std::string isUserDefined = getParameter("isUserDefined").Value;
+                                if (isUserDefined == "true") {
+                                    LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                                }
+                                infNanLogged = true;
+                            }
+                            return false;
+                        }
                         WriteOutputData(port.name.toStdString().c_str(), outputData);
                     } else {
                         ComplexMatrix resultMat = outputVal.complex_matrix_value();
@@ -467,6 +550,19 @@ bool MATLAB_Script_Block::Run()
                             outputData.push_back({c.real(), c.imag()});
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
+                        if (hasInvalidValues(outputData)) {
+                            static bool infNanLogged = false;
+                            if (!infNanLogged) {
+                                LOG_ERROR("MATLAB模型输出异常(Inf/NaN)，算法逻辑校验失败，端口:", port.name.toStdString(),
+                                          "，模块:", getInstanceName().c_str());
+                                std::string isUserDefined = getParameter("isUserDefined").Value;
+                                if (isUserDefined == "true") {
+                                    LOG_ERROR("自定义模型语法/算法逻辑校验失败");
+                                }
+                                infNanLogged = true;
+                            }
+                            return false;
+                        }
                         WriteOutputData(port.name.toStdString().c_str(), outputData);
                     }
                 }
@@ -583,7 +679,7 @@ bool MATLAB_Script_Block::Initialize()
         for (auto e : allparameters) {
             std::string Name = e.second.Name;
 
-            if (Name != "Equations" && Name != "isUserDefined") {
+            if (!Name.empty() && Name != "Equations" && Name != "isUserDefined") {
                 inputs.append(Name.c_str());
 
                 QString str = e.second.Value.c_str();

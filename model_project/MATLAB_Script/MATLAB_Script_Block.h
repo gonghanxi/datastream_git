@@ -37,6 +37,10 @@ private:
     void assignComplexScalarParam(const std::string& name, const QString& str);
     static std::complex<double> parseComplexElement(const QString& str);
     static bool isComplexElement(const QString& str);
+
+    // 检查输出数据是否包含 Inf/NaN
+    static bool hasInvalidValues(const std::vector<double>& data);
+    static bool hasInvalidValues(const std::vector<std::complex<double>>& data);
 private:
     // 共享 Octave 解释器（所有实例共用）
     static octave::interpreter* s_sharedInterp;
