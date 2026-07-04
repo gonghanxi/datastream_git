@@ -623,7 +623,7 @@ bool SimRunner::ManageConnection()
         auto validationResult = validator.validateAll();
 
         if (!validationResult.isValid) {
-            LOG_ERROR("链路：", linkKey.toStdString(), "连接校验失败：", validationResult.errorMessage.toStdString());
+            LOG_ERROR("链路连接校验失败：", validationResult.errorMessage.toStdString());
             return false;
         }
 
@@ -665,8 +665,7 @@ bool SimRunner::validateLinkAndSubLinks(const QString &linkKey)
     auto validationResult = validator.validateAll();
 
     if (!validationResult.isValid) {
-        LOG_ERROR("链路：", linkKey.toStdString(),
-                  "连接校验失败：", validationResult.errorMessage.toStdString());
+        LOG_ERROR("链路连接校验失败：", validationResult.errorMessage.toStdString());
         return false;
     }
 
