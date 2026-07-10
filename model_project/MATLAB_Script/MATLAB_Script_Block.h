@@ -41,6 +41,8 @@ private:
     // 检查输出数据是否包含 Inf/NaN
     static bool hasInvalidValues(const std::vector<double>& data);
     static bool hasInvalidValues(const std::vector<std::complex<double>>& data);
+    static bool hasInvalidValues(const std::vector<SystemVueModelBuilder::DoubleMatrix>& data);
+    static bool hasInvalidValues(const std::vector<SystemVueModelBuilder::DComplexMatrix>& data);
 private:
     // 共享 Octave 解释器（所有实例共用）
     static octave::interpreter* s_sharedInterp;

@@ -139,6 +139,31 @@ bool MATLAB_Script_Block::hasInvalidValues(const std::vector<std::complex<double
     return false;
 }
 
+bool MATLAB_Script_Block::hasInvalidValues(const std::vector<SystemVueModelBuilder::DoubleMatrix>& data)
+{
+    for (const auto& mat : data) {
+        for (size_t r = 0; r < mat.NumRows(); ++r) {
+            for (size_t c = 0; c < mat.NumColumns(); ++c) {
+                if (std::isinf(mat(r, c)) || std::isnan(mat(r, c))) return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool MATLAB_Script_Block::hasInvalidValues(const std::vector<SystemVueModelBuilder::DComplexMatrix>& data)
+{
+    for (const auto& mat : data) {
+        for (size_t r = 0; r < mat.NumRows(); ++r) {
+            for (size_t c = 0; c < mat.NumColumns(); ++c) {
+                if (std::isinf(mat(r, c).real()) || std::isnan(mat(r, c).real()) ||
+                    std::isinf(mat(r, c).imag()) || std::isnan(mat(r, c).imag())) return true;
+            }
+        }
+    }
+    return false;
+}
+
 void MATLAB_Script_Block::assignArrayParam(const std::string& name, const QString& innerStr)
 {
     // 按逗号分割元素（需考虑括号内的逗号）
@@ -463,13 +488,19 @@ bool MATLAB_Script_Block::Run()
                         // Cell 数组：逐个提取矩阵
                         Cell cellArr = outputVal.cell_value();
                         int cellCount = cellArr.numel();
-                        std::vector<double> outputData;
+                        std::vector<SystemVueModelBuilder::DoubleMatrix> outputData;
+                        outputData.reserve(cellCount);
                         for (int ci = 0; ci < cellCount; ci++) {
                             ::Matrix subMat = cellArr.elem(ci).matrix_value();
-                            int subSize = subMat.numel();
-                            for (int i = 0; i < subSize; i++) {
-                                outputData.push_back(subMat.elem(i));
+                            int numRows = subMat.rows();
+                            int numCols = subMat.columns();
+                            SystemVueModelBuilder::DoubleMatrix dMat(numRows, numCols);
+                            for (int i = 0; i < subMat.numel(); i++) {
+                                int r = i % numRows;
+                                int c = i / numRows;
+                                dMat(r, c) = subMat.elem(i);
                             }
+                            outputData.push_back(dMat);
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
                         if (hasInvalidValues(outputData)) {
@@ -489,12 +520,16 @@ bool MATLAB_Script_Block::Run()
                     } else {
                         // 普通矩阵
                         ::Matrix resultMat = outputVal.matrix_value();
-                        int resultDataSize = resultMat.numel();
-                        std::vector<double> outputData;
-                        outputData.reserve(resultDataSize);
-                        for (int i = 0; i < resultDataSize; ++i) {
-                            outputData.push_back(resultMat.elem(i));
+                        int numRows = resultMat.rows();
+                        int numCols = resultMat.columns();
+                        SystemVueModelBuilder::DoubleMatrix dMat(numRows, numCols);
+                        for (int i = 0; i < resultMat.numel(); i++) {
+                            int r = i % numRows;
+                            int c = i / numRows;
+                            dMat(r, c) = resultMat.elem(i);
                         }
+                        std::vector<SystemVueModelBuilder::DoubleMatrix> outputData;
+                        outputData.push_back(dMat);
                         qDebug() << QString("MATLAB_Script_Block Run get output REAL_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
                         if (hasInvalidValues(outputData)) {
                             static bool infNanLogged = false;
@@ -516,14 +551,19 @@ bool MATLAB_Script_Block::Run()
                     if (outputVal.iscell()) {
                         Cell cellArr = outputVal.cell_value();
                         int cellCount = cellArr.numel();
-                        std::vector<std::complex<double>> outputData;
+                        std::vector<SystemVueModelBuilder::DComplexMatrix> outputData;
+                        outputData.reserve(cellCount);
                         for (int ci = 0; ci < cellCount; ci++) {
                             ComplexMatrix subMat = cellArr.elem(ci).complex_matrix_value();
-                            int subSize = subMat.numel();
-                            for (int i = 0; i < subSize; i++) {
-                                Complex c = subMat.elem(i);
-                                outputData.push_back({c.real(), c.imag()});
+                            int numRows = subMat.rows();
+                            int numCols = subMat.columns();
+                            SystemVueModelBuilder::DComplexMatrix dMat(numRows, numCols);
+                            for (int i = 0; i < subMat.numel(); i++) {
+                                int r = i % numRows;
+                                int c = i / numRows;
+                                dMat(r, c) = std::complex<double>(subMat.elem(i).real(), subMat.elem(i).imag());
                             }
+                            outputData.push_back(dMat);
                         }
                         qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX cell data[%1]:%2").arg(port.name).arg(outputData.size());
                         if (hasInvalidValues(outputData)) {
@@ -542,13 +582,16 @@ bool MATLAB_Script_Block::Run()
                         WriteOutputData(port.name.toStdString().c_str(), outputData);
                     } else {
                         ComplexMatrix resultMat = outputVal.complex_matrix_value();
-                        int resultDataSize = resultMat.numel();
-                        std::vector<std::complex<double>> outputData;
-                        outputData.reserve(resultDataSize);
-                        for (int i = 0; i < resultDataSize; ++i) {
-                            Complex c = resultMat.elem(i);
-                            outputData.push_back({c.real(), c.imag()});
+                        int numRows = resultMat.rows();
+                        int numCols = resultMat.columns();
+                        SystemVueModelBuilder::DComplexMatrix dMat(numRows, numCols);
+                        for (int i = 0; i < resultMat.numel(); i++) {
+                            int r = i % numRows;
+                            int c = i / numRows;
+                            dMat(r, c) = std::complex<double>(resultMat.elem(i).real(), resultMat.elem(i).imag());
                         }
+                        std::vector<SystemVueModelBuilder::DComplexMatrix> outputData;
+                        outputData.push_back(dMat);
                         qDebug() << QString("MATLAB_Script_Block Run get output COMPLEX_MATRIX data[%1]:%2").arg(port.name).arg(outputData.size());
                         if (hasInvalidValues(outputData)) {
                             static bool infNanLogged = false;
