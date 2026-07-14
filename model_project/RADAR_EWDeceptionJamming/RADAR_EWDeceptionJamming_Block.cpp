@@ -77,9 +77,57 @@ bool RADAR_EWDeceptionJamming_Block::Setup()
     return true;
 }
 
+// ============================================================================
+// 参数校验（与原算法 Setup 中的校验逻辑一致）
+// ============================================================================
+
+bool RADAR_EWDeceptionJamming_Block::ValidateParameters()
+{
+    bool bStatus = true;
+    const double c = 3e8;
+
+    if (m_SampleNum <= 0)
+    {
+        LOG_ERROR("SampleNum must be > 0");
+        bStatus = false;
+    }
+    if (m_SampleRate <= 0)
+    {
+        LOG_ERROR("SampleRate must be > 0");
+        bStatus = false;
+    }
+    if (m_FalseTargetNum <= 0)
+    {
+        LOG_ERROR("FalseTargetNum must be > 0");
+        bStatus = false;
+    }
+    if (m_SampleRate > 0 && m_MaxRange <= m_SampleNum / m_SampleRate * c / 2)
+    {
+        LOG_ERROR("MaxRange must be > SampleNum / SampleRate * c / 2");
+        bStatus = false;
+    }
+    if (m_FalseTargetRangeDelay.NumElements() != m_FalseTargetNum)
+    {
+        LOG_ERROR("The size of FalseTargetRangeDelay must match the number of false targets(FalseTargetNum)");
+        bStatus = false;
+    }
+    if (m_FalseTargetDopplerOffset.NumElements() != m_FalseTargetNum)
+    {
+        LOG_ERROR("The size of FalseTargetDopplerOffset must match the number of false targets(FalseTargetNum)");
+        bStatus = false;
+    }
+    if (m_FalseTargetGain.NumElements() != m_FalseTargetNum)
+    {
+        LOG_ERROR("The size of FalseTargetGain must match the number of false targets(FalseTargetNum)");
+        bStatus = false;
+    }
+
+    return bStatus;
+}
+
 bool RADAR_EWDeceptionJamming_Block::Run()
 {
-    if (IsVariableStepMode() || m_SampleNum > 1) { return TimeDrivenRun(); }
+    if (IsVariableStepMode() && m_SampleNum > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
@@ -101,6 +149,11 @@ bool RADAR_EWDeceptionJamming_Block::Initialize()
               getParameter("FalseTargetDopplerOffset").Value);                       } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetDopplerOffset', using default value."); }
     try { m_FalseTargetGain          = ParseStringToMatrix<double>(
               getParameter("FalseTargetGain").Value);                                } catch (...) { LOG_WARN("Failed to parse parameter 'FalseTargetGain', using default value."); }
+
+    // ---- 参数校验 ----
+    if (!ValidateParameters()) {
+        return false;
+    }
 
     SetParameters();
 
@@ -126,8 +179,6 @@ bool RADAR_EWDeceptionJamming_Block::Initialize()
 
 bool RADAR_EWDeceptionJamming_Block::DataStreamRun()
 {
-    SetParameters();
-
     auto inputData = ReadInputData<std::complex<double>>(GetInputPortName(0));
     if (inputData.empty()) { return false; }
 

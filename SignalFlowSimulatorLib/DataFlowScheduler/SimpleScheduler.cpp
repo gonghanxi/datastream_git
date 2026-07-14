@@ -246,7 +246,7 @@ bool SimpleScheduler::simpleSchedulerImpl(const QString& linkKey,
             bool progressMade = false;
 
             // 死锁检测
-            if (noProgressCount / blocks_count > 10) {
+            if (blocks_count > 0 && noProgressCount / blocks_count > 500) {
                 LOG_ERROR("Too many iterations without progress, forcing exit");
                 blockDone = true;
             } else {

@@ -25,6 +25,7 @@ public:
 private:
     void SetDefaultParameters();
     void SetParameters();
+    bool ValidateParameters();
     bool DataStreamRun();
     bool TimeDrivenRun();
 

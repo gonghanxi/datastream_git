@@ -57,7 +57,7 @@ bool RADAR_EWJamming_Block::Setup()
 
 bool RADAR_EWJamming_Block::Run()
 {
-    if (IsVariableStepMode() || m_SampleNum > 1) { return TimeDrivenRun(); }
+    if (IsVariableStepMode() && m_SampleNum > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
