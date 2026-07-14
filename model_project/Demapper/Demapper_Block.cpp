@@ -115,7 +115,7 @@ bool Demapper_Block::Setup()
 
 bool Demapper_Block::Run()
 {
-    if (IsVariableStepMode() || m_symbolLength > 1) { return TimeDrivenRun(); }
+    if (IsVariableStepMode() && m_symbolLength > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 

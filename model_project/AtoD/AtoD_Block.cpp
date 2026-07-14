@@ -434,7 +434,7 @@ bool AtoD_Block::Setup()
 
 bool AtoD_Block::Run()
 {
-    if (IsVariableStepMode() || m_inputRate > 1) return TimeDrivenRun();
+    if (IsVariableStepMode() && m_inputRate > 1) return TimeDrivenRun();
     return DataStreamRun();
 }
 

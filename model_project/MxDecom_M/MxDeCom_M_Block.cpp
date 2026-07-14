@@ -80,7 +80,7 @@ bool MxDeCom_M_Block::Setup()
 
 bool MxDeCom_M_Block::Run()
 {
-    if (IsVariableStepMode() || m_numSubMatrices > 1) { return TimeDrivenRun(); }
+    if (IsVariableStepMode() && m_numSubMatrices > 1) { return TimeDrivenRun(); }
     return DataStreamRun();
 }
 
