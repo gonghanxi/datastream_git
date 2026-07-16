@@ -64,12 +64,19 @@ bool RADAR_MultiCH_Tx_Block::DataStreamRun()
         outputData.push_back(EnvelopeSignal(y));
     }
 
-    WriteOutputData(outputPort, outputData);
-
-    // 逐通道设置输出 fc（原算法：applyOutputFc_ → output[k].SetCharacterizationFrequency(FCarrier)）
-    auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
-    for (size_t k = 0; k < outConns.size(); ++k) {
-        outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+    if (IsOutputBusToBus(outputPort)) {
+        // bus-to-bus: 逐通道写入（带 fc）
+        for (int k = 0; k < nChExpected; ++k) {
+            std::vector<EnvelopeSignal> chData = {outputData[k]};
+            GetOutputPort(outputPort)->WriteEnvelopeDataToChannel(k, chData, m_FCarrier);
+        }
+    } else {
+        // bus-to-non-bus: 广播全部数据
+        WriteOutputData(outputPort, outputData);
+        auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
+        for (size_t k = 0; k < outConns.size(); ++k) {
+            outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+        }
     }
 
     return true;
@@ -110,17 +117,28 @@ bool RADAR_MultiCH_Tx_Block::TimeDrivenRun()
 
     if (!m_outputQueue.empty())
     {
-        EnvelopeSignal val = m_outputQueue.front();
-        m_outputQueue.pop();
+        if (IsOutputBusToBus(outputPort)) {
+            // bus-to-bus: 一次输出 N 通道
+            if (static_cast<int>(m_outputQueue.size()) >= m_nChExpected) {
+                for (int k = 0; k < m_nChExpected; ++k) {
+                    EnvelopeSignal val = m_outputQueue.front();
+                    m_outputQueue.pop();
+                    std::vector<EnvelopeSignal> chData = {val};
+                    GetOutputPort(outputPort)->WriteEnvelopeDataToChannel(k, chData, m_FCarrier);
+                }
+            }
+        } else {
+            EnvelopeSignal val = m_outputQueue.front();
+            m_outputQueue.pop();
 
-        std::vector<EnvelopeSignal> outputData;
-        outputData.push_back(val);
-        WriteOutputData(outputPort, outputData);
+            std::vector<EnvelopeSignal> outputData;
+            outputData.push_back(val);
+            WriteOutputData(outputPort, outputData);
 
-        // 逐通道设置输出 fc（原算法：applyOutputFc_ → output[k].SetCharacterizationFrequency(FCarrier)）
-        auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
-        for (size_t k = 0; k < outConns.size(); ++k) {
-            outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+            auto& outConns = GetOutputPort(outputPort)->GetBusConnections();
+            for (size_t k = 0; k < outConns.size(); ++k) {
+                outConns.at(k).bridgeWriter->setCharacterizationFrequency(m_FCarrier);
+            }
         }
     }
 

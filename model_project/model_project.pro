@@ -85,6 +85,7 @@ BPF_ChebyshevII \
 BSF_Butterworth \
 BSF_ChebyshevI \
 BSF_ChebyshevII \
+    COMM_AntennaPolarizationTx \
     CRC_Coder \
     CRC_Decoder \
 ChirpGen \

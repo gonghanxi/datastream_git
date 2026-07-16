@@ -22,6 +22,7 @@ public:
     bool Setup()      override;
     bool Run()        override;
     bool Initialize() override;
+    int  GetBusChannelCount() const override { return m_NumOfCh; }
 
     void SetDefaultParameters();
     void SetParameters();

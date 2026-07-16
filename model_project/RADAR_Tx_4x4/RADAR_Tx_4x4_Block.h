@@ -25,6 +25,8 @@ public:
     bool Initialize() override;
     bool Run() override;
 
+    int GetBusChannelCount() const override { return NumTxAnt_; }
+
     void SetDefaultParameters();
     void SetParameters();
 

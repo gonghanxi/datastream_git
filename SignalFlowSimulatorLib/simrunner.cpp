@@ -88,6 +88,8 @@ bool SimRunner::start()
         LOG_INFO("模型实例建立连接失败");
         return false;
     }
+    // 解析延迟的 bus-to-bus 连接（两端均无通道数参数的情况）
+    Block::ResolveAllDeferredBusConnections();
     if(!SetupBlocks())
     {
         //                LOG_INFO("模型实例Setup完成");

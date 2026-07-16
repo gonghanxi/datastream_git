@@ -1,4 +1,5 @@
 #include "StdinListener.h"
+#include "LogExport.h"
 #include <QDebug>
 #include <QTextStream>
 #include <iostream>
@@ -35,6 +36,8 @@ void StdinListener::run()
     while (m_running) {
         // 阻塞读取一行输入
         QString line = in.readLine();
+
+        LOG_INFO("[StdinListener] received line:", line.toStdString());
 
         if (line.isEmpty()) {
             continue;

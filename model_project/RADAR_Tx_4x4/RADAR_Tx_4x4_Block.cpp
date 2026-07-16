@@ -391,7 +391,14 @@ bool RADAR_Tx_4x4_Block::DataStreamRun() {
         outputData[chIndex] = EnvelopeSignal(Cx(0.0, 0.0));
     }
 
-    WriteOutputData(outputPort, outputData);
+    if (IsOutputBusToBus(outputPort)) {
+        for (size_t chIndex = 0; chIndex < activeChannels_; ++chIndex) {
+            std::vector<EnvelopeSignal> chData = {outputData[chIndex]};
+            GetOutputPort(outputPort)->WriteEnvelopeDataToChannel(static_cast<int>(chIndex), chData, RF_Freq_);
+        }
+    } else {
+        WriteOutputData(outputPort, outputData);
+    }
     ++firingCount_;
     return true;
 }
@@ -485,7 +492,14 @@ bool RADAR_Tx_4x4_Block::TimeDrivenRun() {
 
     if (!m_outputQueue.empty()) {
         auto& outFrame = m_outputQueue.front();
-        WriteOutputData(outputPort, outFrame);
+        if (IsOutputBusToBus(outputPort)) {
+            for (size_t k = 0; k < outFrame.size(); ++k) {
+                std::vector<EnvelopeSignal> chData = {outFrame[k]};
+                GetOutputPort(outputPort)->WriteEnvelopeDataToChannel(static_cast<int>(k), chData, RF_Freq_);
+            }
+        } else {
+            WriteOutputData(outputPort, outFrame);
+        }
         m_outputQueue.pop();
     }
 

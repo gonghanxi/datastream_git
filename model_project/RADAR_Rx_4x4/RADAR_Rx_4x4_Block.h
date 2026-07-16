@@ -24,6 +24,7 @@ public:
     bool Setup() override;
     bool Initialize() override;
     bool Run() override;
+    int  GetBusChannelCount() const override { return NumRxAnt_; }
 
     void SetDefaultParameters();
     void SetParameters();

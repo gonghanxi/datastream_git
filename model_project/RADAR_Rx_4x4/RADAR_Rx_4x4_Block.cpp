@@ -358,7 +358,14 @@ bool RADAR_Rx_4x4_Block::DataStreamRun() {
         ++st.outputCount;
     }
 
-    WriteOutputData(outputPort, outputData);
+    if (IsOutputBusToBus(outputPort)) {
+        for (size_t k = 0; k < nRun; ++k) {
+            std::vector<Cx> chData = {outputData[k]};
+            GetOutputPort(outputPort)->WriteDataToChannel(static_cast<int>(k), chData);
+        }
+    } else {
+        WriteOutputData(outputPort, outputData);
+    }
     ++firingCount_;
     return true;
 }
@@ -431,7 +438,14 @@ bool RADAR_Rx_4x4_Block::TimeDrivenRun() {
 
     if (!m_outputQueue.empty()) {
         auto& outFrame = m_outputQueue.front();
-        WriteOutputData(outputPort, outFrame);
+        if (IsOutputBusToBus(outputPort)) {
+            for (size_t k = 0; k < outFrame.size(); ++k) {
+                std::vector<Cx> chData = {outFrame[k]};
+                GetOutputPort(outputPort)->WriteDataToChannel(static_cast<int>(k), chData);
+            }
+        } else {
+            WriteOutputData(outputPort, outFrame);
+        }
         m_outputQueue.pop();
     }
 

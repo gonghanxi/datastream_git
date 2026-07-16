@@ -500,6 +500,21 @@ public:
     // 获取块的系数权重（可被子类重写）
     virtual double getUpCoefficient() const { return 1.0; }
     virtual double getDownCoefficient() const { return -1.0; }
+
+    // 获取总线通道数（用于 bus-to-bus 连接检测，-1 表示未定义）
+    virtual int GetBusChannelCount() const { return -1; }
+
+    // 延迟 bus-to-bus 连接记录（两端均无通道数参数时暂存）
+    struct DeferredBusConnection {
+        Block* upstreamBlock;
+        std::string upstreamOutputPort;
+        Block* downstreamBlock;
+        std::string downstreamInputPort;
+        DataType outputDataType;
+    };
+
+    // 解析所有延迟的 bus-to-bus 连接（在所有 Connect() 完成后调用）
+    static void ResolveAllDeferredBusConnections();
     //--------------------------------------------------------------
     //设置Block的名称
     void SetName(const std::string& portName);
@@ -652,6 +667,22 @@ public:
 
         return outputBuffer->WriteData(data);
     }
+
+    // 判断输出端口是否为 bus-to-bus 连接（输出BUS且至少一个下游输入也是BUS类型）
+    bool IsOutputBusToBus(const std::string& outputPortName)
+    {
+        Buffer* outputBuffer = GetOutputPort(outputPortName);
+        if (!outputBuffer) return false;
+        for (const auto& conn : outputBuffer->GetBusConnections()) {
+            if (conn.downstreamBlock) {
+                BufferReader* downstreamInput = conn.downstreamBlock->GetInputPort(conn.downstreamPortName);
+                if (downstreamInput && BufferReader::IsBusType(downstreamInput->GetDataType()))
+                    return true;
+            }
+        }
+        return false;
+    }
+
     //变速率模型
     /**
      * @brief 获取指定输入端口需要的数据量才能进行一次处理
@@ -789,6 +820,9 @@ private:
     std::unordered_map<std::string, std::vector<std::pair<Block*, std::string>>> m_connectedBusUpstreamBlocks;
     //总线转普通类型的校验
     static DataType BusToCircularBuffer(DataType type);
+
+    // 延迟 bus-to-bus 连接列表（两端 GetBusChannelCount 均返回 -1 时暂存）
+    static std::vector<DeferredBusConnection> s_deferredBusConnections;
     //--------------------------------------------------------------
 
 

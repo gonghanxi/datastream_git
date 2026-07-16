@@ -11,6 +11,7 @@ using namespace SystemVueModelBuilder;
 std::shared_ptr<DataStreamVerification> Block::s_VerificationSystem = nullptr;
 int Block::m_busConnectionCount = 0;
 int Block::m_OutPutbusConnectionCount = 0;
+std::vector<Block::DeferredBusConnection> Block::s_deferredBusConnections;
 
 Block::Block()
     :m_blockType(BlockType::SOURCE)
@@ -545,6 +546,115 @@ void Block::Connect(Block* upstreamBlock, const std::string& upstreamOutputPort,
     // 对于非总线类型，检查是否已连接
 
     // 连接逻辑
+    // 输出是BUS，输入也是BUS（bus-to-bus 直连，排除 Sink）
+    if (isInputBusType && isOutputBusType && downstreamBlock->GetBlockType() != BlockType::SINK) {
+
+        // 获取通道数
+        int upCh = upstreamBlock->GetBusChannelCount();
+        int downCh = downstreamBlock->GetBusChannelCount();
+
+        // 场景3: 两端都没有通道数参数，延迟初始化
+        if (upCh < 0 && downCh < 0) {
+            DeferredBusConnection deferred;
+            deferred.upstreamBlock = upstreamBlock;
+            deferred.upstreamOutputPort = upstreamOutputPort;
+            deferred.downstreamBlock = downstreamBlock;
+            deferred.downstreamInputPort = downstreamInputPort;
+            deferred.outputDataType = outputDataType;
+            s_deferredBusConnections.push_back(deferred);
+
+            // 记录连接关系（供后续查询）
+            downstreamBlock->m_connectedBusUpstreamBlocks[downstreamInputPort].push_back(
+                {upstreamBlock, upstreamOutputPort});
+
+            qDebug() << "=== Bus-to-Bus 延迟连接 ==="
+                     << "上游:" << QString::fromStdString(upstreamBlock->GetName())
+                     << "下游:" << QString::fromStdString(downstreamBlock->GetName())
+                     << "(两端均无通道数参数，等待 ResolveAllDeferredBusConnections)";
+            return;
+        }
+
+        // 场景2: 一端有参数，另一端为 -1，使用有参数那一端的值
+        // 场景1: 两端都有参数，校验一致性
+        if (upCh > 0 && downCh > 0 && upCh != downCh) {
+            LOG_ERROR("Bus-to-Bus 通道数不一致: ", upstreamBlock->GetName(),
+                      "(", upCh, ") vs ", downstreamBlock->GetName(), "(", downCh, ")");
+            return;
+        }
+        int channelCount = (upCh > 0) ? upCh : downCh;
+        if (channelCount <= 0) channelCount = 1; // fallback
+
+        qDebug() << "=== Bus-to-Bus 连接 ===";
+        qDebug() << "上游:" << QString::fromStdString(upstreamBlock->GetName())
+                 << "下游:" << QString::fromStdString(downstreamBlock->GetName())
+                 << "通道数:" << channelCount;
+
+        // 清理已有的 bus-to-bus 连接
+        outputBuffer->ClearBusConnections();
+        inputReader->ClearBusConnections();
+
+        // 按通道数创建 N 组 bridge writer + channel buffer + bridge reader
+        DataType bridgeDataType = BusToCircularBuffer(outputDataType);
+        for (int ch = 0; ch < channelCount; ++ch) {
+            // 1. 创建 bridge writer (BUS_BRIDGE)
+            std::string wName = upstreamBlock->GetName() + "_bus2bus_w_" +
+                                upstreamOutputPort + "_" + std::to_string(ch);
+            Buffer* bridgeWriter = new Buffer(wName, outputBuffer->GetWriteSize(), bridgeDataType);
+            bridgeWriter->SetWriterType(Buffer::BUS_BRIDGE);
+
+            // 2. 创建 channel buffer
+            CircularBufferBase* channelBuffer =
+                    Buffer::CreateCircularBufferByDataType(bridgeDataType);
+            if (!channelBuffer) {
+                qDebug() << "ERROR: Failed to create CircularBuffer for bus2bus channel" << ch;
+                delete bridgeWriter;
+                continue;
+            }
+            bridgeWriter->SetExternalCircularBuffer(channelBuffer);
+
+            // 3. 创建 bridge reader (BUS_BRIDGE)
+            std::string rName = downstreamBlock->GetName() + "_bus2bus_r_" +
+                                downstreamInputPort + "_" + std::to_string(ch);
+            BufferReader* bridgeReader = new BufferReader(rName, inputReader->GetReadSize(), bridgeDataType);
+            bridgeReader->SetReaderType(BufferReader::BUS_BRIDGE);
+            bridgeReader->connectToBuffer(bridgeWriter);
+
+            // 4. 注册到 outputBuffer 的 bus connections (输出侧分发)
+            OutPutBusConnection outBusConn;
+            outBusConn.downstreamBlock = downstreamBlock;
+            outBusConn.downstreamPortName = downstreamInputPort;
+            outBusConn.bridgeWriter = bridgeWriter;
+            outBusConn.connectedReader = bridgeReader;
+            outBusConn.isDownstreamDone = false;
+            outBusConn.PermitWrite = true;
+            outputBuffer->AddBusConnection(outBusConn);
+
+            // 5. 注册到 inputReader 的 bus connections (输入侧收集)
+            BusConnection inBusConn;
+            inBusConn.upstreamBlock = upstreamBlock;
+            inBusConn.upstreamPortName = upstreamOutputPort;
+            inBusConn.bridgeReader = bridgeReader;
+            inBusConn.connectedBuffer = bridgeWriter;
+            inBusConn.isUpstreamDone = false;
+            inputReader->AddBusConnection(inBusConn);
+
+            qDebug() << "  通道" << ch << ": bridgeWriter=" << QString::fromStdString(wName)
+                     << "bridgeReader=" << QString::fromStdString(rName);
+        }
+
+        // 设置主端口类型
+        outputBuffer->SetWriterType(Buffer::BUS_MASTER);
+        inputReader->SetReaderType(BufferReader::BUS_MASTER);
+
+        // 记录连接关系
+        downstreamBlock->m_connectedBusUpstreamBlocks[downstreamInputPort].push_back(
+            {upstreamBlock, upstreamOutputPort});
+
+        qDebug() << "Bus-to-Bus 连接完成，输出侧" << outputBuffer->GetBusConnectionCount()
+                 << "个连接，输入侧" << inputReader->GetBusConnectionCount() << "个连接";
+        return;
+    }
+
     //输出是,输入不是
     if(!isInputBusType && isOutputBusType) {
         // 创建唯一的桥接读取器名称
@@ -618,7 +728,7 @@ void Block::Connect(Block* upstreamBlock, const std::string& upstreamOutputPort,
         // 直接连接
         inputReader->connectToBuffer(outputBuffer);
     }
-    //输出不是，输入是
+    //输出不是，输入是（非 bus-to-bus）
     else {
         // 创建唯一的桥接读取器名称
         std::string bridgeName = downstreamBlock->GetName() + "_bus_bridge_" +
@@ -1022,6 +1132,102 @@ Block::DataType Block::BusToCircularBuffer(Block::DataType type)
     else if(type == DataType::MATRIX_DCOMPLEX_BUS) return DataType::MATRIX_DCOMPLEX;
     else if(type == DataType::MATRIX_ENVELOPE_BUS) return DataType::MATRIX_ENVELOPE;
     return DataType::CIRCULAR_BUFFER_INT;
+}
+
+void Block::ResolveAllDeferredBusConnections()
+{
+    if (s_deferredBusConnections.empty()) return;
+
+    qDebug() << "=== 解析延迟 Bus-to-Bus 连接，共" << s_deferredBusConnections.size() << "个 ===";
+
+    for (const auto& deferred : s_deferredBusConnections) {
+        Block* upstreamBlock = deferred.upstreamBlock;
+        Block* downstreamBlock = deferred.downstreamBlock;
+        const std::string& upstreamOutputPort = deferred.upstreamOutputPort;
+        const std::string& downstreamInputPort = deferred.downstreamInputPort;
+        DataType outputDataType = deferred.outputDataType;
+
+        Buffer* outputBuffer = upstreamBlock->GetOutputPort(upstreamOutputPort);
+        BufferReader* inputReader = downstreamBlock->GetInputPort(downstreamInputPort);
+
+        if (!outputBuffer || !inputReader) {
+            LOG_ERROR("延迟连接解析失败: 端口为空");
+            continue;
+        }
+
+        // 尝试从两端的已有 bus 连接数推导通道数
+        size_t outConnCount = outputBuffer->GetBusConnectionCount();
+        size_t inConnCount = inputReader->GetBusConnectionCount();
+        int channelCount = static_cast<int>(std::max(outConnCount, inConnCount));
+
+        // 再次尝试从模型的 GetBusChannelCount 获取（可能已被模型更新）
+        int upCh = upstreamBlock->GetBusChannelCount();
+        int downCh = downstreamBlock->GetBusChannelCount();
+        if (upCh > 0) channelCount = upCh;
+        else if (downCh > 0) channelCount = downCh;
+
+        // 最终 fallback
+        if (channelCount <= 0) channelCount = 1;
+
+        qDebug() << "延迟连接解析:" << QString::fromStdString(upstreamBlock->GetName())
+                 << "->" << QString::fromStdString(downstreamBlock->GetName())
+                 << "通道数:" << channelCount
+                 << "(输出侧已有连接:" << outConnCount
+                 << "输入侧已有连接:" << inConnCount << ")";
+
+        // 清理可能存在的旧连接
+        outputBuffer->ClearBusConnections();
+        inputReader->ClearBusConnections();
+
+        // 创建 bridge
+        DataType bridgeDataType = BusToCircularBuffer(outputDataType);
+        for (int ch = 0; ch < channelCount; ++ch) {
+            std::string wName = upstreamBlock->GetName() + "_bus2bus_w_" +
+                                upstreamOutputPort + "_" + std::to_string(ch);
+            Buffer* bridgeWriter = new Buffer(wName, outputBuffer->GetWriteSize(), bridgeDataType);
+            bridgeWriter->SetWriterType(Buffer::BUS_BRIDGE);
+
+            CircularBufferBase* channelBuffer =
+                    Buffer::CreateCircularBufferByDataType(bridgeDataType);
+            if (!channelBuffer) {
+                qDebug() << "ERROR: Failed to create CircularBuffer for deferred bus2bus channel" << ch;
+                delete bridgeWriter;
+                continue;
+            }
+            bridgeWriter->SetExternalCircularBuffer(channelBuffer);
+
+            std::string rName = downstreamBlock->GetName() + "_bus2bus_r_" +
+                                downstreamInputPort + "_" + std::to_string(ch);
+            BufferReader* bridgeReader = new BufferReader(rName, inputReader->GetReadSize(), bridgeDataType);
+            bridgeReader->SetReaderType(BufferReader::BUS_BRIDGE);
+            bridgeReader->connectToBuffer(bridgeWriter);
+
+            OutPutBusConnection outBusConn;
+            outBusConn.downstreamBlock = downstreamBlock;
+            outBusConn.downstreamPortName = downstreamInputPort;
+            outBusConn.bridgeWriter = bridgeWriter;
+            outBusConn.connectedReader = bridgeReader;
+            outBusConn.isDownstreamDone = false;
+            outBusConn.PermitWrite = true;
+            outputBuffer->AddBusConnection(outBusConn);
+
+            BusConnection inBusConn;
+            inBusConn.upstreamBlock = upstreamBlock;
+            inBusConn.upstreamPortName = upstreamOutputPort;
+            inBusConn.bridgeReader = bridgeReader;
+            inBusConn.connectedBuffer = bridgeWriter;
+            inBusConn.isUpstreamDone = false;
+            inputReader->AddBusConnection(inBusConn);
+        }
+
+        outputBuffer->SetWriterType(Buffer::BUS_MASTER);
+        inputReader->SetReaderType(BufferReader::BUS_MASTER);
+
+        qDebug() << "延迟连接解析完成，输出侧" << outputBuffer->GetBusConnectionCount()
+                 << "个连接，输入侧" << inputReader->GetBusConnectionCount() << "个连接";
+    }
+
+    s_deferredBusConnections.clear();
 }
 
 Block::BlockState Block::GetState() const
