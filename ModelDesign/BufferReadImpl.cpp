@@ -1084,6 +1084,59 @@ bool BufferReadImpl::ReadFComplexMatrixDataForReaderImpl(size_t readSize, std::v
      // 获取内部矩阵缓冲区指针
      auto* buffer = m_buffer->getFComplexMatrixCircularBuffer();
      if(!buffer) {
+         // 兼容: IntMatrix -> FComplexMatrix (int作为实部，虚部为0)
+         if(m_buffer->GetDataType() == DataType::MATRIX_INT) {
+             IntMatrixCircularBuffer* compatBuf = m_buffer->getIntMatrixCircularBuffer();
+             if(!compatBuf) { LOG_ERROR("getIntMatrixCircularBuffer failed"); return false; }
+             if(m_buffer->m_readerPositions.find(readerName) == m_buffer->m_readerPositions.end()) {
+                 qDebug() << "ERROR: Reader '" << QString::fromStdString(readerName) << "' not found!";
+                 return false;
+             }
+             size_t& readerPosition = m_buffer->m_readerPositions[readerName];
+             if(readerPosition == SIZE_MAX) { readerPosition = 0; return false; }
+             size_t available = m_buffer->m_totalWritten - readerPosition;
+             size_t processSize = m_buffer->IsVariableMode() ? available : readSize;
+             outputData.resize(processSize);
+             for(size_t i = 0; i < processSize; i++) {
+                 size_t readIndex = (readerPosition + i) % m_buffer->m_bufferSize;
+                 IntMatrix readData = (*compatBuf)[readIndex];
+                 FComplexMatrix outValue(readData.NumRows(), readData.NumColumns());
+                 for(size_t row = 0; row < readData.NumRows(); ++row)
+                     for(size_t col = 0; col < readData.NumColumns(); ++col)
+                         outValue(row, col) = std::complex<float>(static_cast<float>(readData(row, col)), 0.0f);
+                 outputData[i] = outValue;
+             }
+             readerPosition += processSize;
+             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+             return true;
+         }
+         // 兼容: DoubleMatrix -> FComplexMatrix (double作为实部，虚部为0)
+         if(m_buffer->GetDataType() == DataType::MATRIX_DOUBLE) {
+             DoubleMatrixCircularBuffer* compatBuf = m_buffer->getDoubleMatrixCircularBuffer();
+             if(!compatBuf) { LOG_ERROR("getDoubleMatrixCircularBuffer failed"); return false; }
+             if(m_buffer->m_readerPositions.find(readerName) == m_buffer->m_readerPositions.end()) {
+                 qDebug() << "ERROR: Reader '" << QString::fromStdString(readerName) << "' not found!";
+                 return false;
+             }
+             size_t& readerPosition = m_buffer->m_readerPositions[readerName];
+             if(readerPosition == SIZE_MAX) { readerPosition = 0; return false; }
+             size_t available = m_buffer->m_totalWritten - readerPosition;
+             size_t processSize = m_buffer->IsVariableMode() ? available : readSize;
+             outputData.resize(processSize);
+             for(size_t i = 0; i < processSize; i++) {
+                 size_t readIndex = (readerPosition + i) % m_buffer->m_bufferSize;
+                 DoubleMatrix readData = (*compatBuf)[readIndex];
+                 FComplexMatrix outValue(readData.NumRows(), readData.NumColumns());
+                 for(size_t row = 0; row < readData.NumRows(); ++row)
+                     for(size_t col = 0; col < readData.NumColumns(); ++col)
+                         outValue(row, col) = std::complex<float>(static_cast<float>(readData(row, col)), 0.0f);
+                 outputData[i] = outValue;
+             }
+             readerPosition += processSize;
+             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+             return true;
+         }
+         LOG_ERROR("get circularbuffer ptr error");
          return false;
      }
      return ReadDataForReaderImpl<FComplexMatrix, FComplexMatrix>(readSize, outputData, readerName, buffer);
@@ -1094,6 +1147,59 @@ bool BufferReadImpl::ReadDComplexMatrixDataForReaderImpl(size_t readSize, std::v
      // 获取内部矩阵缓冲区指针
      auto* buffer = m_buffer->getDComplexMatrixCircularBuffer();
      if(!buffer) {
+         // 兼容: IntMatrix -> DComplexMatrix (int作为实部，虚部为0)
+         if(m_buffer->GetDataType() == DataType::MATRIX_INT) {
+             IntMatrixCircularBuffer* compatBuf = m_buffer->getIntMatrixCircularBuffer();
+             if(!compatBuf) { LOG_ERROR("getIntMatrixCircularBuffer failed"); return false; }
+             if(m_buffer->m_readerPositions.find(readerName) == m_buffer->m_readerPositions.end()) {
+                 qDebug() << "ERROR: Reader '" << QString::fromStdString(readerName) << "' not found!";
+                 return false;
+             }
+             size_t& readerPosition = m_buffer->m_readerPositions[readerName];
+             if(readerPosition == SIZE_MAX) { readerPosition = 0; return false; }
+             size_t available = m_buffer->m_totalWritten - readerPosition;
+             size_t processSize = m_buffer->IsVariableMode() ? available : readSize;
+             outputData.resize(processSize);
+             for(size_t i = 0; i < processSize; i++) {
+                 size_t readIndex = (readerPosition + i) % m_buffer->m_bufferSize;
+                 IntMatrix readData = (*compatBuf)[readIndex];
+                 DComplexMatrix outValue(readData.NumRows(), readData.NumColumns());
+                 for(size_t row = 0; row < readData.NumRows(); ++row)
+                     for(size_t col = 0; col < readData.NumColumns(); ++col)
+                         outValue(row, col) = std::complex<double>(static_cast<double>(readData(row, col)), 0.0);
+                 outputData[i] = outValue;
+             }
+             readerPosition += processSize;
+             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+             return true;
+         }
+         // 兼容: DoubleMatrix -> DComplexMatrix (double作为实部，虚部为0)
+         if(m_buffer->GetDataType() == DataType::MATRIX_DOUBLE) {
+             DoubleMatrixCircularBuffer* compatBuf = m_buffer->getDoubleMatrixCircularBuffer();
+             if(!compatBuf) { LOG_ERROR("getDoubleMatrixCircularBuffer failed"); return false; }
+             if(m_buffer->m_readerPositions.find(readerName) == m_buffer->m_readerPositions.end()) {
+                 qDebug() << "ERROR: Reader '" << QString::fromStdString(readerName) << "' not found!";
+                 return false;
+             }
+             size_t& readerPosition = m_buffer->m_readerPositions[readerName];
+             if(readerPosition == SIZE_MAX) { readerPosition = 0; return false; }
+             size_t available = m_buffer->m_totalWritten - readerPosition;
+             size_t processSize = m_buffer->IsVariableMode() ? available : readSize;
+             outputData.resize(processSize);
+             for(size_t i = 0; i < processSize; i++) {
+                 size_t readIndex = (readerPosition + i) % m_buffer->m_bufferSize;
+                 DoubleMatrix readData = (*compatBuf)[readIndex];
+                 DComplexMatrix outValue(readData.NumRows(), readData.NumColumns());
+                 for(size_t row = 0; row < readData.NumRows(); ++row)
+                     for(size_t col = 0; col < readData.NumColumns(); ++col)
+                         outValue(row, col) = std::complex<double>(readData(row, col), 0.0);
+                 outputData[i] = outValue;
+             }
+             readerPosition += processSize;
+             m_buffer->m_dataCount = m_buffer->m_totalWritten - readerPosition;
+             return true;
+         }
+         LOG_ERROR("get circularbuffer ptr error");
          return false;
      }
      return ReadDataForReaderImpl<DComplexMatrix, DComplexMatrix>(readSize, outputData, readerName, buffer);

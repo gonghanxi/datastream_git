@@ -362,17 +362,12 @@ ConnectionValidator::ValidationResult PortValidatorImpl::validateSubLinkPortData
         // 检查端口数据类型兼容性
         if (!DataFlowCheck::portDataTypeCheck(dataTypeStart, dataTypeEnd)) {
             result.isValid = false;
-            result.errorMessage = QString("子链路 %1 内部端口数据类型不兼容: %2(%3:%4) (cmpId: cp_%5)")
-//                                        "源类型: %8, 目标类型: %9")
+            result.errorMessage = QString("子链路 %1 内部端口数据类型不兼容: %2 的端口 %3(类型:%4) 无法接收类型 %5 的数据。\n"
+                                          "提示: 类型兼容规则为 Complex>Real>Int（矩阵/多通道同理），仅支持向下兼容。")
                 .arg(linkKey)
-//                .arg(srcPort->instanceName).arg(srcPort->portName)
-//                .arg(m_validator->dataTypeToString(srcPort->dataType))
                 .arg(dstPort->instanceName).arg(dstPort->portName)
                 .arg(m_validator->dataTypeToString(dstPort->dataType))
-//                .arg(m_validator->dataTypeToString(dataTypeStart))
-//                .arg(m_validator->dataTypeToString(dataTypeEnd))
-//                .arg(srcBlockId)
-                .arg(dstBlockId);
+                .arg(m_validator->dataTypeToString(dataTypeStart));
             return result;
         }
     }

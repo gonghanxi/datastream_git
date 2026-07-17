@@ -1384,8 +1384,11 @@ ConnectionValidator::ValidationResult ConnectionValidator::validatePenetratedDat
         // 执行数据类型校验
         if (!DataFlowCheck::portDataTypeCheck(srcPort->dataType, dstPort->dataType)) {
             result.isValid = false;
-            result.errorMessage = QString("连接端口数据类型不兼容: %1(cmpId: cp_%2)")
-                    .arg(dstPort->instanceName).arg(findBlockInfo(dstBlockId)->cmpId);
+            result.errorMessage = QString("连接端口数据类型不兼容: %1(cmpId: cp_%2) 的端口 %3(类型:%4) 无法接收来自 %5(类型:%6) 的数据。\n"
+                                          "提示: 类型兼容规则为 Complex>Real>Int（矩阵/多通道同理），仅支持向下兼容。")
+                    .arg(dstPort->instanceName).arg(findBlockInfo(dstBlockId)->cmpId)
+                    .arg(dstPort->portName).arg(dataTypeToString(dstPort->dataType))
+                    .arg(srcPort->instanceName).arg(dataTypeToString(srcPort->dataType));
 
 //                                          "实际数据流: %2(%3:%4) -> %5(%6:%7)\n"
 //                                          "路径: %8")

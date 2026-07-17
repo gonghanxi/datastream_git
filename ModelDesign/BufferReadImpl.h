@@ -165,7 +165,15 @@ private:
     //兼容:
     //int_M -> bool_M
     bool ReadBoolMatrixDataForReaderImpl(size_t readSize, std::vector<SystemVueModelBuilder::BoolMatrix>& outputData, const std::string& readerName);
+
+    //兼容:
+    //IntMatrix -> FComplexMatrix (int作为实部，虚部为0)
+    //DoubleMatrix -> FComplexMatrix (double作为实部，虚部为0)
     bool ReadFComplexMatrixDataForReaderImpl(size_t readSize, std::vector<SystemVueModelBuilder::FComplexMatrix>& outputData, const std::string& readerName);
+
+    //兼容:
+    //IntMatrix -> DComplexMatrix (int作为实部，虚部为0)
+    //DoubleMatrix -> DComplexMatrix (double作为实部，虚部为0)
     bool ReadDComplexMatrixDataForReaderImpl(size_t readSize, std::vector<SystemVueModelBuilder::DComplexMatrix>& outputData, const std::string& readerName);
     bool ReadEnvelopeMatrixDataForReaderImpl(size_t readSize, std::vector<SystemVueModelBuilder::EnvelopeMatrix>& outputData, const std::string& readerName);
 

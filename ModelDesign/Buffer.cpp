@@ -2078,6 +2078,14 @@ FComplexMatrixCircularBuffer *Buffer::getFComplexMatrixCircularBuffer()
         if (intBuffer) {
             return intBuffer;
         } else {
+            //兼容类型不报警告
+            //IntMatrix -> FComplexMatrix
+            //DoubleMatrix -> FComplexMatrix
+            if (GetDataType() == DataType::MATRIX_INT ||
+                GetDataType() == DataType::MATRIX_DOUBLE)
+            {
+                return nullptr;
+            }
             LOG_WARN("External CircularBuffer is not FComplexMatrixCircularBuffer type");
             return nullptr;
         }
@@ -2114,6 +2122,14 @@ DComplexMatrixCircularBuffer *Buffer::getDComplexMatrixCircularBuffer()
         if (intBuffer) {
             return intBuffer;
         } else {
+            //兼容类型不报警告
+            //IntMatrix -> DComplexMatrix
+            //DoubleMatrix -> DComplexMatrix
+            if (GetDataType() == DataType::MATRIX_INT ||
+                GetDataType() == DataType::MATRIX_DOUBLE)
+            {
+                return nullptr;
+            }
             LOG_WARN("External CircularBuffer is not DComplexMatrixCircularBuffer type");
             return nullptr;
         }

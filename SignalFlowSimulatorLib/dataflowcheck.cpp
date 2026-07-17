@@ -23,8 +23,44 @@ bool DataFlowCheck::portPutTypeCheck(const QString &putTypeStart, const QString 
     }
 }
 
+bool DataFlowCheck::isTypeCompatible(PortMsg::PortDataType srcType, PortMsg::PortDataType dstType)
+{
+    // 严格相等始终兼容
+    if (srcType == dstType) return true;
+
+    // 标量向下兼容链: COMPLEX > REAL > INT
+    // src=REAL, dst=COMPLEX
+    if (srcType == PortMsg::REAL && dstType == PortMsg::COMPLEX) return true;
+    // src=INT, dst=REAL
+    if (srcType == PortMsg::INT && dstType == PortMsg::REAL) return true;
+    // src=INT, dst=COMPLEX (传递性)
+    if (srcType == PortMsg::INT && dstType == PortMsg::COMPLEX) return true;
+
+    // 矩阵向下兼容链: COMPLEX_MATRIX > REAL_MATRIX > INT_MATRIX
+    if (srcType == PortMsg::REAL_MATRIX && dstType == PortMsg::COMPLEX_MATRIX) return true;
+    if (srcType == PortMsg::INT_MATRIX && dstType == PortMsg::REAL_MATRIX) return true;
+    if (srcType == PortMsg::INT_MATRIX && dstType == PortMsg::COMPLEX_MATRIX) return true;
+
+    // 多通道向下兼容链: MULTIPLE_COMPLEX > MULTIPLE_REAL > MULTIPLE_INT
+    if (srcType == PortMsg::MULTIPLE_REAL && dstType == PortMsg::MULTIPLE_COMPLEX) return true;
+    if (srcType == PortMsg::MULTIPLE_INT && dstType == PortMsg::MULTIPLE_REAL) return true;
+    if (srcType == PortMsg::MULTIPLE_INT && dstType == PortMsg::MULTIPLE_COMPLEX) return true;
+
+    // 多通道矩阵向下兼容链: MULTIPLE_COMPLEX_MATRIX > MULTIPLE_REAL_MATRIX > MULTIPLE_INT_MATRIX
+    if (srcType == PortMsg::MULTIPLE_REAL_MATRIX && dstType == PortMsg::MULTIPLE_COMPLEX_MATRIX) return true;
+    if (srcType == PortMsg::MULTIPLE_INT_MATRIX && dstType == PortMsg::MULTIPLE_REAL_MATRIX) return true;
+    if (srcType == PortMsg::MULTIPLE_INT_MATRIX && dstType == PortMsg::MULTIPLE_COMPLEX_MATRIX) return true;
+
+    return false;
+}
+
 bool DataFlowCheck::portDataTypeCheck(PortMsg::PortDataType dataTypeStart, PortMsg::PortDataType dataTypeEnd)
 {
+    // 新增：向下兼容快速通道
+    if (isTypeCompatible(dataTypeStart, dataTypeEnd)) {
+        return true;
+    }
+
     //1.matrix不能连非matrix
     if(
             (
