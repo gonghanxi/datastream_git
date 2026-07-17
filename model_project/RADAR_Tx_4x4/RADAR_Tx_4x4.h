@@ -37,15 +37,11 @@ public:
 	typedef std::complex<double> Cx;
 
 	// ============================================================
-	// 端口定义
-	// 端口 1：BB_Signal，multiple complex，多路基带复信号输入
-	// 端口 2：RF_Signal，multiple envelope，多路射频包络输出
 	// ============================================================
 	SystemVueModelBuilder::CircularBufferBusT<SystemVueModelBuilder::DComplexCircularBuffer> BB_Signal;
 	SystemVueModelBuilder::EnvelopeCircularBufferBus RF_Signal;
 
 	// ============================================================
-	// 发射前端基础参数
 	// ============================================================
 	double TStep;
 	double RF_Freq;
@@ -73,7 +69,6 @@ public:
 	double NoiseFigure_Mixer;
 
 	// ============================================================
-	// RF 放大器增益压缩 / 非线性参数
 	// ============================================================
 	SelectedGCType GCType_RF_Gain;
 	double TOIout_RF_Gain;
@@ -86,7 +81,6 @@ public:
 	int     GComp_RF_Gain_Size;
 
 	// ============================================================
-	// IF 放大器增益压缩 / 非线性参数
 	// ============================================================
 	SelectedGCType GCType_IF_Gain;
 	double TOIout_IF_Gain;
@@ -146,6 +140,15 @@ private:
 		uint32_t seedMixer;
 
 		unsigned long long outputCount;
+
+		double lastRfAbs;
+		double edgeRippleState;
+
+		double riseEdgeState;
+		double fallEdgeState;
+
+		bool inPulse;
+		unsigned long long pulseSampleIndex;
 
 		ChannelState();
 		void resetRuntime();
@@ -213,7 +216,8 @@ private:
 		double timeNow) const;
 
 	Cx applyFcChangeImage_(const Cx& idealEnvelope,
-		double timeNow) const;
+		double timeNow,
+		ChannelState& st);
 
 	Cx applyFinalComplexPhaseCorrection_(const Cx& x,
 		double timeNow) const;

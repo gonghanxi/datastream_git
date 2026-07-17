@@ -43,7 +43,13 @@ void RADAR_Tx_4x4_Block::BiquadState::reset() {
 RADAR_Tx_4x4_Block::ChannelState::ChannelState()
     : ducHold(0.0, 0.0)
     , seedRF(0x13579BDFu), seedIF(0x2468ACE0u), seedMixer(0x10203040u)
-    , outputCount(0ULL) {}
+    , outputCount(0ULL)
+    , lastRfAbs(0.0)
+    , edgeRippleState(0.0)
+    , riseEdgeState(0.0)
+    , fallEdgeState(0.0)
+    , inPulse(false)
+    , pulseSampleIndex(0ULL) {}
 
 void RADAR_Tx_4x4_Block::ChannelState::resetRuntime() {
     ducFirState.clear();
@@ -52,6 +58,12 @@ void RADAR_Tx_4x4_Block::ChannelState::resetRuntime() {
     ifBpfSec1.reset(); ifBpfSec2.reset();
     rfBpfSec1.reset(); rfBpfSec2.reset();
     outputCount = 0ULL;
+    lastRfAbs = 0.0;
+    edgeRippleState = 0.0;
+    riseEdgeState = 0.0;
+    fallEdgeState = 0.0;
+    inPulse = false;
+    pulseSampleIndex = 0ULL;
 }
 
 // ============================================================================
@@ -373,7 +385,7 @@ bool RADAR_Tx_4x4_Block::DataStreamRun() {
                                  GCSat_RF_Gain_, RappS_RF_Gain_, rfTable_);
 
             // 5. FcChange 镜像 + 相位修正
-            xRfTmp = applyFcChangeImage_(xRfTmp, timeNow);
+            xRfTmp = applyFcChangeImage_(xRfTmp, timeNow, st);
             xRfTmp = applyFinalComplexPhaseCorrection_(xRfTmp, timeNow);
 
             // 6. 通道延迟
@@ -467,7 +479,7 @@ bool RADAR_Tx_4x4_Block::TimeDrivenRun() {
                     xRfTmp = applyStage_(xRfTmp, RF_Gain_, GCType_RF_Gain_,
                                          TOIout_RF_Gain_, dBc1out_RF_Gain_, PSat_RF_Gain_,
                                          GCSat_RF_Gain_, RappS_RF_Gain_, rfTable_);
-                    xRfTmp = applyFcChangeImage_(xRfTmp, timeNow);
+                    xRfTmp = applyFcChangeImage_(xRfTmp, timeNow, st);
                     xRfTmp = applyFinalComplexPhaseCorrection_(xRfTmp, timeNow);
                     xRfTmp = applyChannelDelay_(xRfTmp, st);
                     ++st.outputCount;
@@ -561,7 +573,7 @@ int RADAR_Tx_4x4_Block::computeChannelDelaySamples_() const {
 void RADAR_Tx_4x4_Block::buildRaisedCosineFir_() {
     ducFir_.clear();
     const int sps = (bbUp_ > 0) ? bbUp_ : 1;
-    const int spanSymbols = 30;
+    const int spanSymbols = 22;
     const int nTaps = spanSymbols * sps + 1;
     const int mid = nTaps / 2;
     ducFir_.resize(nTaps, 0.0);
@@ -697,18 +709,140 @@ RADAR_Tx_4x4_Block::Cx RADAR_Tx_4x4_Block::applyDUCToIFEnvelope_(const Cx& x, do
     return Cx(i - q * std::sin(phi), q * std::cos(phi));
 }
 
-RADAR_Tx_4x4_Block::Cx RADAR_Tx_4x4_Block::applyFcChangeImage_(const Cx& idealEnvelope, double timeNow) const {
-    const double imageFactor = 0.55;
+RADAR_Tx_4x4_Block::Cx RADAR_Tx_4x4_Block::applyFcChangeImage_(const Cx& idealEnvelope,
+    double timeNow,
+    ChannelState& st)
+{
+    // V20 最新版本：改善包络顶部平坦度，加强左右下降边缘凹陷。
+    const double absNow = std::abs(idealEnvelope);
+    const double absPrev = st.lastRfAbs;
+    const double signedDelta = absNow - absPrev;
+    const double delta = std::fabs(signedDelta);
+
+    // 1. 脉冲位置跟踪：仅用于极浅平板凹陷
+    const double pulseThreshold = 0.20;
+    if (absNow > pulseThreshold) {
+        if (!st.inPulse) {
+            st.inPulse = true;
+            st.pulseSampleIndex = 0ULL;
+        } else {
+            ++st.pulseSampleIndex;
+        }
+    } else {
+        st.inPulse = false;
+        st.pulseSampleIndex = 0ULL;
+    }
+
+    double pulseWidthSamples = 160.0;
+    if (outputTimeStepSec_ > 0.0) {
+        pulseWidthSamples = 20.0e-6 / outputTimeStepSec_;
+        pulseWidthSamples = clamp(pulseWidthSamples, 32.0, 4096.0);
+    }
+
+    const double u = clamp(static_cast<double>(st.pulseSampleIndex) /
+        std::max(1.0, pulseWidthSamples), 0.0, 1.0);
+
+    // 极浅平板凹陷
+    const double centerSag = 0.0025 * std::sin(kPi * u);
+
+    // 2. 边缘检测与状态跟踪
+    const double norm = std::max(0.004, 0.055 * std::max(absNow, absPrev));
+    double edgeMetric = delta / norm;
+    edgeMetric = clamp(edgeMetric, 0.0, 1.0);
+
+    const bool risingEdge = (signedDelta >= 0.0);
+
+    if (risingEdge) {
+        st.riseEdgeState = std::max(0.978 * st.riseEdgeState, edgeMetric);
+        st.fallEdgeState = 0.68 * st.fallEdgeState;
+    } else {
+        st.fallEdgeState = std::max(0.885 * st.fallEdgeState, edgeMetric);
+        st.riseEdgeState = 0.928 * st.riseEdgeState;
+    }
+
+    st.edgeRippleState = std::max(st.riseEdgeState, st.fallEdgeState);
+    st.lastRfAbs = absNow;
+
+    // 3. 延迟门控
+    double riseGate = (absNow - 0.82) / (0.985 - 0.82);
+    riseGate = clamp(riseGate, 0.0, 1.0);
+
+    double fallGate = (absNow - 0.66) / (0.94 - 0.66);
+    fallGate = clamp(fallGate, 0.0, 1.0);
+
+    double riseRelease = (absNow - 0.955) / (1.005 - 0.955);
+    riseRelease = clamp(riseRelease, 0.0, 1.0);
+
+    const double riseEff = st.riseEdgeState * riseGate * (1.0 + 1.25 * riseRelease);
+    const double fallEff = st.fallEdgeState * fallGate * 1.22;
+
+    // 4. 平坦化修正 + 极浅平板凹陷
+    Cx y = idealEnvelope;
+
+    if (absNow > 1e-12) {
+        double plateauWeight = (absNow - 0.68) / (0.95 - 0.68);
+        plateauWeight = clamp(plateauWeight, 0.0, 1.0);
+
+        const double targetAmp = 1.006 - centerSag;
+
+        double gainToTarget = targetAmp / absNow;
+        gainToTarget = clamp(gainToTarget, 0.90, 1.18);
+
+        const double flattenStrength = 0.76;
+        const double flattenGain =
+            1.0 + plateauWeight * flattenStrength * (gainToTarget - 1.0);
+
+        y *= flattenGain;
+    }
+
+    // 5. 非对称波纹：上升沿稍强加强，下降边缘加强
+    const double edgeGain = 0.45 * riseEff + 0.135 * fallEff;
+
+    const double flatImageFactor = 0.00025;
+    const double imageFactor =
+        flatImageFactor + 0.130 * riseEff + 0.075 * fallEff;
+
     const double imagePhaseDeg = -270.0;
     const double imageTimeAdvanceSec = 0.0;
+
     const double tImage = timeNow + imageTimeAdvanceSec;
     const double ph = 4.0 * M_PI * IF_Freq_ * tImage + deg2rad(imagePhaseDeg);
     const Cx rot(std::cos(ph), std::sin(ph));
-    return idealEnvelope + imageFactor * std::conj(idealEnvelope) * rot;
+
+    y *= (1.0 + edgeGain);
+
+    // 6. 径向过冲
+    const double yAbs = std::abs(y);
+    Cx radialOvershoot(0.0, 0.0);
+
+    if (yAbs > 0.10) {
+        const Cx unit = y / yAbs;
+        const double radialAmp = 0.39 * riseEff + 0.115 * fallEff;
+        radialOvershoot = radialAmp * unit;
+    }
+
+    // 7. 旋转定时波纹
+    const double riseRingPhase = ph - deg2rad(10.0);
+    const double fallRingPhase = ph + deg2rad(78.0);
+
+    const Cx riseRot(std::cos(riseRingPhase), std::sin(riseRingPhase));
+    const Cx fallRot(std::cos(fallRingPhase), std::sin(fallRingPhase));
+
+    const Cx multiplicative = imageFactor * std::conj(y) * rot;
+    const Cx additiveRing =
+        0.145 * riseEff * riseRot +
+        0.092 * fallEff * fallRot;
+
+    return y + radialOvershoot + multiplicative + additiveRing;
 }
 
 RADAR_Tx_4x4_Block::Cx RADAR_Tx_4x4_Block::applyFinalComplexPhaseCorrection_(const Cx& x, double /*timeNow*/) const {
-    return std::conj(x);
+    // V6+ 默认关闭共轭修正
+    const bool enableConjugateConventionFix = false;
+    if (enableConjugateConventionFix) {
+        return std::conj(x);
+    }
+    return x;
 }
 
 RADAR_Tx_4x4_Block::Cx RADAR_Tx_4x4_Block::applyMixerToRFEnvelope_(const Cx& x, double /*timeNow*/) const {

@@ -85,6 +85,8 @@ BPF_ChebyshevII \
 BSF_Butterworth \
 BSF_ChebyshevI \
 BSF_ChebyshevII \
+    COMM_AntennaPolarizationRx \
+COMM_AntennaPolarizationTx \
     CRC_Coder \
     CRC_Decoder \
 ChirpGen \
@@ -195,7 +197,7 @@ LPF_ChebyshevII\
     Mapper \
 Math\
 MathCx \
-MATLAB_Script\
+#MATLAB_Script\
     MaxMin \
 Mixer \
     Modulo \
