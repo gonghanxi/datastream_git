@@ -1560,17 +1560,20 @@ bool SimRunner::RunBlocks()
         }
     }
 
-    // 无 ZeroCross 时使用默认数据流调度器
-    return OldScheduler();
+    // 无 ZeroCross 时使用 ReadyQueueScheduler（统一数据流 + 时间驱动）
+    return NewScheduler();
 }
 
 bool SimRunner::NewScheduler()
 {
-    // 使用新的调度器
+    // 使用 ReadyQueueScheduler（统一数据流 + 时间驱动）
     ReadyQueueScheduler scheduler;
     for (const QString& linkKey : AlgorithmManager::createInstance()->getRunBlocks().keys())
     {
         QVector<Block *> blocks = AlgorithmManager::createInstance()->getRunBlocks().value(linkKey);
+
+        // 设置暂停控制成员
+        scheduler.setPauseControls(&m_paused, &m_stopRequested, &m_pauseMutex, &m_pauseCond);
 
         // 获取仿真参数
         SimuParameter simuParams;
@@ -1579,8 +1582,8 @@ bool SimRunner::NewScheduler()
             simuParams = simuParamsMap.value(linkKey);
         }
 
-        // 调用新调度器
-        if (!scheduler.schedule(linkKey, blocks, m_verificationSystem, simuParams)) {
+        // 调用新调度器（传入拓扑排序器）
+        if (!scheduler.schedule(linkKey, blocks, m_verificationSystem, simuParams, &m_topologySorter)) {
             LOG_ERROR("链路：", linkKey.toStdString(), "，调度失败");
             return false;
         }

@@ -1,8 +1,10 @@
 #include "ReadyQueueScheduler.h"
 #include <QDebug>
 #include <QThread>
+#include <QMutexLocker>
 #include <algorithm>
 #include "../Common/LogExport.h"
+#include "../algorithmmanager.h"
 
 ReadyQueueScheduler::ReadyQueueScheduler() {
 }
@@ -13,7 +15,8 @@ ReadyQueueScheduler::~ReadyQueueScheduler() {
 bool ReadyQueueScheduler::schedule(const QString& linkKey,
                                     QVector<Block*>& blocks,
                                     std::shared_ptr<DataStreamVerification> verificationSystem,
-                                    const SimuParameter& simuParams) {
+                                    const SimuParameter& simuParams,
+                                    SignalFlowLinkSort* topologySorter) {
 
     if (!verificationSystem) {
         LOG_ERROR("Verification system not initialized!");
@@ -23,19 +26,33 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
     m_verificationSystem = verificationSystem;
     m_totalSamples = simuParams.num_Samples;
     m_timeInterval = simuParams.time_Interval;
+    m_topologySorter = topologySorter;
+
+    // 重置全局状态
+    m_simulationTime = 0.0;
+    m_sourceFireCount = 0;
+    m_hasTimeDrivenSink = false;
+    m_stopSignal = false;
+    m_lastProgressPercent = -1;
 
     // 1. 初始化状态和就绪队列
     initBlockStates(blocks);
     initReadyQueues(blocks);
     calculateRequiredInputCounts();
 
-    // 2. 验证可行性
+    // 2. 初始化全局仿真时钟
+    initSimulationClock(simuParams, blocks);
+
+    // 3. 构建下游Sink引用计数
+    buildDownstreamSinkRefCounts();
+
+    // 4. 验证可行性
     if (!m_verificationSystem->CheckFeasibility()) {
         LOG_ERROR("数据一致性校验失败!");
         return false;
     }
 
-    // 3. 统计信号源和收集器数量
+    // 5. 统计信号源和收集器数量
     int sourceCount = 0, sinkCount = 0;
     for (auto block : blocks) {
         if (block->GetBlockType() == Block::BlockType::SOURCE) sourceCount++;
@@ -47,7 +64,7 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
         return false;
     }
 
-    // 4. 设置 Buffer 容量限制
+    // 6. 设置 Buffer 容量限制
     for (auto block : blocks) {
         for (auto& port : block->GetOutputPorts()) {
             Buffer* buffer = port.second;
@@ -57,14 +74,10 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
         }
     }
 
-    // 5. 计算 Sink 目标收集数
+    // 7. 计算 Sink 目标收集数（仅用于进度报告）
     calculateSinkTargets(blocks);
-    int totalTargetCollect = 0;
-    for (auto& pair : m_sinkTargetCounts) {
-        totalTargetCollect += pair.second;
-    }
 
-    // 6. 初始化 Sink 计数
+    // 8. 初始化 Sink 计数
     m_sinkProcessCount.clear();
     for (auto block : blocks) {
         if (block->GetBlockType() == Block::BlockType::SINK) {
@@ -72,46 +85,42 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
         }
     }
 
-    // 7. 主调度循环（基于 Sink 收集计数）
+    // 9. 主调度循环（基于 Sink 完成状态）
     int totalCollected = 0;
     int noProgressCount = 0;
     const int MAX_NO_PROGRESS = 1000;
-    bool allSinksDone = false;
 
-//    LOG_INFO("[调度]开始执行，Sink目标总数:", totalTargetCollect);
+    LOG_INFO("[调度]开始执行");
 
-    while (!allSinksDone && totalCollected < totalTargetCollect) {
+    while (!allSinksDone() && !m_stopSignal) {
         bool madeProgress = false;
-        static int cycleCount = 0;  // 添加循环计数
-        cycleCount++;
 
-        // 每 500 个周期打印一次状态
-        if (cycleCount == 1 || cycleCount == 2 || cycleCount % 1000 == 0 || cycleCount == 4 || cycleCount == 5
-                || cycleCount == 6 || cycleCount == 7 || cycleCount == 8 || cycleCount == 9 || cycleCount == 10) {
-            qDebug() <<"=== Scheduler State at cycle" << cycleCount << "===";
-            qDebug() <<"Total collected:" << totalCollected << "/" << totalTargetCollect;
-            qDebug() <<"Ready sources:" << m_readySources.size();
-            qDebug() <<"Ready processors:" << m_readyByPriority.values();
-            qDebug() <<"Ready sinks:" << m_readySinks.size();
-            for (auto it = m_readyByPriority.begin(); it != m_readyByPriority.end(); ++it) {
-                if (!it.value().isEmpty()) {
-                    qDebug() <<"Priority" << it.key() << "queue size:" << it.value().size();
-                }
-            }
-
-            // 打印各 Block 状态
-            for (auto& state : m_states) {
-                if (!state.isDone) {
-                    qDebug() <<"Block [" <<  QString::fromStdString(state.block->GetName())
-                             << "]: ready=" << state.isReady
-                             << ", inQueue="<< state.inReadyQueue
-                             << ", backpressured="<< state.isBackpressured
-                             << ", upstreamFinished="<< state.upstreamFinished
-                             << ", execCount="<< state.executedCount;
-                }
-            }
-            qDebug() <<"=====================================";
+        // ====== 停止检测 ======
+        if (m_stopRequested && *m_stopRequested) {
+            LOG_INFO("[ReadyQueueScheduler] 检测到停止命令");
+            break;
         }
+        // ====== 暂停检测 ======
+        if (m_paused && *m_paused) {
+            if (m_pauseMutex && m_pauseCond) {
+                QMutexLocker locker(m_pauseMutex);
+                while (*m_paused && !(m_stopRequested && *m_stopRequested)) {
+                    m_pauseCond->wait(m_pauseMutex, 1000);
+                }
+            }
+            if (m_stopRequested && *m_stopRequested) break;
+        }
+
+        // 调试状态打印（条件编译）
+#ifdef SCHEDULER_DEBUG
+        static int cycleCount = 0;
+        cycleCount++;
+        if (cycleCount == 1 || cycleCount % 1000 == 0) {
+            qDebug() << "=== Scheduler State at cycle" << cycleCount << " ===";
+            qDebug() << "Ready sources:" << m_readySources.size();
+            qDebug() << "Ready sinks:" << m_readySinks.size();
+        }
+#endif
 
         // 阶段1：信号源（带背压检测）
         while (!m_readySources.isEmpty()) {
@@ -129,7 +138,8 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
 
             if (executeSourceWithBackpressure(state)) {
                 madeProgress = true;
-                qDebug() << QString::fromStdString(block->GetName()) <<" Source produced data: " << state.executedCount;
+                // 推进全局仿真时钟
+                advanceSimulationTime();
                 updateBlockReadyState(state);
                 if (state.isReady && !state.isDone && !state.isBackpressured) {
                     addToReadyQueue(state);
@@ -210,17 +220,14 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
             if (collected > 0) {
                 madeProgress = true;
                 totalCollected += collected;
-//                qDebug() << QString::fromStdString(block->GetName()) << "Sink collected data, count: "
-//                         << totalCollected;
                 m_sinkProcessCount[block->GetName()] += collected;
 
-                // 检查 Sink 是否达到目标
-                if (m_sinkProcessCount[block->GetName()] >= m_sinkTargetCounts[block->GetName()]) {
+                // 使用 IsCollectionComplete() 判断终止（支持Auto/Samples/Time三种模式）
+                if (block->IsCollectionComplete()) {
                     state.isDone = true;
                     block->SetDone(true);
                     block->Stop();
-
-                    // 通知上游停止生产
+                    // 通知上游（使用引用计数机制）
                     notifyUpstreamFinished(block);
                 }
 
@@ -228,100 +235,39 @@ bool ReadyQueueScheduler::schedule(const QString& linkKey,
                 if (state.isReady && !state.isDone) {
                     addToReadyQueue(state);
                 }
-//                if(state.executedCount >= totalTargetCollect - 4) {
-//                    qDebug() << QString::fromStdString(block->GetName()) << "状态更新";
-//                    qDebug() << "是否在队列中: " << state.inReadyQueue;
-//                    qDebug() << "是否在就绪中: " << state.isReady;
-//                    qDebug() << "是否完成: " << state.isDone;
-//                    qDebug() << "是否背压: " << state.isBackpressured;
-//                    qDebug() <<"Ready processors:" << m_readyByPriority.values();
-//                    qDebug() << "此刻的仿真次数: " << totalCollected << "/" << totalTargetCollect;
-//                }
                 notifyUpstream(block);
             }
         }
-//        if(totalTargetCollect >= 6394 && cycleCount <= 7) {
-//            qDebug() <<"Ready sources:" << m_readySources.size();
-//            qDebug() <<"Ready processors:" << m_readyByPriority.values();
-//            qDebug() <<"Ready sinks:" << m_readySinks.size();
-//        }
-
-
 
         // 进度报告
         reportProgress(linkKey, m_sinkProcessCount, m_sinkTargetCounts);
 
-        // 增强的死锁检测
+        // 死锁检测
         if (!madeProgress) {
             if (++noProgressCount > MAX_NO_PROGRESS) {
-                qDebug() << "Deadlock detected! No progress for" << MAX_NO_PROGRESS << "cycles";
-
-                // 打印详细的死锁信息
-                qDebug() <<"=== Deadlock Diagnosis ===";
-                qDebug() <<"Total collected:" << totalCollected << "/" << totalTargetCollect;
+                LOG_ERROR("[ReadyQueueScheduler] 死锁检测！无进展超过", MAX_NO_PROGRESS, "个周期");
+                qDebug() << "=== Deadlock Diagnosis ===";
                 qDebug() << "Ready queues - Sources:" << m_readySources.size()
                          << ", Sinks:" << m_readySinks.size();
-
-                // 找出所有未完成但不在就绪队列中的 Block
                 for (auto& state : m_states) {
                     if (!state.isDone && !state.inReadyQueue) {
-                        qDebug() <<"Stuck block [" << QString::fromStdString(state.block->GetName()) << "]";
-                        qDebug() <<"  isReady:" << state.isReady
-                                 << ", isBackpressured:" << state.isBackpressured
+                        qDebug() << "Stuck block [" << QString::fromStdString(state.block->GetName()) << "]";
+                        qDebug() << "  isReady:" << state.isReady
+                                 << ", backpressured:" << state.isBackpressured
                                  << ", upstreamFinished:" << state.upstreamFinished;
-
-                        // 打印输入端口状态
-                        for (size_t i = 0; i < state.block->GetInputPortCount(); i++) {
-                            auto* reader = state.block->GetInputPort(state.block->GetInputPortName(i));
-                            if (reader && reader->HasValidConnection()) {
-                                size_t available = state.cachedInputCount.value(i, 0);
-                                bool upstreamDone = reader->IsUpstreamDone();
-                                qDebug() << "  Input[" << i << "]: available=" << available
-                                         << ", required=" << state.requiredInputCount
-                                         << ", upstreamDone=" << upstreamDone;
-
-                                if (upstreamDone && available < static_cast<size_t>(state.requiredInputCount)) {
-                                    qDebug() <<"    WARNING: Upstream done but insufficient data!";
-                                }
-                            }
-                        }
-
-                        // 打印输出端口状态
-                        for (size_t i = 0; i < state.block->GetOutputPortCount(); i++) {
-                            auto* buffer = state.block->GetOutputPort(state.block->GetOutputPortName(i));
-                            if (buffer && buffer->GetReaderCount() > 0) {
-                                size_t freeSpace = state.cachedOutputSpace.value(i, 0);
-                                qDebug() <<"  Output[" << i << "]: freeSpace=" << freeSpace;
-                                if (freeSpace == 0) {
-                                    qDebug() <<"    WARNING: Output buffer full!";
-                                }
-                            }
-                        }
                     }
                 }
-                qDebug() <<"=========================";
                 break;
             }
         } else {
             noProgressCount = 0;
         }
-
-        // 检查所有 Sink 是否完成
-        allSinksDone = true;
-        for (auto& pair : m_sinkProcessCount) {
-            auto it = m_sinkTargetCounts.find(pair.first);
-            if (it != m_sinkTargetCounts.end() && pair.second < it->second) {
-                allSinksDone = false;
-                break;
-            }
-        }
     }
 
-    // 8. 清理阶段：强制停止所有上游
-//    LOG_INFO("所有 Sink 已完成，停止所有上游 Block...");
+    // 10. 清理阶段：强制停止所有上游
     stopAllUpstreamBlocks();
 
-    // 9. 完成处理
+    // 11. 完成处理
     for (auto block : blocks) {
         if (!block->IsDone()) {
             block->SetDone(true);
@@ -357,6 +303,27 @@ void ReadyQueueScheduler::initBlockStates(QVector<Block*>& blocks) {
         state.upstreamFinished = false;
 
         m_states[block] = state;
+    }
+
+    // 拓扑排序优先级计算
+    m_processorPriority.clear();
+    if (m_topologySorter) {
+        QVector<Block*> processors;
+        for (auto block : blocks) {
+            if (block->GetBlockType() == Block::BlockType::PROCESSOR) {
+                processors.append(block);
+            }
+        }
+        if (!processors.isEmpty()) {
+            QVector<Block*> sortedProcessors = m_topologySorter->sortProcessorsCrossLayer(
+                QString(), // linkKey not needed for priority
+                AlgorithmManager::createInstance()->getBlocksInfo(),
+                AlgorithmManager::createInstance()->getConnection()
+            );
+            for (int i = 0; i < sortedProcessors.size(); i++) {
+                m_processorPriority[sortedProcessors[i]] = 100 - i;
+            }
+        }
     }
 }
 
@@ -458,19 +425,42 @@ bool ReadyQueueScheduler::checkInputsReady(BlockRuntimeState& state) {
         std::string portName = block->GetInputPortName(i);
         BufferReader* reader = block->GetInputPort(portName);
 
-        if (!reader || !reader->HasValidConnection()) continue;
+        if (!reader) continue;
+
+        // BUS类型端口处理
+        if (reader->IsBusType(reader->GetDataType())) {
+            auto busConns = reader->GetBusConnections();
+            if (busConns.empty()) continue; // 未连接的bus端口跳过
+            // 检查bridge reader的数据可用性
+            bool busDataReady = false;
+            for (auto& busConn : busConns) {
+                if (busConn.bridgeReader && busConn.bridgeReader->GetAvailableDataCount() >= static_cast<size_t>(state.requiredInputCount)) {
+                    busDataReady = true;
+                    break;
+                }
+            }
+            if (!busDataReady) {
+                // 检查上游是否已完成
+                bool allBusUpstreamDone = true;
+                for (auto& busConn : busConns) {
+                    if (busConn.bridgeReader && !busConn.bridgeReader->IsUpstreamDone()) {
+                        allBusUpstreamDone = false;
+                        break;
+                    }
+                }
+                if (allBusUpstreamDone) {
+                    state.isDone = true;
+                    return false;
+                }
+                return false;
+            }
+            continue;
+        }
+
+        if (!reader->HasValidConnection()) continue;
 
         int required = state.requiredInputCount;
         size_t available = state.cachedInputCount.value(i, 0);
-
-        if(block->GetBlockType() == Block::BlockType::SINK) {
-            if(available == 1024 || available % 100 == 0) {
-//                LOG_DEBUG(block->GetName(), " checkInputsReady: port=", i,
-//                          ", required=", required,
-//                          ", available=", available);
-            }
-        }
-
 
         if (available < static_cast<size_t>(required)) {
             if (reader->IsUpstreamDone()) {
@@ -497,13 +487,12 @@ bool ReadyQueueScheduler::checkOutputsReady(BlockRuntimeState& state) {
 
         if (buffer->GetReaderCount() == 0) continue;
 
-        size_t freeSpace = state.cachedOutputSpace.value(i, 0);
-        if(block->GetBlockType() == Block::BlockType::SINK) {
-            if(freeSpace == 1024 || freeSpace % 100 == 0) {
-//                LOG_DEBUG(block->GetName(), " checkOutputsReady: port=", i,
-//                          ", freeSpace=", freeSpace);
-            }
+        // BUS类型输出始终有空间（通过 bridge writer 中转）
+        if (buffer->IsBusType(buffer->GetDataType())) {
+            continue;
         }
+
+        size_t freeSpace = state.cachedOutputSpace.value(i, 0);
         if (freeSpace == 0) {
             return false;
         }
@@ -806,31 +795,42 @@ void ReadyQueueScheduler::notifyUpstream(Block* block) {
 void ReadyQueueScheduler::notifyUpstreamFinished(Block* sink) {
     QSet<Block*> visited;
     QQueue<Block*> toProcess;
-    toProcess.enqueue(sink);
+
+    // 从sink的直接上游开始
+    for (size_t i = 0; i < sink->GetInputPortCount(); i++) {
+        BufferReader* reader = sink->GetInputPort(sink->GetInputPortName(i));
+        if (reader && reader->HasValidConnection()) {
+            Buffer* buffer = reader->GetConnectedBuffer();
+            if (buffer && buffer->GetWriter()) {
+                toProcess.enqueue(static_cast<Block*>(buffer->GetWriter()));
+            }
+        }
+    }
 
     while (!toProcess.isEmpty()) {
         Block* current = toProcess.dequeue();
-
         if (visited.contains(current)) continue;
         visited.insert(current);
 
-        // 找到所有输入端口的上游
-        for (size_t i = 0; i < current->GetInputPortCount(); i++) {
-            BufferReader* reader = current->GetInputPort(current->GetInputPortName(i));
-            if (reader) {
-                Buffer* buffer = reader->GetConnectedBuffer();
-                if (buffer) {
-                    // 找到拥有这个 buffer 的 block
-                    for (auto& pair : m_states) {
-                        Block* upstream = pair.block;
-                        for (size_t j = 0; j < upstream->GetOutputPortCount(); j++) {
-                            if (upstream->GetOutputPort(upstream->GetOutputPortName(j)) == buffer) {
-                                BlockRuntimeState& upstreamState = m_states[upstream];
-                                upstreamState.upstreamFinished = true;
-                                toProcess.enqueue(upstream);
-                                break;
-                            }
-                        }
+        // 递减引用计数
+        if (m_downstreamSinkRefCount.count(current)) {
+            m_downstreamSinkRefCount[current]--;
+        }
+
+        // 只有当所有下游Sink都完成后，才标记upstreamFinished
+        if (m_downstreamSinkRefCount[current] <= 0) {
+            if (m_states.contains(current)) {
+                BlockRuntimeState& upstreamState = m_states[current];
+                upstreamState.upstreamFinished = true;
+            }
+
+            // 继续向上游传播
+            for (size_t i = 0; i < current->GetInputPortCount(); i++) {
+                BufferReader* reader = current->GetInputPort(current->GetInputPortName(i));
+                if (reader && reader->HasValidConnection()) {
+                    Buffer* buffer = reader->GetConnectedBuffer();
+                    if (buffer && buffer->GetWriter()) {
+                        toProcess.enqueue(static_cast<Block*>(buffer->GetWriter()));
                     }
                 }
             }
@@ -926,6 +926,14 @@ bool ReadyQueueScheduler::executeSource(BlockRuntimeState& state,
 
 bool ReadyQueueScheduler::executeSourceWithBackpressure(BlockRuntimeState& state) {
     Block* block = state.block;
+
+    // 检查引用计数：所有下游Sink都已完成则停止
+    if (m_downstreamSinkRefCount.count(block) && m_downstreamSinkRefCount[block] <= 0) {
+        state.isDone = true;
+        block->SetDone(true);
+        block->Stop();
+        return false;
+    }
 
     if (state.upstreamFinished) {
         state.isDone = true;
@@ -1110,13 +1118,6 @@ int ReadyQueueScheduler::tryExecuteBatch(BlockRuntimeState& state, int maxBatch)
 
     int batchSize = block->GetBatchSize();
     bool useBatch = (batchSize > 1 && maxBatch >= batchSize);
-    if(block->GetBlockType() == Block::BlockType::PROCESSOR) {
-        qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-                 << "maxBatch: " << maxBatch;
-        qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-                 << "batchSize: " << batchSize;
-    }
-
 
     int executed = 0;
 
@@ -1131,21 +1132,10 @@ int ReadyQueueScheduler::tryExecuteBatch(BlockRuntimeState& state, int maxBatch)
             useBatch = false;
         }
     }
-    if(block->GetBlockType() == Block::BlockType::SINK) {
-//        qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-//                 << "useBatch: " << (useBatch?"true":"false");
-    }
 
     if (useBatch) {
         int actualBatch = std::min(batchSize, maxBatch);
-        if(block->GetBlockType() == Block::BlockType::SINK) {
-//            qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-//                     << "actualBatch: " << actualBatch;
-        }
-
         executed = block->RunBatch(actualBatch);
-        qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-                 << "RunBatch ending, executed: " << executed;
     } else {
         for (int i = 0; i < maxBatch; i++) {
             if (!block->Run()) {
@@ -1160,8 +1150,6 @@ int ReadyQueueScheduler::tryExecuteBatch(BlockRuntimeState& state, int maxBatch)
                 break;
             }
         }
-        qDebug() << "ReadyQueueScheduler::tryExecuteBatch --" << QString::fromStdString(block->GetName())
-                 << "usingbatch RunBatch ending, executed: " << executed;
     }
 
     return executed;
@@ -1178,6 +1166,12 @@ BlockRuntimeState* ReadyQueueScheduler::getState(Block* block) {
 }
 
 int ReadyQueueScheduler::getBlockPriority(Block* block) {
+    // 如果拓扑排序已预计算优先级，直接使用
+    if (m_processorPriority.contains(block)) {
+        return m_processorPriority[block];
+    }
+
+    // 默认优先级分类
     int priority = 5;
 
     switch (block->GetBlockType()) {
@@ -1190,22 +1184,6 @@ int ReadyQueueScheduler::getBlockPriority(Block* block) {
     case Block::BlockType::SINK:
         priority = 5;
         break;
-    }
-
-    int requiredInput = block->GetMaxRequiredInputCount();
-    if (requiredInput > 1) {
-        priority += std::min(requiredInput / 10, 10);
-
-        BlockRuntimeState* state = getState(block);
-        if (state) {
-            size_t totalInput = 0;
-            for (size_t i = 0; i < block->GetInputPortCount(); i++) {
-                totalInput += state->cachedInputCount.value(i, 0);
-            }
-            if (totalInput > static_cast<size_t>(requiredInput * 2)) {
-                priority += 5;
-            }
-        }
     }
 
     return std::max(0, std::min(priority, 35));
@@ -1280,4 +1258,150 @@ void ReadyQueueScheduler::reportProgress(const QString& linkKey,
         LOG_DEBUG("当前总进度：100%");
         m_lastProgressPercent = 100;
     }
+}
+
+// ========== 全局仿真时钟 (Task 1) ==========
+
+void ReadyQueueScheduler::initSimulationClock(const SimuParameter& simuParams, QVector<Block*>& blocks) {
+    double sampleRate = simuParams.samplingRate;
+    if (sampleRate > 0.0) {
+        m_timeStep = 1.0 / sampleRate;
+    } else {
+        m_timeStep = simuParams.time_Interval > 0.0 ? simuParams.time_Interval : 0.001;
+    }
+
+    // 检测是否存在 Time 模式 Sink
+    for (auto block : blocks) {
+        if (block->GetBlockType() == Block::BlockType::SINK) {
+            std::string option = block->getParameter("StartStopOption").Value;
+            std::transform(option.begin(), option.end(), option.begin(), ::tolower);
+            if (option == "time" || option == "2") {
+                m_hasTimeDrivenSink = true;
+                block->SetVariableStepMode(true);
+            }
+        }
+    }
+
+    if (m_hasTimeDrivenSink) {
+        LOG_INFO("[ReadyQueueScheduler] 检测到Time模式Sink，启用仿真时钟");
+    }
+}
+
+void ReadyQueueScheduler::advanceSimulationTime() {
+    ++m_sourceFireCount;
+    m_simulationTime = m_sourceFireCount * m_timeStep;
+
+    // 广播当前时间到所有Block
+    for (auto& pair : m_states) {
+        pair.block->SetCurrentTime(m_simulationTime);
+    }
+}
+
+// ========== 下游Sink引用计数 (Task 4) ==========
+
+void ReadyQueueScheduler::buildDownstreamSinkRefCounts() {
+    m_downstreamSinkRefCount.clear();
+
+    // 初始化所有非SINK Block的计数为0
+    for (auto& pair : m_states) {
+        Block* block = pair.block;
+        if (block->GetBlockType() == Block::BlockType::SINK) continue;
+        m_downstreamSinkRefCount[block] = 0;
+    }
+
+    // 从每个SINK反向BFS，统计每个上游Block被多少个SINK可达
+    for (auto& pair : m_states) {
+        Block* sink = pair.block;
+        if (sink->GetBlockType() != Block::BlockType::SINK) continue;
+
+        QSet<Block*> visited;
+        QQueue<Block*> queue;
+
+        // 找sink的直接上游
+        for (size_t i = 0; i < sink->GetInputPortCount(); i++) {
+            BufferReader* reader = sink->GetInputPort(sink->GetInputPortName(i));
+            if (reader && reader->HasValidConnection()) {
+                Buffer* buffer = reader->GetConnectedBuffer();
+                if (buffer && buffer->GetWriter()) {
+                    Block* upstream = static_cast<Block*>(buffer->GetWriter());
+                    queue.enqueue(upstream);
+                }
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            Block* current = queue.dequeue();
+            if (visited.contains(current)) continue;
+            visited.insert(current);
+
+            m_downstreamSinkRefCount[current]++;
+
+            // 继续向上游遍历
+            for (size_t i = 0; i < current->GetInputPortCount(); i++) {
+                BufferReader* reader = current->GetInputPort(current->GetInputPortName(i));
+                if (reader && reader->HasValidConnection()) {
+                    Buffer* buffer = reader->GetConnectedBuffer();
+                    if (buffer && buffer->GetWriter()) {
+                        queue.enqueue(static_cast<Block*>(buffer->GetWriter()));
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool ReadyQueueScheduler::allSinksDone() const {
+    for (auto& pair : m_states) {
+        if (pair.block->GetBlockType() == Block::BlockType::SINK && !pair.isDone) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// ========== 暂停/停止控制 (Task 2) ==========
+
+void ReadyQueueScheduler::setPauseControls(QAtomicInt* paused,
+                                            QAtomicInt* stopRequested,
+                                            QMutex* pauseMutex,
+                                            QWaitCondition* pauseCond) {
+    m_paused = paused;
+    m_stopRequested = stopRequested;
+    m_pauseMutex = pauseMutex;
+    m_pauseCond = pauseCond;
+}
+
+void ReadyQueueScheduler::pause() {
+    if (m_paused && !(*m_paused)) {
+        *m_paused = 1;
+    }
+}
+
+void ReadyQueueScheduler::resume() {
+    if (m_paused && (*m_paused)) {
+        *m_paused = 0;
+        if (m_pauseMutex && m_pauseCond) {
+            QMutexLocker locker(m_pauseMutex);
+            m_pauseCond->wakeAll();
+        }
+    }
+}
+
+void ReadyQueueScheduler::requestStop() {
+    if (m_stopRequested) {
+        *m_stopRequested = 1;
+        m_stopSignal = true;
+        // 如果暂停中，唤醒
+        if (m_paused && (*m_paused)) {
+            *m_paused = 0;
+            if (m_pauseMutex && m_pauseCond) {
+                QMutexLocker locker(m_pauseMutex);
+                m_pauseCond->wakeAll();
+            }
+        }
+    }
+}
+
+bool ReadyQueueScheduler::isPaused() const {
+    return m_paused && (*m_paused == 1);
 }

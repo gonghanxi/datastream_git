@@ -5,9 +5,13 @@
 #include <QMap>
 #include <QSet>
 #include <QQueue>
+#include <QMutex>
+#include <QWaitCondition>
+#include <QAtomicInt>
 #include <memory>
 #include "Block.h"
 #include "DataStreamVerification.h"
+#include "../signalflowlinksort.h"
 
 using namespace SystemVueModelBuilder;
 
@@ -55,44 +59,36 @@ public:
 
     /**
      * @brief 主调度函数，执行给定链路的调度
-     * @param linkKey 链路标识符
-     * @param blocks 该链路中包含的所有Block
-     * @param verificationSystem 数据流验证系统
-     * @param simuParams 仿真参数
-     * @return 调度是否成功
      */
     bool schedule(const QString& linkKey,
                   QVector<Block*>& blocks,
                   std::shared_ptr<DataStreamVerification> verificationSystem,
-                  const SimuParameter& simuParams);
+                  const SimuParameter& simuParams,
+                  SignalFlowLinkSort* topologySorter = nullptr);
+
+    // ========== 暂停/恢复/停止控制 ==========
+    void setPauseControls(QAtomicInt* paused, QAtomicInt* stopRequested,
+                          QMutex* pauseMutex, QWaitCondition* pauseCond);
+    void pause();
+    void resume();
+    void requestStop();
+    bool isPaused() const;
 
 private:
     // ========== 初始化 ==========
-    /**
-     * @brief 初始化所有Block的运行时状态结构
-     * @param blocks 要初始化的Block列表
-     */
     void initBlockStates(QVector<Block*>& blocks);
-    /**
-     * @brief 初始化就绪队列
-     * @param blocks 所有Block列表
-     */
     void initReadyQueues(QVector<Block*>& blocks);
-    /**
-     * @brief 计算每个Block所需的输入数量
-     */
     void calculateRequiredInputCounts();
-    /**
-     * @brief 计算单个Sink Block的目标收集样本数
-     * @param sink 目标Sink Block
-     * @return 该Sink需要收集的样本数
-     */
     int calculateSinkTarget(Block* sink);
-    /**
-     * @brief 计算所有Sink Block的目标收集样本数
-     * @param blocks 所有Block列表
-     */
     void calculateSinkTargets(QVector<Block*>& blocks);
+
+    // ========== 全局仿真时钟 ==========
+    void initSimulationClock(const SimuParameter& simuParams, QVector<Block*>& blocks);
+    void advanceSimulationTime();
+
+    // ========== 下游Sink引用计数 ==========
+    void buildDownstreamSinkRefCounts();
+    bool allSinksDone() const;
 
     // ========== 状态管理 ==========
     /**
@@ -188,44 +184,11 @@ private:
     void removeFromReadyQueue(BlockRuntimeState& state);
 
     // ========== 执行逻辑 ==========
-    /**
-     * @brief 执行一个信号源（Source）Block
-     * @param state 要执行的Source Block的状态
-     * @param globalProcessCount 全局已处理的样本计数
-     * @param maxProcessCount 最大可处理样本数
-     * @return 是否成功执行
-     */
     bool executeSource(BlockRuntimeState& state, int& globalProcessCount, int maxProcessCount);
-    /**
-     * @brief 执行一个信号源（Source）Block，包含背压控制
-     * @param state 要执行的Source Block的状态
-     * @return 是否成功执行
-     */
     bool executeSourceWithBackpressure(BlockRuntimeState& state);
-    /**
-     * @brief 执行一个处理器（Processor）Block
-     * @param state 要执行的Processor Block的状态
-     * @return 是否成功执行
-     */
     bool executeProcessor(BlockRuntimeState& state);
-    /**
-     * @brief 执行一个处理器（Processor）Block，包含背压控制
-     * @param state 要执行的Processor Block的状态
-     * @return 是否成功执行
-     */
     bool executeProcessorWithBackpressure(BlockRuntimeState& state);
-    /**
-     * @brief 执行一个收集器（Sink）Block，并记录收集数量
-     * @param state 要执行的Sink Block的状态
-     * @return 本次执行收集到的样本数
-     */
     int executeSinkWithCount(BlockRuntimeState& state);
-    /**
-     * @brief 尝试以批量模式执行一个Block
-     * @param state 要执行的Block状态
-     * @param maxBatch 最大批量大小
-     * @return 实际执行的样本数
-     */
     int tryExecuteBatch(BlockRuntimeState& state, int maxBatch);
 
     // ========== 辅助方法 ==========
@@ -252,27 +215,47 @@ private:
                         const std::map<std::string, int>& sinkTargets);
 
     // ========== 成员变量 ==========
-    QMap<Block*, BlockRuntimeState> m_states; ///< 所有Block的运行时状态映射
-    QQueue<Block*> m_readySources;            ///< 就绪的信号源（Source）队列
-    QQueue<Block*> m_readyProcessors;         ///< 就绪的处理器（Processor）队列
-    QQueue<Block*> m_readySinks;              ///< 就绪的收集器（Sink）队列
-    QMap<int, QQueue<Block*>> m_readyByPriority; ///< 按优先级组织的处理器就绪队列
+    QMap<Block*, BlockRuntimeState> m_states;
+    QQueue<Block*> m_readySources;
+    QQueue<Block*> m_readyProcessors;
+    QQueue<Block*> m_readySinks;
+    QMap<int, QQueue<Block*>> m_readyByPriority;
 
-    int m_totalSamples = 0;                     ///< 仿真的总样本数
-    double m_timeInterval = 0.0;                 ///< 仿真的时间间隔
-    std::shared_ptr<DataStreamVerification> m_verificationSystem; ///< 数据流验证系统
-    QVector<Block*> m_executionOrder;           ///< Block的执行顺序
-    QMap<Block*, int> m_blockIndex;              ///< Block到其索引的映射
+    int m_totalSamples = 0;
+    double m_timeInterval = 0.0;
+    std::shared_ptr<DataStreamVerification> m_verificationSystem;
+    QVector<Block*> m_executionOrder;
+    QMap<Block*, int> m_blockIndex;
 
-    std::map<std::string, int> m_sinkProcessCount;  ///< 各Sink已处理的样本数
-    std::map<std::string, int> m_sinkTargetCounts;  ///< 各Sink的目标处理样本数
-    int m_lastProgressPercent = -1;                 ///< 上一次报告的进度百分比
+    std::map<std::string, int> m_sinkProcessCount;
+    std::map<std::string, int> m_sinkTargetCounts;
+    int m_lastProgressPercent = -1;
 
     // Buffer 容量限制
-    const size_t DEFAULT_BUFFER_SIZE = 1024;    ///< Buffer的默认容量
+    const size_t DEFAULT_BUFFER_SIZE = 1024;
 
-    // 用于防止重复传播背压
-    QSet<Block*> m_backpressuredBlocks;         ///< 已处于背压状态的Block集合
+    // 背压控制
+    QSet<Block*> m_backpressuredBlocks;
+
+    // ========== 全局仿真时钟 (Task 1) ==========
+    double m_simulationTime = 0.0;
+    double m_timeStep = 0.0;
+    unsigned long long m_sourceFireCount = 0;
+    bool m_hasTimeDrivenSink = false;
+
+    // ========== 暂停/停止控制 (Task 2) ==========
+    QAtomicInt* m_paused = nullptr;
+    QAtomicInt* m_stopRequested = nullptr;
+    QMutex* m_pauseMutex = nullptr;
+    QWaitCondition* m_pauseCond = nullptr;
+    bool m_stopSignal = false;  // 内部停止信号
+
+    // ========== 下游Sink引用计数 (Task 4) ==========
+    std::map<Block*, int> m_downstreamSinkRefCount;
+
+    // ========== 拓扑排序 (Task 6) ==========
+    SignalFlowLinkSort* m_topologySorter = nullptr;
+    QMap<Block*, int> m_processorPriority;
 };
 
 #endif // READYQUEUESCHEDULER_H
