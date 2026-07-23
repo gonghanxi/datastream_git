@@ -394,7 +394,6 @@ bool SimpleScheduler::simpleSchedulerImpl(const QString& linkKey,
 
                         // 非总线类型且无有效连接：完全跳过
                         if(!isConnected && !isBusType) {
-                            qDebug() << "currentBlock"  << QString::fromStdString(currentBlock->GetName()) << "Port: " << QString::fromStdString(portName) << "Skip";
                             qDebug() << "Checking currentBlock Port: false";
                             continue;
                         }
@@ -594,6 +593,8 @@ int SimpleScheduler::calculateMaxProcessCount(QVector<Block*> blocks,
                                              int sourceCount)
 {
     int maxProcessCount = 0;
+    int numSamples = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).num_Samples;
+    int globalMax = numSamples * sourceCount; // 全局上限：源最多产这么多数据
 
     for (auto block : blocks) {
         if (block->GetBlockType() == Block::BlockType::SINK) {
@@ -602,22 +603,29 @@ int SimpleScheduler::calculateMaxProcessCount(QVector<Block*> blocks,
 
             int count = 0;
             if (option == "auto") {
-                count = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).num_Samples * sourceCount;
+                count = globalMax;
             }
             else if (option == "samples") {
+                int sampleStart = std::stoi(block->getParameter("SampleStart").Value);
                 int sampleStop = std::stoi(block->getParameter("SampleStop").Value);
-                count = sampleStop * sourceCount;
+                count = (sampleStop - sampleStart + 1) * sourceCount;
             }
             else if (option == "time") {
+                double timeStart = std::stod(block->getParameter("TimeStart").Value);
                 double timeStop = std::stod(block->getParameter("TimeStop").Value);
                 double timeInterval = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).time_Interval;
-                count = static_cast<int>(timeStop / timeInterval) * sourceCount;
+                count = static_cast<int>((timeStop - timeStart) / timeInterval + 1) * sourceCount;
             }
 
             if (count > maxProcessCount) {
                 maxProcessCount = count;
             }
         }
+    }
+
+    // 不超过全局仿真数据量上限
+    if (maxProcessCount > globalMax) {
+        maxProcessCount = globalMax;
     }
 
     return maxProcessCount > 0 ? maxProcessCount : 1000;

@@ -20,6 +20,7 @@
 #include "algorithmmanager.h"
 #include "unitconvert.h"
 #include "../Common/LogExport.h"
+#include "../Common/ISimRunner.h"  // AdvancedStepInfo
 
 // 解析结果结构体
 struct ParseResult {
@@ -27,6 +28,7 @@ struct ParseResult {
     QString errorMessage;
     QString mainLinkKey;
     QMap<QString, SimuParameter> simuParameters;
+    AdvancedStepInfo advancedStepInfo;  // 变步长参数解析结果
 
     ParseResult() : success(false) {}
 };
@@ -137,6 +139,7 @@ private:
     QMap<QString, QVector<Connection>> m_connections;
     QMap<QString, SimuParameter> m_simuParameters;
     QStringList m_subsystemPathStack;  // 子系统路径栈
+    AdvancedStepInfo m_advancedStepInfo;  // 变步长参数解析结果
 };
 
 #endif // LINKPARSER_H

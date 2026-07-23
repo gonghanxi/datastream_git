@@ -52,7 +52,7 @@ bool SinkCx_M_Block::Setup()
 
     // 创建完整路径
     QString outputPath = QString::fromStdString(getOutPutPath());
-    QString folderPath = outputPath + "/01";
+    QString folderPath = outputPath + "/08";
 
     QDir dir(folderPath);
     if (!dir.exists()) {
@@ -82,7 +82,7 @@ bool SinkCx_M_Block::Setup()
     QString fullPath = folderPath + "/" + fileName;
 
     //后端存储路径
-    m_WritePath = "/02/" + fileName;
+    m_WritePath = "/08/" + fileName;
 
     // 保存路径（转换为char*给原有代码使用）
     QByteArray pathBytes = fullPath.toUtf8();
@@ -139,6 +139,15 @@ bool SinkCx_M_Block::Run()
         }
 
         for (size_t i = 0; i < inputData.size(); ++i) {
+            // 跳过 SampleStart/TimeStart 之前的数据点
+            if (m_sinkSkipSamples > 0) {
+                --m_sinkSkipSamples;
+                continue;
+            }
+            // 达到目标采样点后跳过写入
+            if (Index - 1 >= m_sinkTargetSamples) {
+                continue;
+            }
             // 计算当前数据点的时间戳（数据流模式）或使用真实时间
             double timeVal = 0.0;
             if (m_isTimeDrivenMode) {
@@ -238,6 +247,31 @@ bool SinkCx_M_Block::Initialize()
 
     SetParameters();
 
+    // 计算 SINK 目标采样点数（仅在 Stop_Condition == "按数据收集器" 时生效）
+    m_sinkTargetSamples = ULLONG_MAX;
+    m_sinkSkipSamples = 0;
+    if (getSimu().stopCondition == "按数据收集器") {
+        size_t sim_total_samples = getSimu().num_Samples;
+        unsigned long long sink_target = 0;
+        switch (m_StartStopOption) {
+        case SinkCx_M::Auto:
+            sink_target = sim_total_samples;
+            break;
+        case SinkCx_M::Samples:
+            sink_target = (m_SampleStop >= m_SampleStart) ? static_cast<unsigned long long>(m_SampleStop - m_SampleStart + 1) : 0;
+            m_sinkSkipSamples = (m_SampleStart > 0) ? static_cast<unsigned long long>(m_SampleStart) : 0;
+            break;
+        case SinkCx_M::Time:
+            if (getSimu().time_Interval > 0) sink_target = static_cast<unsigned long long>(m_TimeStop / getSimu().time_Interval);
+            else if (m_sampleRate > 0) sink_target = static_cast<unsigned long long>(m_TimeStop * m_sampleRate);
+            if (m_TimeStart > 0) {
+                if (getSimu().time_Interval > 0) m_sinkSkipSamples = static_cast<unsigned long long>(m_TimeStart / getSimu().time_Interval);
+                else if (m_sampleRate > 0) m_sinkSkipSamples = static_cast<unsigned long long>(m_TimeStart * m_sampleRate);
+            }
+            break;
+        }
+        m_sinkTargetSamples = (sink_target < sim_total_samples) ? sink_target : sim_total_samples;
+    }
     return true;
 }
 
@@ -530,7 +564,6 @@ void SinkCx_M_Block::writeDataPointToStream(size_t bufferIndex, unsigned long lo
             }
         }
     }
-    m_stream << "\t}," << "\r\n";
     m_stream << "\t}";
 }
 

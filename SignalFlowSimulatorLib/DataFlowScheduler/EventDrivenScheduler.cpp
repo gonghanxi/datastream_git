@@ -182,6 +182,7 @@ bool EventDrivenScheduler::ProcessOneTimeStep(const QString& linkKey)
         return false;
     }
 
+    // 仅在 "按数据收集器" 模式下检查 Sink 完成状态
     if (areAllSinksComplete(ctx)) {
         return false;
     }
@@ -694,6 +695,8 @@ int EventDrivenScheduler::calculateMaxProcessCount(QVector<Block*> blocks,
                                                    int sourceCount)
 {
     int maxProcessCount = 0;
+    int numSamples = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).num_Samples;
+    int globalMax = numSamples * sourceCount; // 全局上限：源最多产这么多数据
 
     for (auto block : blocks) {
         if (block->GetBlockType() == Block::BlockType::SINK) {
@@ -702,22 +705,29 @@ int EventDrivenScheduler::calculateMaxProcessCount(QVector<Block*> blocks,
 
             int count = 0;
             if (option == "auto") {
-                count = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).num_Samples * sourceCount;
+                count = globalMax;
             }
             else if (option == "samples") {
+                int sampleStart = std::stoi(block->getParameter("SampleStart").Value);
                 int sampleStop = std::stoi(block->getParameter("SampleStop").Value);
-                count = sampleStop * sourceCount;
+                count = (sampleStop - sampleStart + 1) * sourceCount;
             }
             else if (option == "time") {
+                double timeStart = std::stod(block->getParameter("TimeStart").Value);
                 double timeStop = std::stod(block->getParameter("TimeStop").Value);
                 double timeInterval = AlgorithmManager::createInstance()->getSimuParameters().value(linkKey).time_Interval;
-                count = static_cast<int>(timeStop / timeInterval) * sourceCount;
+                count = static_cast<int>((timeStop - timeStart) / timeInterval + 1) * sourceCount;
             }
 
             if (count > maxProcessCount) {
                 maxProcessCount = count;
             }
         }
+    }
+
+    // 不超过全局仿真数据量上限
+    if (maxProcessCount > globalMax) {
+        maxProcessCount = globalMax;
     }
 
     return maxProcessCount > 0 ? maxProcessCount : 1000;
@@ -1026,12 +1036,12 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                     // Set skip flag for sink if blocked by untriggered ZeroCross
                     // Sink still runs (to advance time) but checks this flag to skip data output
                     bool shouldSkip = isBlockedByUntriggeredZeroCross(ctx, currentBlock);
-                    currentBlock->SetSkipDataOutput(shouldSkip);
                     // SINK: called every iteration
                     // Check termination conditions
                     int max_items_avail = 0;
                     bool input_done = false;
                     bool all_upstream_done = true;
+                    bool anyInputReady = false;
 
                     for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
                         std::string portName = currentBlock->GetInputPortName(i);
@@ -1042,6 +1052,8 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                             if (reader->IsUpstreamDone()) {
                                 input_done = true;
                             }
+                        } else {
+                            anyInputReady = true;
                         }
 
                         if (!reader->IsUpstreamDone()) {
@@ -1053,14 +1065,22 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                         }
                     }
 
+                    // Skip data output if no upstream data is available this iteration.
+                    // ReadDataForReaderImpl reads from circular buffer memory unconditionally,
+                    // so we must explicitly skip to prevent recording stale zero values.
+                    if (!anyInputReady && !all_upstream_done) {
+                        shouldSkip = true;
+                    }
+
+                    currentBlock->SetSkipDataOutput(shouldSkip);
+
                     // Check if sink should terminate
                     if ((input_done && all_upstream_done) ||
                             (FinalProgress == 100 && nalive / sinkCount == 1 && OutputBusCount > 0)) {
                         blockDone = true;
                     }
                     else {
-                        // Always call sink (even if no data available)
-                        // Sink's Run() handles event-driven mode internally
+                        // Call sink every iteration; skip flag controls whether data is recorded
                         int result = generalWork(currentBlock);
                         if (result > 0) {
                             progressMade = true;
@@ -1104,9 +1124,7 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                         continue;
                     }
 
-                    // In event-driven mode, processors run every iteration.
-                    // The block's Run() handles empty input gracefully.
-                    // Skip only if output buffer is full (backpressure).
+                    // Check output buffer space (backpressure)
                     bool output_ready = true;
                     for (size_t i = 0; i < currentBlock->GetOutputPortCount(); i++) {
                         std::string portName = currentBlock->GetOutputPortName(i);
@@ -1123,19 +1141,82 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                         continue;
                     }
 
-                    // Check if upstream is done (for blockDone detection)
-                    bool allUpstreamDone = true;
+                    // Check input readiness and upstream completion (respecting port rate / readSize)
+                    // Same logic as SimpleScheduler: only run when enough data is available
+                    bool input_ready = true;
+                    bool upstream_done = false;
+                    bool hasActiveInputPorts = false;
+                    bool hasConnectedPorts = false;
+                    bool allConnectedUpstreamDone = true;
+
                     for (size_t i = 0; i < currentBlock->GetInputPortCount(); i++) {
                         std::string portName = currentBlock->GetInputPortName(i);
                         BufferReader* reader = currentBlock->GetInputPort(portName);
-                        if (reader->HasValidConnection() && !reader->IsUpstreamDone()) {
-                            allUpstreamDone = false;
-                            break;
+                        bool isConnected = reader->HasValidConnection();
+                        bool isBusType = reader->IsBusType(reader->GetDataType());
+
+                        // Not bus type and no valid connection: skip entirely
+                        if (!isConnected && !isBusType) continue;
+                        // Bus type but no actual connections: skip
+                        if (isBusType && reader->GetBusConnections().empty()) continue;
+
+                        hasActiveInputPorts = true;
+                        hasConnectedPorts = true;
+
+                        if (!reader->HasDataAvailable()) {
+                            input_ready = false;
+                            // Check upstream done status for this port
+                            if (isBusType) {
+                                bool all_done = true;
+                                for (auto busreader : reader->GetBusConnections()) {
+                                    all_done &= busreader.bridgeReader->IsUpstreamDone();
+                                }
+                                upstream_done = all_done;
+                                allConnectedUpstreamDone &= all_done;
+                            } else {
+                                if (reader->IsUpstreamDone()) {
+                                    upstream_done = true;
+                                } else {
+                                    allConnectedUpstreamDone = false;
+                                }
+                            }
+                        } else {
+                            // Data available, but upstream may still be producing
+                            if (isBusType) {
+                                bool all_done = true;
+                                for (auto busreader : reader->GetBusConnections()) {
+                                    all_done &= busreader.bridgeReader->IsUpstreamDone();
+                                }
+                                allConnectedUpstreamDone &= all_done;
+                            } else {
+                                if (!reader->IsUpstreamDone()) {
+                                    allConnectedUpstreamDone = false;
+                                }
+                            }
                         }
                     }
 
-                    if (allUpstreamDone) {
+                    // If no connected ports, allConnectedUpstreamDone should not be true
+                    if (!hasConnectedPorts) {
+                        allConnectedUpstreamDone = false;
+                    }
+
+                    if (!hasActiveInputPorts) {
+                        noProgressCount++;
+                        continue;
+                    }
+
+                    bool hasRunBefore = ctx.processedBlocks.contains(QString::fromStdString(currentBlock->GetName()));
+
+                    // Force run when all upstream done but block never executed (prevent deadlock)
+                    bool forceRun = allConnectedUpstreamDone && !hasRunBefore && output_ready;
+
+                    // Processor done: all connected upstream done + has run at least once
+                    if (allConnectedUpstreamDone && hasRunBefore) {
                         blockDone = true;
+                    }
+                    else if (!forceRun && !input_ready) {
+                        continue;
                     }
 
                     if (!blockDone) {
@@ -1144,6 +1225,7 @@ bool EventDrivenScheduler::eventDrivenSchedulerImpl(const QString& linkKey,
                             progressMade = true;
                             making_progress = true;
                             noProgressCount = 0;
+                            ctx.processedBlocks.insert(QString::fromStdString(currentBlock->GetName()));
                         }
                     }
                 }

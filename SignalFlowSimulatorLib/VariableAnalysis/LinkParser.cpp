@@ -70,6 +70,14 @@ bool LinkParser::parseSimuParameters(
 
     simuPara.simuName = simuObj["simuName"].toString().toStdString();
 
+    // 解析停止条件
+    if (simuObj.contains("Stop_Condition") && simuObj["Stop_Condition"].isString()) {
+        simuPara.stopCondition = simuObj["Stop_Condition"].toString().toStdString();
+    } else {
+        simuPara.stopCondition = ""; // 默认无特殊停止条件
+    }
+    qDebug() << "Stop_Condition:" << QString::fromStdString(simuPara.stopCondition);
+
     bool ok = true;
     simuPara.startTime = UnitConvert::convertToStandardUnit("time", startTime_Unit, startTime_Value).toDouble(&ok);
     double stopTime = UnitConvert::convertToStandardUnit("time", stopTime_Unit, stopTime_Value).toDouble(&ok);
@@ -92,6 +100,130 @@ bool LinkParser::parseSimuParameters(
     if (!ok) {
         LOG_ERROR("仿真器参数错误.");
         return false;
+    }
+
+    // ========== 解析 AdvancedSimuParam ==========
+    if (simuObj.contains("AdvancedSimuParam") && simuObj["AdvancedSimuParam"].isObject()) {
+        auto advObj = simuObj["AdvancedSimuParam"].toObject();
+        std::string stepMode;
+
+        // 解析 StepMode
+        if (advObj.contains("StepMode") && advObj["StepMode"].isString()) {
+            stepMode = advObj["StepMode"].toString().toStdString();
+        }
+
+        if (stepMode == "VariableStep") {
+            // 基础步长 Step = time_interval（已经是以秒为单位的值）
+            double Step = simuPara.time_Interval;
+
+            // 解析 initStep、minStep、maxStep，支持 "auto" 自动配置
+            double rawInitStep = 0.0, rawMinStep = 0.0, rawMaxStep = 0.0;
+            bool initStepIsAuto = false, minStepIsAuto = false, maxStepIsAuto = false;
+
+            if (advObj.contains("initStep")) {
+                QString valStr = advObj["initStep"].toString().trimmed();
+                if (valStr.compare("auto", Qt::CaseInsensitive) == 0) {
+                    initStepIsAuto = true;
+                } else {
+                    bool parseOk = false;
+                    rawInitStep = valStr.toDouble(&parseOk);
+                    if (!parseOk) {
+                        LOG_ERROR("初始步长(initStep) 值无法解析为数值: ", valStr.toStdString());
+                        return false;
+                    }
+                }
+            } else {
+                initStepIsAuto = true;
+            }
+
+            if (advObj.contains("minStep")) {
+                QString valStr = advObj["minStep"].toString().trimmed();
+                if (valStr.compare("auto", Qt::CaseInsensitive) == 0) {
+                    minStepIsAuto = true;
+                } else {
+                    bool parseOk = false;
+                    rawMinStep = valStr.toDouble(&parseOk);
+                    if (!parseOk) {
+                        LOG_ERROR("最小步长(minStep) 值无法解析为数值: ", valStr.toStdString());
+                        return false;
+                    }
+                }
+            } else {
+                minStepIsAuto = true;
+            }
+
+            if (advObj.contains("maxStep")) {
+                QString valStr = advObj["maxStep"].toString().trimmed();
+                if (valStr.compare("auto", Qt::CaseInsensitive) == 0) {
+                    maxStepIsAuto = true;
+                } else {
+                    bool parseOk = false;
+                    rawMaxStep = valStr.toDouble(&parseOk);
+                    if (!parseOk) {
+                        LOG_ERROR("最大步长(maxStep) 值无法解析为数值: ", valStr.toStdString());
+                        return false;
+                    }
+                }
+            } else {
+                maxStepIsAuto = true;
+            }
+
+            // 自动配置逻辑：initStep=Step, minStep=Step/50, maxStep=Step*10
+            if (initStepIsAuto) { rawInitStep = Step; }
+            if (minStepIsAuto)  { rawMinStep  = Step / 50.0; }
+            if (maxStepIsAuto)  { rawMaxStep  = Step * 10.0; }
+
+            // ========== 参数合法性严格校验（带浮点容差） ==========
+            bool valid = true;
+            // 浮点比较容差：避免 10.0 * 1e-06 与 1e-05 因精度问题误判
+            constexpr double EPS = 1e-9;
+
+            // maxStep 合法范围: Step <= maxStep <= 10 * Step
+            double maxStepLower = Step * (1.0 - EPS);
+            double maxStepUpper = 10.0 * Step * (1.0 + EPS);
+            if (rawMaxStep < maxStepLower || rawMaxStep > maxStepUpper) {
+                LOG_ERROR("最大步长(maxStep) 不合法: 值为 ", rawMaxStep,
+                         "，合法范围为 [", Step, ", ", 10.0 * Step, "]");
+                valid = false;
+            }
+
+            // minStep 合法范围: Step/1000 <= minStep <= Step/10
+            double minStepLower = (Step / 1000.0) * (1.0 - EPS);
+            double minStepUpper = (Step / 10.0) * (1.0 + EPS);
+            if (rawMinStep < minStepLower || rawMinStep > minStepUpper) {
+                LOG_ERROR("最小步长(minStep) 不合法: 值为 ", rawMinStep,
+                         "，合法范围为 [", Step / 1000.0, ", ", Step / 10.0, "]");
+                valid = false;
+            }
+
+            // initStep 合法范围: minStep <= initStep <= maxStep（带容差）
+            if (rawInitStep < rawMinStep * (1.0 - EPS) || rawInitStep > rawMaxStep * (1.0 + EPS)) {
+                LOG_ERROR("初始步长(initStep) 不合法: 值为 ", rawInitStep,
+                         "，合法范围为 [", rawMinStep, ", ", rawMaxStep, "]");
+                valid = false;
+            }
+
+            if (!valid) {
+                return false;
+            }
+
+            // 存储到 m_advancedStepInfo
+            m_advancedStepInfo.isVariableStep = true;
+            m_advancedStepInfo.initStep = rawInitStep;
+            m_advancedStepInfo.minStep  = rawMinStep;
+            m_advancedStepInfo.maxStep  = rawMaxStep;
+            m_advancedStepInfo.numSamples = simuPara.num_Samples;
+
+            qDebug() << "AdvancedSimuParam 变步长模式已启用:"
+                     << "Step=" << Step
+                     << "initStep=" << rawInitStep
+                     << "minStep=" << rawMinStep
+                     << "maxStep=" << rawMaxStep;
+        } else {
+            // 非 VariableStep 模式，仅记录总仿真点数（由 main.cpp 打印）
+            m_advancedStepInfo.isVariableStep = false;
+            m_advancedStepInfo.numSamples = simuPara.num_Samples;
+        }
     }
 
     simuParams[mainLinkKey] = simuPara;
@@ -606,9 +738,14 @@ bool LinkParser::parseSingleModel(const QString& currentLinkKey,
                 .arg(blockInfo.isSubSystem)
                 .arg(subsystemPath);
 
-    // 判断是否为FMU模型
+    // 判断是否为FMU模型（cmpType可能不是严格的"Fmu"，需同时检查cmpCategory）
     QString cmpType = cmpObj["cmpType"].toString();
-    if (cmpType == "Fmu") {
+    QString cmpCategory;
+    if (cmpObj.contains("cmpCategory") && cmpObj["cmpCategory"].isArray()) {
+        QJsonArray catArr = cmpObj["cmpCategory"].toArray();
+        if (!catArr.isEmpty()) cmpCategory = catArr.first().toString();
+    }
+    if (cmpType == "Fmu" || cmpCategory == "Fmu") {
         // 使用独立的FMU解析器
         FMUModelParser fmuParser;
         FMUModelInfo fmuModelInfo;
@@ -1140,6 +1277,7 @@ ParseResult LinkParser::parseLinkFiles(
     result.success = true;
     result.mainLinkKey = mainLinkKey;
     result.simuParameters = simuParams;
+    result.advancedStepInfo = m_advancedStepInfo;
 
     return result;
 }

@@ -68,6 +68,9 @@ public:
     // 添加获取仿真参数的方法
     SimuParameter getSimulationParameters() const override;
 
+    // 获取高级步长信息（AdvancedSimuParam 解析结果）
+    AdvancedStepInfo getAdvancedStepInfo() const override { return m_advancedStepInfo; }
+
     // ========== 暂停/继续/停止控制接口 ==========
     void pause() override;         // 暂停仿真
     void resume() override;        // 继续仿真
@@ -137,6 +140,8 @@ private:
     std::shared_ptr<DataStreamVerification> m_verificationSystem;
     //仿真器参数缓存
     QMap<QString, SimuParameter> m_simuParamsCache;
+    // 高级步长参数（从 AdvancedSimuParam 解析）
+    AdvancedStepInfo m_advancedStepInfo;
     // 拓扑排序器
     SignalFlowLinkSort m_topologySorter;
     // 存储短路且为信号源或数据收集器的模型

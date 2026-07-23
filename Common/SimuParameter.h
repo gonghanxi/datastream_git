@@ -17,6 +17,7 @@ struct SimuParameter
     std::string linkName;
     std::string subsystemName;
     std::string User_Id;
+    std::string stopCondition;  // 停止条件: "按数据收集器" 或其他
 
 
     SimuParameter()
@@ -32,7 +33,9 @@ struct SimuParameter
           time_Interval(other.time_Interval),
           num_Samples(other.num_Samples),
           linkName(other.linkName),
-          subsystemName(other.subsystemName) {}
+          subsystemName(other.subsystemName),
+          User_Id(other.User_Id),
+          stopCondition(other.stopCondition) {}
 
 
     SimuParameter& operator=(const SimuParameter& other) {
@@ -45,6 +48,8 @@ struct SimuParameter
             num_Samples = other.num_Samples;
             linkName = other.linkName;
             subsystemName = other.subsystemName;
+            User_Id = other.User_Id;
+            stopCondition = other.stopCondition;
         }
         return *this;
     }
@@ -58,7 +63,9 @@ struct SimuParameter
           time_Interval(other.time_Interval),
           num_Samples(other.num_Samples),
           linkName(std::move(other.linkName)),
-          subsystemName(std::move(other.subsystemName)) {}
+          subsystemName(std::move(other.subsystemName)),
+          User_Id(std::move(other.User_Id)),
+          stopCondition(std::move(other.stopCondition)) {}
 
 
     SimuParameter& operator=(SimuParameter&& other) noexcept {
@@ -71,6 +78,8 @@ struct SimuParameter
             num_Samples = other.num_Samples;
             linkName = std::move(other.linkName);
             subsystemName = std::move(other.subsystemName);
+            User_Id = std::move(other.User_Id);
+            stopCondition = std::move(other.stopCondition);
         }
         return *this;
     }

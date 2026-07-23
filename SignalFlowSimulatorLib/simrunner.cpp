@@ -292,6 +292,9 @@ bool SimRunner::AnalysisFiles()
         return false;
     }
 
+    // 存储高级步长信息
+    m_advancedStepInfo = result.advancedStepInfo;
+
     // 存储blocksInfo、connections、simuParams
     auto blocksInfo = parser.getBlocksInfo();
     auto connections = parser.getConnections();
@@ -740,7 +743,8 @@ bool SimRunner::validateShortCircuitedSourcesAndSinks()
                 LOG_ERROR("特殊情况：信号源模型",
                          blockInfo.instanceName.toStdString(),
                          "短路，存在未连接端口:",
-                         unconnectedPorts.join(",").toStdString());
+                         unconnectedPorts.join(",").toStdString(),
+                          "(cmpId:cp_",blockInfo.cmpId,")连接关系有误.实例或端口不存在.");
                 return false;
             } else {
                 qDebug() << "信号源短路校验通过:" << blockInfo.instanceName;
@@ -780,7 +784,8 @@ bool SimRunner::validateShortCircuitedSourcesAndSinks()
                 LOG_ERROR("特殊情况：数据收集器模型",
                          blockInfo.instanceName.toStdString(),
                          "短路，存在未连接端口:",
-                         unconnectedPorts.join(",").toStdString());
+                         unconnectedPorts.join(",").toStdString(),
+                          "(cmpId:cp_",blockInfo.cmpId,")连接关系有误.实例或端口不存在.");
                 return false;
             } else {
                 qDebug() << "数据收集器短路校验通过:" << blockInfo.instanceName;
@@ -1032,10 +1037,12 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
                         }
 
                         if (srcBlock && dstBlock && srcBlock->block && dstBlock->block) {
-                            QString connection = QString::number(srcBlock->cmpId) + ":" +
-                                    QString::number(srcPort.id) + ":" +
-                                    QString::number(dstBlock->cmpId) + ":" +
-                                    QString::number(dstPort.id);
+                            // 使用Block指针地址代替cmpId避免跨层ID冲突
+                            QString connection = QString("%1:%2-->%3:%4")
+                                    .arg(reinterpret_cast<quintptr>(srcBlock->block))
+                                    .arg(srcPort.name)
+                                    .arg(reinterpret_cast<quintptr>(dstBlock->block))
+                                    .arg(dstPort.name);
 
                             if (!mConnections.contains(connection)) {
                                 Block::Connect(srcBlock->block, srcPort.name.toStdString(),
@@ -1094,10 +1101,12 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
                         }
 
                         if (srcBlock && dstBlock && srcBlock->block && dstBlock->block) {
-                            QString connection = QString::number(srcBlock->cmpId) + ":" +
-                                    QString::number(srcPort.id) + ":" +
-                                    QString::number(dstBlock->cmpId) + ":" +
-                                    QString::number(dstPort.id);
+                            // 使用Block指针地址代替cmpId避免跨层ID冲突
+                            QString connection = QString("%1:%2-->%3:%4")
+                                    .arg(reinterpret_cast<quintptr>(srcBlock->block))
+                                    .arg(srcPort.name)
+                                    .arg(reinterpret_cast<quintptr>(dstBlock->block))
+                                    .arg(dstPort.name);
 
                             if (!mConnections.contains(connection)) {
                                 Block::Connect(srcBlock->block, srcPort.name.toStdString(),
@@ -1375,15 +1384,12 @@ bool SimRunner::dfsTraverseLink(const BlockInfo& upstreamBlock, const PortMsg& u
             //没有父节点或者子链路没有进行过基础连接才进行基础连接，否则会多次connect，导致报错
             qDebug() << "=== 场景：基础业务连接 ===";
 
-            QString connection = QString("%1(%2) %3(%4) --> %5(%6) %7(%8)")
-                    .arg(QString::fromStdString(srcNode.block->GetName()))
-                    .arg(srcNode.cmpId)
+            // 使用Block指针地址代替cmpId避免跨层ID冲突（不同子系统中cmpId会重复）
+            QString connection = QString("%1:%2-->%3:%4")
+                    .arg(reinterpret_cast<quintptr>(srcNode.block))
                     .arg(srcPort.name)
-                    .arg(srcPort.id)
-                    .arg(QString::fromStdString(dstNode.block->GetName()))
-                    .arg(dstNode.cmpId)
-                    .arg(dstPort.name)
-                    .arg(dstPort.id);
+                    .arg(reinterpret_cast<quintptr>(dstNode.block))
+                    .arg(dstPort.name);
             qDebug() << "场景基础业务 --检查连接: connection: " << connection;
             if(mConnections.contains(connection))
                 continue;

@@ -131,6 +131,15 @@ bool Sink_Block::Run()
         }
 
         for (size_t i = 0; i < inputData.size(); ++i) {
+            // 跳过 SampleStart/TimeStart 之前的数据点
+            if (m_sinkSkipSamples > 0) {
+                --m_sinkSkipSamples;
+                continue;
+            }
+            // 达到目标采样点后跳过写入
+            if (Index - 1 >= m_sinkTargetSamples) {
+                continue;
+            }
             double timeVal = 0.0;
             if (m_isTimeDrivenMode) {
                 timeVal = m_currentSimulationTime;
@@ -165,6 +174,17 @@ bool Sink_Block::Run()
         double inputData;
         if (!inputReader->ReadData(inputData)) {
             // 事件驱动模式下无数据时仍然返回true
+            return true;
+        }
+
+        // 跳过 SampleStart/TimeStart 之前的数据点
+        if (m_sinkSkipSamples > 0) {
+            --m_sinkSkipSamples;
+            return true;
+        }
+
+        // 达到目标采样点后跳过写入
+        if (Index - 1 >= m_sinkTargetSamples) {
             return true;
         }
 
@@ -229,6 +249,34 @@ bool Sink_Block::Initialize()
 
     SetParameters(m_SampleStart, m_SampleStop, m_TimeStart, m_TimeStop,
                   m_StartStopOption, m_fileName);
+
+    // 计算 SINK 目标采样点数（仅在 Stop_Condition == "按数据收集器" 时生效）
+    m_sinkTargetSamples = ULLONG_MAX;
+    m_sinkSkipSamples = 0;
+    if (getSimu().stopCondition == "按数据收集器") {
+        size_t sim_total_samples = getSimu().num_Samples;
+        unsigned long long sink_target = 0;
+        switch (m_StartStopOption) {
+        case Sink::Auto:
+            sink_target = sim_total_samples;
+            m_sinkSkipSamples = 0;
+            break;
+        case Sink::Samples:
+            sink_target = (m_SampleStop >= m_SampleStart) ? static_cast<unsigned long long>(m_SampleStop - m_SampleStart + 1) : 0;
+            m_sinkSkipSamples = (m_SampleStart > 0) ? static_cast<unsigned long long>(m_SampleStart) : 0;
+            break;
+        case Sink::Time:
+            if (getSimu().time_Interval > 0) sink_target = static_cast<unsigned long long>(m_TimeStop / getSimu().time_Interval);
+            else if (m_sampleRate > 0) sink_target = static_cast<unsigned long long>(m_TimeStop * m_sampleRate);
+            if (m_TimeStart > 0) {
+                if (getSimu().time_Interval > 0) m_sinkSkipSamples = static_cast<unsigned long long>(m_TimeStart / getSimu().time_Interval);
+                else if (m_sampleRate > 0) m_sinkSkipSamples = static_cast<unsigned long long>(m_TimeStart * m_sampleRate);
+            }
+            break;
+        }
+        m_sinkTargetSamples = (sink_target < sim_total_samples) ? sink_target : sim_total_samples;
+        qDebug() << "[Sink_Block] sink_target=" << sink_target << "sim_total=" << sim_total_samples << "m_sinkTargetSamples=" << m_sinkTargetSamples << "m_sinkSkipSamples=" << m_sinkSkipSamples;
+    }
     return true;
 }
 
