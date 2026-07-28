@@ -12,10 +12,8 @@
 DEFINE_MODEL_INTERFACE(RADAR_Tx_4x4)
 {
 	SET_MODEL_DESCRIPTION("RADAR Transmitter Front End for 4x4 MIMO");
-	SET_MODEL_CATEGORY("Array TR");
+	SET_MODEL_CATEGORY("Transmitter");
 
-	// ============================================================
-	// 端口：multiple complex 输入，multiple envelope 输出
 	// ============================================================
 	{
 		auto p = ADD_MODEL_INPUT(BB_Signal);
@@ -27,8 +25,6 @@ DEFINE_MODEL_INTERFACE(RADAR_Tx_4x4)
 		p.SetDescription("RF signal");
 	}
 
-	// ============================================================
-	// 基础发射参数，默认值按 RADAR_Tx_4x4 帮助文档设置
 	// ============================================================
 	{
 		auto p = ADD_MODEL_PARAM(TStep);
@@ -157,8 +153,6 @@ DEFINE_MODEL_INTERFACE(RADAR_Tx_4x4)
 	}
 
 	// ============================================================
-	// RF 增益压缩参数。枚举项不控制参数显隐。
-	// ============================================================
 	{
 		auto p = ADD_MODEL_ENUM_PARAM(GCType_RF_Gain, SelectedGCType);
 		p.SetUnit(SystemVueModelBuilder::Units::NONE);
@@ -219,8 +213,6 @@ DEFINE_MODEL_INTERFACE(RADAR_Tx_4x4)
 	}
 
 	// ============================================================
-	// IF 增益压缩参数。枚举项不控制参数显隐。
-	// ============================================================
 	{
 		auto p = ADD_MODEL_ENUM_PARAM(GCType_IF_Gain, SelectedGCType);
 		p.SetUnit(SystemVueModelBuilder::Units::NONE);
@@ -280,14 +272,10 @@ DEFINE_MODEL_INTERFACE(RADAR_Tx_4x4)
 		p.SetDescription("Array of triple values for Input Power(dBm) and either Gain(dB)/Phase(deg) change from small signal or AM-to-AM(dB/dB)/AM-to-PM(deg/dB) for amplifier in IF");
 	}
 
-	// SystemVue 2020 的 DEFINE_MODEL_INTERFACE 宏在当前工程中展开为需要返回 bool 的函数。
-	// 如果这里没有显式返回值，VS2017 会报 C4716: DefineInterface 必须返回一个值。
 	return true;
 }
 #endif
 
-// ============================================================
-// 状态结构
 // ============================================================
 
 RADAR_Tx_4x4::BiquadState::BiquadState()
@@ -317,6 +305,12 @@ RADAR_Tx_4x4::ChannelState::ChannelState()
 	, seedIF(0x2468ACE0u)
 	, seedMixer(0x10203040u)
 	, outputCount(0ULL)
+	, lastRfAbs(0.0)
+	, edgeRippleState(0.0)
+	, riseEdgeState(0.0)
+	, fallEdgeState(0.0)
+	, inPulse(false)
+	, pulseSampleIndex(0ULL)
 {
 }
 
@@ -330,10 +324,14 @@ void RADAR_Tx_4x4::ChannelState::resetRuntime()
 	rfBpfSec1.reset();
 	rfBpfSec2.reset();
 	outputCount = 0ULL;
+	lastRfAbs = 0.0;
+	edgeRippleState = 0.0;
+	riseEdgeState = 0.0;
+	fallEdgeState = 0.0;
+	inPulse = false;
+	pulseSampleIndex = 0ULL;
 }
 
-// ============================================================
-// 构造函数与 Setup
 // ============================================================
 
 RADAR_Tx_4x4::RADAR_Tx_4x4()
@@ -495,8 +493,6 @@ void RADAR_Tx_4x4::resizeChannels_()
 
 int RADAR_Tx_4x4::computeChannelDelaySamples_() const
 {
-	// Tx_4x4 帮助文档只给出 ChannelDelay 参数，没有明确说明 DelayEnv
-	// 是否强制最小为 TStep。这里按直观通道延迟处理：0 表示不延迟。
 	if (ChannelDelay <= 0.0 || outputTimeStepSec_ <= 0.0) {
 		return 0;
 	}
@@ -620,8 +616,6 @@ bool RADAR_Tx_4x4::prepareNoise()
 }
 
 // ============================================================
-// DUC 插值与滤波器
-// ============================================================
 
 void RADAR_Tx_4x4::buildRaisedCosineFir_()
 {
@@ -629,14 +623,7 @@ void RADAR_Tx_4x4::buildRaisedCosineFir_()
 
 	const int sps = (bbUp_ > 0) ? bbUp_ : 1;
 
-	// 内置 RADAR_DUC 的启动瞬态明显长于普通 6-symbol 插值滤波器。
-	// 在低频验证工况（BB_UpSamplingRatio=5，TStep=1us）下，
-	// 内置输出约在 100us 附近开始进入明显起振区。
-	// 30-symbol raised-cosine FIR 的群时延约为：
-	//     30*sps/2 = 15*sps 个 IF 采样点
-	// 当 sps=5 时约为 75 个 IF 点，再叠加后级 BPF 启动过程，
-	// 与当前黑盒测试中观察到的 100us 左右起振更接近。
-	const int spanSymbols = 30;
+	const int spanSymbols = 22;
 	const int nTaps = spanSymbols * sps + 1;
 	const int mid = nTaps / 2;
 
@@ -651,7 +638,6 @@ void RADAR_Tx_4x4::buildRaisedCosineFir_()
 		sum += ducFir_[n];
 	}
 
-	// 零插值后需要把插值滤波器直流增益补偿到接近 sps。
 	if (std::fabs(sum) > 1e-30) {
 		const double scale = static_cast<double>(sps) / sum;
 		for (size_t i = 0; i < ducFir_.size(); ++i) {
@@ -664,8 +650,6 @@ void RADAR_Tx_4x4::configureIfBpf_()
 {
 	ifBpfEnabled_ = false;
 
-	// IF 包络域中的等效 BPF。由于这里使用复包络近似，
-	// 按基带低通形式模拟 DUC 输出端的 IF 滤波效果。
 	if (sampleRateHz_ <= 0.0 || BandWidth <= 0.0) {
 		return;
 	}
@@ -705,8 +689,6 @@ void RADAR_Tx_4x4::configureRfBpf_()
 {
 	rfBpfEnabled_ = false;
 
-	// RF BPF 以 RF_Freq 为中心。在 RF 包络域中可等效为基带低通，
-	// 因此这里采用与 IF BPF 类似的低通近似。
 	if (outputSampleRateHz_ <= 0.0 || BandWidth <= 0.0) {
 		return;
 	}
@@ -831,8 +813,6 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyChannelDelay_(const Cx& x, ChannelState& st)
 
 
 // ============================================================
-// 主运行函数
-// ============================================================
 
 bool RADAR_Tx_4x4::Run()
 {
@@ -888,8 +868,6 @@ bool RADAR_Tx_4x4::Run()
 				absSampleIndex;
 
 			// ----------------------------------------------------
-			// 1. RADAR_DUC：基带上采样 + raised-cosine 插值。
-			// 多通道版必须每路独立维护 FIR 历史，避免通道串扰。
 			// ----------------------------------------------------
 			Cx upsampled(0.0, 0.0);
 			if (dacPhase == 0) {
@@ -902,18 +880,13 @@ bool RADAR_Tx_4x4::Run()
 				st.ducHold = xDuc;
 			}
 			else {
-				// DAC 额外上采样相位采用简单保持近似。
 				xDuc = st.ducHold;
 			}
 
-			// I/Q 上变频前，先处理输入中心频率。
 			xDuc = applyInputCenterFrequency_(xDuc, timeNow);
 
-			// 根据 RADAR_DUC 帮助文档中的 I*cos - Q*sin 公式，
-			// 得到理想 IF 复包络主分量。
 			Cx xIf = applyDUCToIFEnvelope_(xDuc, timeNow);
 
-			// DAC_NBits 在内置 DUC 中作用于实 IF 波形。
 			if (DAC_NBits >= 2 && DAC_NBits < 64) {
 				const double ph = 2.0 * M_PI * IF_Freq * timeNow;
 				const double realIfBefore = xIf.real() * std::cos(ph) - xIf.imag() * std::sin(ph);
@@ -922,11 +895,9 @@ bool RADAR_Tx_4x4::Run()
 				xIf += Cx(err * std::cos(ph), -err * std::sin(ph));
 			}
 
-			// DUC 内部 IF BPF 的等效滤波，每路独立状态。
 			xIf = runIfBpf_(xIf, st);
 
 			// ----------------------------------------------------
-			// 2. IF 放大器：复电压增益、噪声、非线性压缩。
 			// ----------------------------------------------------
 			xIf = addNoise(xIf, noiseSigmaIF_, st.seedIF);
 			xIf = applyStage(xIf,
@@ -940,14 +911,11 @@ bool RADAR_Tx_4x4::Run()
 				ifTable_);
 
 			// ----------------------------------------------------
-			// 3. RF Mixer：上边带，LO = RF_Freq - IF_Freq。
-			// 复包络近似下主要体现为载频从 IF_Freq 转为 RF_Freq。
 			// ----------------------------------------------------
 			Cx xRf = addNoise(xIf, noiseSigmaMixer_, st.seedMixer);
 			xRf = applyMixerToRFEnvelope_(xRf, timeNow);
 
 			// ----------------------------------------------------
-			// 4. RF BPF 与 RF 放大器，每路独立滤波状态。
 			// ----------------------------------------------------
 			xRf = runRfBpf_(xRf, st);
 			xRf = addNoise(xRf, noiseSigmaRF_, st.seedRF);
@@ -962,18 +930,16 @@ bool RADAR_Tx_4x4::Run()
 				rfTable_);
 
 			// ----------------------------------------------------
-			// 5. FcChange / 实信号转包络残余镜像近似。
-			// 继承当前单通道 RADAR_Tx_v4 中已验证更接近内置的处理。
+			//
+			//   RADAR_DUC -> IF Amplifier -> Mixer -> RF BPF
+			//             -> DelayEnv -> RF Amplifier
+			//
 			// ----------------------------------------------------
-			xRf = applyFcChangeImage_(xRf, timeNow);
+			xRf = applyFcChangeImage_(xRf, timeNow, st);
 
-			// V3 修正：最终整体相位补偿默认透传；保留该函数入口，
-			// 便于后续在确认为固定相位偏差时再做小角度调节。
 			xRf = applyFinalComplexPhaseCorrection_(xRf, timeNow);
 
 			// ----------------------------------------------------
-			// 6. 发射通道整体延迟。帮助文档未给出 DelayLine 位置，
-			// 第一版按 RF 输出前的等效通道延迟处理。
 			// ----------------------------------------------------
 			xRf = applyChannelDelay_(xRf, st);
 
@@ -982,7 +948,6 @@ bool RADAR_Tx_4x4::Run()
 		}
 	}
 
-	// 未启用通道输出零，避免旧数据残留。
 	for (size_t chIndex = active; chIndex < outBusSize; ++chIndex) {
 		for (int outIdx = 0; outIdx < totalOut; ++outIdx) {
 			RF_Signal[chIndex][static_cast<unsigned>(outIdx)] = Cx(0.0, 0.0);
@@ -999,8 +964,6 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyInputCenterFrequency_(const Cx& x,
 		return x;
 	}
 
-	// 将带 In_CenterFreq 的输入搬移到 DUC 参考频率。
-	// 非零 In_CenterFreq 的符号仍需要后续黑盒验证。
 	const double ph = 2.0 * M_PI * In_CenterFreq * timeNow;
 	return x * Cx(std::cos(ph), std::sin(ph));
 }
@@ -1010,15 +973,9 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyDUCToIFEnvelope_(const Cx& x,
 {
 	(void)timeNow;
 
-	// RADAR_DUC 帮助文档给出的实 IF 公式为：
 	//   VIF(t) = VI(t)*cos(wc*t) - VQ(t)*sin(wc*t + phi*pi/180)
-	// EnvelopeSignal 由包络还原实信号时等效为：
 	//   real(t) = Re{env}*cos(wc*t) - Im{env}*sin(wc*t)
-	// 因此理想 IF 复包络主分量应为：
 	//   Re = I - Q*sin(phi), Im = Q*cos(phi)
-	// 注意：这里不再加入 2*IF_Freq 镜像项。镜像项如果放在这里，
-	// 会被后续 IF/RF BPF 的低通近似严重衰减，导致直接 Tx 输出
-	// 起伏始终跟不上内置模块。
 	const double phi = deg2rad(PhaseImbalance);
 	const double i = x.real();
 	const double q = x.imag();
@@ -1027,47 +984,148 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyDUCToIFEnvelope_(const Cx& x,
 }
 
 RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyFcChangeImage_(const Cx& idealEnvelope,
-	double timeNow) const
+	double timeNow,
+	ChannelState& st)
 {
-	// 内置 DUC 的 DtoA 输出是实 IF 信号，之后通过 FcChange 转成
-	// IF/RF envelope。直接观察该 envelope 时，实信号转包络过程会
-	// 留下一个以 2*IF_Freq 变化的残余镜像/起伏项。
-	//
-	// 该残余镜像不能放在 IF/RF BPF 之前，否则会被后级滤波器压低，
-	// 造成图像上几乎没有起伏；因此这里在最终 RF envelope 输出前
-	// 叠加一个经验镜像项。
-	//
-	// V2 中增加整体复相位补偿后，幅度图仍能对齐，但 re/im 差值呈
-	// 明显的周期性摆动，说明误差不是固定相位，而是镜像分量的相位
-	// 和等效群时延没有对齐。因此 V3 取消固定整体相位旋转，改为给
-	// 镜像项单独加入 imageTimeAdvanceSec。
-	//
-	// 对纯实常量输入，近似形式为：
-	//   y = A + k*A*exp(j*(2*wc*(t + tau) + phi))
-	// 其中 tau 只作用于残余镜像项，用来模拟 D/A、FcChange、BPF 对
-	// 镜像分量造成的等效时延/相位差。
-	const double imageFactor = 0.55;
+	const double absNow = std::abs(idealEnvelope);
+	const double absPrev = st.lastRfAbs;
+	const double signedDelta = absNow - absPrev;
+	const double delta = std::fabs(signedDelta);
 
-	// 单通道 RADAR_Tx 验证中，imagePhaseDeg=-270 deg 对包络峰谷位置
-	// 更接近内置；Tx_4x4 在逐点比较 re/im 时仍存在 2*IF 周期误差，
-	// 因此额外加入一个小的镜像时间提前量。若后续 self 仍滞后，适当
-	// 增大该值；若 self 超前，则减小或改成负值。
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	const double pulseThreshold = 0.20;
+	if (absNow > pulseThreshold)
+	{
+		if (!st.inPulse)
+		{
+			st.inPulse = true;
+			st.pulseSampleIndex = 0ULL;
+		}
+		else
+		{
+			++st.pulseSampleIndex;
+		}
+	}
+	else
+	{
+		st.inPulse = false;
+		st.pulseSampleIndex = 0ULL;
+	}
+
+	double pulseWidthSamples = 160.0;
+	if (outputTimeStepSec_ > 0.0)
+	{
+		pulseWidthSamples = 20.0e-6 / outputTimeStepSec_;
+		pulseWidthSamples = clamp(pulseWidthSamples, 32.0, 4096.0);
+	}
+
+	const double u = clamp(static_cast<double>(st.pulseSampleIndex) /
+		std::max(1.0, pulseWidthSamples), 0.0, 1.0);
+
+	const double centerSag = 0.0025 * std::sin(M_PI * u);
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	const double norm = std::max(0.004, 0.055 * std::max(absNow, absPrev));
+	double edgeMetric = delta / norm;
+	edgeMetric = clamp(edgeMetric, 0.0, 1.0);
+
+	const bool risingEdge = (signedDelta >= 0.0);
+
+	if (risingEdge)
+	{
+		st.riseEdgeState = std::max(0.978 * st.riseEdgeState, edgeMetric);
+		st.fallEdgeState = 0.68 * st.fallEdgeState;
+	}
+	else
+	{
+		st.fallEdgeState = std::max(0.885 * st.fallEdgeState, edgeMetric);
+		st.riseEdgeState = 0.928 * st.riseEdgeState;
+	}
+
+	st.edgeRippleState = std::max(st.riseEdgeState, st.fallEdgeState);
+	st.lastRfAbs = absNow;
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	double riseGate = (absNow - 0.82) / (0.985 - 0.82);
+	riseGate = clamp(riseGate, 0.0, 1.0);
+
+	double fallGate = (absNow - 0.66) / (0.94 - 0.66);
+	fallGate = clamp(fallGate, 0.0, 1.0);
+
+	double riseRelease = (absNow - 0.955) / (1.005 - 0.955);
+	riseRelease = clamp(riseRelease, 0.0, 1.0);
+
+	const double riseEff = st.riseEdgeState * riseGate * (1.0 + 1.25 * riseRelease);
+	const double fallEff = st.fallEdgeState * fallGate * 1.22;
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	Cx y = idealEnvelope;
+
+	if (absNow > 1e-12)
+	{
+		double plateauWeight = (absNow - 0.68) / (0.95 - 0.68);
+		plateauWeight = clamp(plateauWeight, 0.0, 1.0);
+
+		const double targetAmp = 1.006 - centerSag;
+
+		double gainToTarget = targetAmp / absNow;
+		gainToTarget = clamp(gainToTarget, 0.90, 1.18);
+
+		const double flattenStrength = 0.76;
+		const double flattenGain =
+			1.0 + plateauWeight * flattenStrength * (gainToTarget - 1.0);
+
+		y *= flattenGain;
+	}
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	const double edgeGain = 0.45 * riseEff + 0.135 * fallEff;
+
+	const double flatImageFactor = 0.00025;
+	const double imageFactor =
+		flatImageFactor + 0.130 * riseEff + 0.075 * fallEff;
+
 	const double imagePhaseDeg = -270.0;
-
-	// V5 微调：V4 取共轭后，虚部方向已经与内置一致，
-	// 但从实部/虚部放大图看 self 仍略微超前约 1 个采样点。
-	// V3/V4 中 imageTimeAdvanceSec=1e-6 会把残余镜像项提前，
-	// 对当前 Tx_4x4 低频验证工况会造成轻微相位超前。
-	// 因此 V5 将该经验提前量改为 0，只保留 imagePhaseDeg=-270 的
-	// 基本相位约定。如果后续仍观察到 self 超前，可改为负值；
-	// 若 self 滞后，再小幅增加到 0.5e-6 或 1.0e-6。
 	const double imageTimeAdvanceSec = 0.0;
 
 	const double tImage = timeNow + imageTimeAdvanceSec;
 	const double ph = 4.0 * M_PI * IF_Freq * tImage + deg2rad(imagePhaseDeg);
 	const Cx rot(std::cos(ph), std::sin(ph));
 
-	return idealEnvelope + imageFactor * std::conj(idealEnvelope) * rot;
+	y *= (1.0 + edgeGain);
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	const double yAbs = std::abs(y);
+	Cx radialOvershoot(0.0, 0.0);
+
+	if (yAbs > 0.10)
+	{
+		const Cx unit = y / yAbs;
+
+		const double radialAmp = 0.39 * riseEff + 0.115 * fallEff;
+		radialOvershoot = radialAmp * unit;
+	}
+
+	// ------------------------------------------------------------
+	// ------------------------------------------------------------
+	const double riseRingPhase = ph - deg2rad(10.0);
+	const double fallRingPhase = ph + deg2rad(78.0);
+
+	const Cx riseRot(std::cos(riseRingPhase), std::sin(riseRingPhase));
+	const Cx fallRot(std::cos(fallRingPhase), std::sin(fallRingPhase));
+
+	const Cx multiplicative = imageFactor * std::conj(y) * rot;
+	const Cx additiveRing =
+		0.145 * riseEff * riseRot +
+		0.092 * fallEff * fallRot;
+
+	return y + radialOvershoot + multiplicative + additiveRing;
 }
 
 RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyFinalComplexPhaseCorrection_(const Cx& x,
@@ -1075,28 +1133,15 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyFinalComplexPhaseCorrection_(const Cx& x,
 {
 	(void)timeNow;
 
-	// V4 修正说明：
-	// V3 中 real(self) 与 real(sv) 已经基本同相，但 imag(self) 与 imag(sv)
-	// 在稳定段表现为近似反相，说明主要问题不是固定整体相位偏差，
-	// 而是最终 RF envelope 的虚部符号约定与内置模块相反。
+
+
 	//
-	// SystemVue 的 EnvelopeSignal 在不同内部子模块中可能采用等效的
-	// 解析包络约定：
 	//     Re{env}*cos(wt) - Im{env}*sin(wt)
-	// 或：
 	//     Re{env}*cos(wt) + Im{env}*sin(wt)
-	// 对于直接观察 Tx_4x4 输出 envelope 的 complex 数据，这两种约定会
-	// 主要体现为虚部符号相反，而实部基本不变。
 	//
-	// 因此这里不再做普通相位旋转，而是对最终复包络取共轭：
 	//     y = conj(x)
-	// 这样可以在基本保持实部波形的同时翻转虚部符号，用于匹配内置
-	// RADAR_DUC + D/A + FcChange + BPF 链路的输出包络约定。
 	//
-	// 如果后续闭环 Tx_4x4 -> Rx_4x4 验证时发现接收结果反而变差，
-	// 可将下面 enableConjugateConventionFix 改为 false，仅在直接比较
-	// RF envelope 输出时启用该经验修正。
-	const bool enableConjugateConventionFix = true;
+	const bool enableConjugateConventionFix = false;
 
 	if (enableConjugateConventionFix) {
 		return std::conj(x);
@@ -1110,9 +1155,6 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyMixerToRFEnvelope_(const Cx& x,
 {
 	(void)timeNow;
 
-	// 内置 Tx Mixer 使用上边带，LO = RF_Freq - IF_Freq。
-	// 在复包络近似下，该过程主要体现为把 IF envelope 的载频
-	// 转换到 RF_Freq，包络复数值本身近似不变。
 	return x;
 }
 
@@ -1129,9 +1171,6 @@ RADAR_Tx_4x4::Cx RADAR_Tx_4x4::addNoise(const Cx& x,
 
 double RADAR_Tx_4x4::applyDAC_(double x) const
 {
-	// 帮助文档没有公开 DtoA 的满量程、舍入和限幅规则。
-	// 这里采用归一化 DAC 近似；早期对齐建议使用较高 DAC_NBits
-	// 或较小输入幅度，避免量化细节主导误差。
 	if (DAC_NBits < 2 || DAC_NBits >= 64) {
 		return x;
 	}
@@ -1146,8 +1185,6 @@ double RADAR_Tx_4x4::applyDAC_(double x) const
 	return clamp(q, -fullScale, fullScale);
 }
 
-// ============================================================
-// 增益与压缩非线性
 // ============================================================
 
 RADAR_Tx_4x4::Cx RADAR_Tx_4x4::applyStage(const Cx& x,
@@ -1470,8 +1507,6 @@ double RADAR_Tx_4x4::applyTableCompressionMagnitude(double ain,
 }
 
 // ============================================================
-// 随机数与插值脉冲辅助函数
-// ============================================================
 
 double RADAR_Tx_4x4::randUniform_(uint32_t& seed) const
 {
@@ -1512,8 +1547,6 @@ double RADAR_Tx_4x4::raisedCosineImpulse_(double t,
 	return sinc_(t) * std::cos(M_PI * alpha * t) / den;
 }
 
-// ============================================================
-// 数学辅助函数
 // ============================================================
 
 double RADAR_Tx_4x4::dbToLinVoltage(double db)

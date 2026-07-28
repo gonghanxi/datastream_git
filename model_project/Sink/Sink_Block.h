@@ -101,6 +101,10 @@ private:
     int m_flushCounter = 0;
     int m_flushInterval = 100;
     double m_currentSimulationTime = 0.0;
+
+    // SINK输出截断控制
+    unsigned long long m_sinkTargetSamples = ULLONG_MAX; // 最大输出采样点数，默认无限制
+    unsigned long long m_sinkSkipSamples = 0; // 头部跳过的采样点数，默认0
 };
 
 RegAlgo(Sink_Block);

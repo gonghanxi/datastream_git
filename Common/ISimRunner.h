@@ -10,6 +10,15 @@
 #include <QWaitCondition>
 #include <QAtomicInt>
 
+// AdvancedSimuParam 变步长参数结构体（独立于 SimuParameter，避免修改 ModelDesign）
+struct AdvancedStepInfo {
+    bool isVariableStep = false;   // 是否为变步长模式
+    double minStep = 0.0;          // 最小步长（秒）
+    double maxStep = 0.0;          // 最大步长（秒）
+    double initStep = 0.0;         // 初始步长（秒）
+    size_t numSamples = 0;         // 总仿真点数
+};
+
 class ISimRunner{
 public:
 
@@ -70,6 +79,9 @@ public:
     virtual void resume() = 0;
     //停止
     virtual void requestStop() = 0;
+
+    // 获取高级步长信息（AdvancedSimuParam 解析结果）
+    virtual AdvancedStepInfo getAdvancedStepInfo() const = 0;
 
     // 获取暂停控制指针，供外部直接操作原子标志
     virtual QAtomicInt* getPausedPtr() = 0;

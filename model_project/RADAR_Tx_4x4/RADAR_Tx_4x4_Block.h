@@ -132,6 +132,19 @@ private:
         std::deque<Cx> delayLine;
         uint32_t seedRF, seedIF, seedMixer;
         unsigned long long outputCount;
+
+        // V8: 用于记录包络变化，抑制镜像/波纹强度
+        double lastRfAbs;
+        double edgeRippleState;
+
+        // V17: 上升/下降状态，形成"蝉翼"非对称波纹
+        double riseEdgeState;
+        double fallEdgeState;
+
+        // V16/V17: 脉冲位置，仅用于非常浅的平板凹陷
+        bool inPulse;
+        unsigned long long pulseSampleIndex;
+
         ChannelState();
         void resetRuntime();
     };
@@ -170,7 +183,7 @@ private:
     Cx applyChannelDelay_(const Cx& x, ChannelState& st);
     Cx applyInputCenterFrequency_(const Cx& x, double timeNow) const;
     Cx applyDUCToIFEnvelope_(const Cx& x, double timeNow) const;
-    Cx applyFcChangeImage_(const Cx& idealEnvelope, double timeNow) const;
+    Cx applyFcChangeImage_(const Cx& idealEnvelope, double timeNow, ChannelState& st);
     Cx applyFinalComplexPhaseCorrection_(const Cx& x, double timeNow) const;
     Cx applyMixerToRFEnvelope_(const Cx& x, double timeNow) const;
     double applyDAC_(double x) const;

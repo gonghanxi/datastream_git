@@ -300,10 +300,24 @@ int main(int argc, char *argv[])
         std::cout.flush();
         LOG_INFO("CPU仿真耗时：", cpuTimeUsed, " s");
         std::cout.flush();
-        LOG_INFO("最小时间步长：", simParams.time_Interval, " s");
+
+        // 始终打印总仿真点数
+        LOG_INFO("总仿真点数: ", simParams.num_Samples);
         std::cout.flush();
-        LOG_INFO("最大时间步长：", simParams.time_Interval, " s");
-        std::cout.flush();
+
+        // 根据是否存在 AdvancedSimuParam 打印不同的步长信息
+        AdvancedStepInfo advStep = sim->getAdvancedStepInfo();
+        if (advStep.isVariableStep) {
+            LOG_INFO("最小时间步长：", advStep.minStep, " s");
+            std::cout.flush();
+            LOG_INFO("最大时间步长：", advStep.maxStep, " s");
+            std::cout.flush();
+        } else {
+            LOG_INFO("最小时间步长：", simParams.time_Interval, " s");
+            std::cout.flush();
+            LOG_INFO("最大时间步长：", simParams.time_Interval, " s");
+            std::cout.flush();
+        }
 
     } else {
         LOG_INFO("仿真初始化失败。");

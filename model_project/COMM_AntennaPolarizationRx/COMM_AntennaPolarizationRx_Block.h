@@ -1,7 +1,7 @@
-#ifndef COMM_ANTENNAPOLARIZATIONTX_BLOCK_H
-#define COMM_ANTENNAPOLARIZATIONTX_BLOCK_H
+#ifndef COMM_ANTENNAPOLARIZATIONRX_BLOCK_H
+#define COMM_ANTENNAPOLARIZATIONRX_BLOCK_H
 
-#include "COMM_AntennaPolarizationTx.h"
+#include "COMM_AntennaPolarizationRx.h"
 #include "Block.h"
 #include <memory>
 #include <queue>
@@ -9,11 +9,11 @@
 
 using namespace SystemVueModelBuilder;
 
-class SYSTEMVUEMODELBUILDER_API COMM_AntennaPolarizationTx_Block : public SystemVueModelBuilder::Block
+class SYSTEMVUEMODELBUILDER_API COMM_AntennaPolarizationRx_Block : public SystemVueModelBuilder::Block
 {
 public:
-    COMM_AntennaPolarizationTx_Block(const std::string& name);
-    ~COMM_AntennaPolarizationTx_Block();
+    COMM_AntennaPolarizationRx_Block(const std::string& name);
+    ~COMM_AntennaPolarizationRx_Block();
 
     bool Setup() override;
     bool Run() override;
@@ -23,27 +23,22 @@ private:
     void SetDefaultParameters();
     void SetParameters();
     bool ModelSetup();
-    void UpdateCharacterizationFrequency();
-
     bool DataStreamRun();
     bool TimeDrivenRun();
 
     // 原算法实例指针（仅用于端口注册和参数设置）
-    std::unique_ptr<COMM_AntennaPolarizationTx> m_algo;
+    std::unique_ptr<COMM_AntennaPolarizationRx> m_algo;
 
     // ========== 参数存储 ==========
-    // 方向图数据模式
     int m_PatternDataMode;
     int m_ParametricPatternType;
 
-    // 方向图参数
     double m_PeakGain_dBi;
     double m_AzimuthHPBW;
     double m_ElevationHPBW;
     double m_MaxAttenuation_dB;
     double m_VerticalSidelobeAttenuation_dB;
 
-    // 极化参数
     int m_PolarizationType;
     double m_PolarizationTiltAngle;
     double m_XPD_dB;
@@ -54,14 +49,12 @@ private:
     double m_UserJonesVMagnitude;
     double m_UserJonesVPhase;
 
-    // 实际方向图文件参数
     int m_ElementPatternFileType;
     std::vector<double> m_ElementPatternFileScaleFactor;
     int m_ImportedPatternDimension;
     int m_ImportedGainMode;
-    std::string m_TxAntennaPatternFileName;
+    std::string m_RxAntennaPatternFileName;
 
-    // 波束控制参数
     int m_BeamControlMode;
     int m_BeamScanPattern;
 
@@ -73,7 +66,6 @@ private:
     int m_NumberOfRasterBars;
     double m_RasterBarWidth;
 
-    // 默认方向参数
     std::vector<double> m_DirectionAzimuthAngle;
     std::vector<double> m_DirectionElevationAngle;
     double m_BeamAzimuthAngle;
@@ -81,12 +73,11 @@ private:
 
     // ========== 运行时状态 ==========
     int m_directionCount;
-    double m_inputFc;
 
     // ========== 时间驱动缓冲队列 ==========
     struct OutputFrame {
-        std::vector<EnvelopeSignal> vChannels;
-        std::vector<EnvelopeSignal> hChannels;
+        std::complex<double> summedV;
+        std::complex<double> summedH;
     };
     std::queue<OutputFrame> m_outputQueue;
 
@@ -139,6 +130,12 @@ private:
     void buildPolarizationJones(std::complex<double>& jonesV, std::complex<double>& jonesH) const;
     void applyConfiguredPolarization(const std::complex<double>& scalarGain,
                                      std::complex<double>& Gtheta, std::complex<double>& Gphi) const;
+    void applyReceivePolarization(const std::complex<double>& inputV,
+                                  const std::complex<double>& inputH,
+                                  const std::complex<double>& responseV,
+                                  const std::complex<double>& responseH,
+                                  std::complex<double>& outputV,
+                                  std::complex<double>& outputH) const;
     std::complex<double> combinePatternComponentsToScalar(
         const std::complex<double>& Gtheta, const std::complex<double>& Gphi) const;
 
@@ -169,7 +166,6 @@ private:
     static int ConvertStringToEnum(const std::string& value, int defaultValue);
 };
 
-RegAlgo(COMM_AntennaPolarizationTx_Block);
+RegAlgo(COMM_AntennaPolarizationRx_Block);
 
-#endif // COMM_ANTENNAPOLARIZATIONTX_BLOCK_H
-
+#endif // COMM_ANTENNAPOLARIZATIONRX_BLOCK_H

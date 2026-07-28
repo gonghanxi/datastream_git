@@ -76,6 +76,7 @@ public:
         int sinkCount = 0;
         int OutputBusCount = 0;
         std::map<std::string, int> sinkProcessCount;
+        QSet<QString> processedBlocks;  // track which processors have run at least once
 
         // ZeroCross 下游映射
         QMap<Block*, QSet<Block*>> zeroCrossDownstreamMap;
